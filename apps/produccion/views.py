@@ -1,42 +1,63 @@
-import json
-import unicodedata
-
 from django.http import JsonResponse
-from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django_fsm import TransitionNotAllowed, can_proceed
-
-from apps.administrador.models import Orden, Usuario
-from apps.core.decorators import login_required_api, login_required_rol
-from apps.operarios.models import AsignacionTarea, Operario
+from django.shortcuts import render
+from django.utils import timezone
+from django_fsm import can_proceed
+import json
+import unicodedata
+from datetime import timedelta
 
 from .models import Producto, Produccion
 from .services import sincronizar_estado_cliente
+from apps.administrador.models import Orden, AsignacionTarea, Tarea
+from apps.core.decorators import login_required_rol, login_required_api
+from apps.administrador.models import Usuario
+from apps.operarios.models import Operario
 
-# ── DECORADORES DE PROTECCIÓN ─────────────────────────────────────────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
 admin_required_api = login_required_api(rol_esperado='administrador', session_key='usuario_id')
 
-# ── MAPA DE TRANSICIONES FSM ──────────────────────────────────────────
-TRANSICIONES = {
-    'En Progreso': 'iniciar',
-    'Completado':  'completar',
-    'Detenido':    'detener',
+TRANSICIONES_PRODUCCION = {
+    ('Pendiente', 'En Progreso'):   'iniciar',
+    ('En Progreso', 'Completado'):  'completar',
+    ('Pendiente', 'Detenido'):      'detener',
+    ('En Progreso', 'Detenido'):    'detener',
+    ('Detenido', 'En Progreso'):    'reanudar',
 }
 
+# Colores fijos por nombre de proceso/etapa. No hay tabla de configuración
+# todavía — si aparece un proceso nuevo que no está acá, cae en 'gris'.
+COLOR_ETAPA = {
+    'Diseño':     '#8b5cf6',
+    'Corte':      '#f97316',
+    'Confección': '#3b82f6',
+    'Estampado':  '#ec4899',
+    'Calidad':    '#eab308',
+    'Empaque':    '#22c55e',
+    'Terminado':  '#14b8a6',
+}
+COLOR_ETAPA_DEFAULT = '#6b7280'
 
-# ── UTILIDADES DE NORMALIZACIÓN Y SERIALIZACIÓN ──────────────────────
+
 def _normalizar(texto):
-    """
-    Normaliza un texto para comparar nombres de forma robusta:
-    quita espacios extra, pasa a minúsculas y elimina tildes/acentos.
-    """
     texto = (texto or '').strip().lower()
     texto = unicodedata.normalize('NFKD', texto)
-    return ''.join(c for c in texto if not unicodedata.combining(c))
+    texto = ''.join(c for c in texto if not unicodedata.combining(c))
+    return texto
 
 
+# ── PORTAL (Template HTML) ───────────────────────────
+@admin_required
+def produccion_portal(request):
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+    return render(request, 'produccion/produccion_portal.html', {
+        'usuario': usuario,
+        'seccion_activa': 'produccion',
+    })
+
+
+# ── UTILIDADES ───────────────────────────────────────
 def producto_to_dict(p):
     return {
         'idProducto':  p.idProducto,
@@ -47,7 +68,87 @@ def producto_to_dict(p):
     }
 
 
-def produccion_to_dict(o):
+def _etapas_de_produccion(id_produccion):
+    """
+    Agrupa las AsignacionTarea de esta Produccion por Tarea.proceso
+    (= nuestra "etapa" real, ya que no existe tabla de etapas todavía).
+    Devuelve la lista ordenada por la fecha de inicio más temprana de
+    cada proceso, con su color, estado agregado y % de avance.
+    """
+    asignaciones = (
+        AsignacionTarea.objects
+        .select_related('idTarea', 'idOperario__idUsuario')
+        .filter(idTarea__idProduccion=id_produccion)
+        .exclude(estado='Cancelada')
+        .order_by('fechaInicio')
+    )
+
+    grupos = {}
+    orden_procesos = []
+    for a in asignaciones:
+        proceso = a.idTarea.proceso or 'Sin proceso'
+        if proceso not in grupos:
+            grupos[proceso] = []
+            orden_procesos.append(proceso)
+        grupos[proceso].append(a)
+
+    etapas = []
+    for proceso in orden_procesos:
+        tareas_etapa = grupos[proceso]
+        total = len(tareas_etapa)
+        completadas = sum(1 for t in tareas_etapa if t.estado == 'Completada')
+        en_progreso = sum(1 for t in tareas_etapa if t.estado == 'En Progreso')
+        avance_pct = round((completadas / total) * 100) if total else 0
+
+        if avance_pct == 100:
+            estado_etapa = 'COMPLETADA'
+        elif en_progreso > 0 or avance_pct > 0:
+            estado_etapa = 'EN PROCESO'
+        else:
+            estado_etapa = 'NO INICIADA'
+
+        # Atrasada: alguna tarea de la etapa venció su fechaLimite sin completarse
+        hoy = timezone.now().date()
+        if any(t.fechaLimite and t.fechaLimite < hoy and t.estado != 'Completada' for t in tareas_etapa):
+            estado_etapa = 'ATRASADA'
+
+        operarios_etapa = sorted(set(
+            f'{t.idOperario.idUsuario.nombre} {t.idOperario.idUsuario.apellido}'
+            for t in tareas_etapa
+        ))
+
+        fechas_inicio = [t.fechaInicio for t in tareas_etapa if t.fechaInicio]
+        fechas_fin = [t.fechaFinalizacion for t in tareas_etapa if t.fechaFinalizacion]
+
+        etapas.append({
+            'nombre': proceso,
+            'color': COLOR_ETAPA.get(proceso, COLOR_ETAPA_DEFAULT),
+            'estado': estado_etapa,
+            'avancePct': avance_pct,
+            'totalTareas': total,
+            'completadas': completadas,
+            'operarios': operarios_etapa,
+            'fechaInicio': str(min(fechas_inicio)) if fechas_inicio else None,
+            'fechaFin': str(max(fechas_fin)) if fechas_fin else None,
+        })
+
+    return etapas
+
+
+def _avance_pct_produccion(id_produccion):
+    asignaciones = (
+        AsignacionTarea.objects
+        .filter(idTarea__idProduccion=id_produccion)
+        .exclude(estado='Cancelada')
+    )
+    total = asignaciones.count()
+    if total == 0:
+        return 0
+    completadas = asignaciones.filter(estado='Completada').count()
+    return round((completadas / total) * 100)
+
+
+def produccion_to_dict(o, con_etapas=False):
     cliente_nombre = None
     if o.idOrden:
         try:
@@ -56,32 +157,99 @@ def produccion_to_dict(o):
         except Orden.DoesNotExist:
             cliente_nombre = None
 
-    return {
-        'idProduccion':     o.idProduccion,
-        'idOrden':          o.idOrden,
-        'cliente':          cliente_nombre,
-        'idProducto':       o.idProducto_id,
-        'producto':         o.idProducto.nombre,
-        'descripcion':      o.descripcion,
+    hoy = timezone.now().date()
+    atrasada = (
+        o.estado not in ('Completado', 'Detenido')
+        and o.fechaEstimadaFin
+        and o.fechaEstimadaFin < hoy
+    )
+
+    transiciones_disponibles = [
+        destino for (origen, destino) in TRANSICIONES_PRODUCCION
+        if origen == o.estado
+    ]
+
+    data = {
+        'idProduccion':      o.idProduccion,
+        'idOrden':           o.idOrden,
+        'cliente':           cliente_nombre,
+        'idProducto':        o.idProducto_id,
+        'producto':          o.idProducto.nombre,
+        'descripcion':       o.descripcion,
         'cantidadRequerida': o.cantidadRequerida,
-        'fechaInicio':      str(o.fechaInicio),
-        'fechaEstimadaFin': str(o.fechaEstimadaFin),
-        'fechaRealFin':     str(o.fechaRealFin) if o.fechaRealFin else None,
-        'estado':           o.estado,
+        'fechaInicio':       str(o.fechaInicio),
+        'fechaEstimadaFin':  str(o.fechaEstimadaFin),
+        'fechaRealFin':      str(o.fechaRealFin) if o.fechaRealFin else None,
+        'estado':            o.estado,
+        'atrasada':          bool(atrasada),
+        'avancePct':         _avance_pct_produccion(o.idProduccion),
+        'transicionesDisponibles': transiciones_disponibles,
     }
 
+    if con_etapas:
+        data['etapas'] = _etapas_de_produccion(o.idProduccion)
+        data['historial'] = [
+            {
+                'fecha': h.history_date.strftime('%d/%m %H:%M'),
+                'estado': h.estado,
+            }
+            for h in o.history.order_by('history_date')
+        ]
 
-# ── PORTAL (Vistas HTML) ──────────────────────────────────────────────
-@admin_required
-def produccion_portal(request):
-    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    return render(request, 'produccion/produccion_portal.html', {
-        'usuario': usuario,
-        'seccion_activa': 'produccion',
+    return data
+
+
+# ── DASHBOARD ─────────────────────────────────────────
+@admin_required_api
+def dashboard(request):
+    """
+    GET /produccion/dashboard/
+    KPIs del centro de control: totales, hoy, esta semana, atrasadas.
+    """
+    hoy = timezone.now().date()
+    fin_semana = hoy + timedelta(days=(6 - hoy.weekday()))
+
+    todas = Produccion.objects.all()
+    total = todas.count()
+    pendientes = todas.filter(estado='Pendiente').count()
+    en_progreso = todas.filter(estado='En Progreso').count()
+    completadas = todas.filter(estado='Completado').count()
+
+    atrasadas = sum(
+        1 for p in todas.exclude(estado__in=['Completado', 'Detenido'])
+        if p.fechaEstimadaFin and p.fechaEstimadaFin < hoy
+    )
+    programadas_hoy = todas.filter(fechaInicio=hoy).count()
+    programadas_semana = todas.filter(fechaInicio__gte=hoy, fechaInicio__lte=fin_semana).count()
+
+    avances = [_avance_pct_produccion(p.idProduccion) for p in todas.exclude(estado='Completado')]
+    progreso_general = round(sum(avances) / len(avances)) if avances else 100
+
+    alertas = []
+    if atrasadas:
+        alertas.append({'tipo': 'danger', 'icono': '🔴', 'texto': f'{atrasadas} orden(es) de producción atrasada(s)'})
+    proximas_vencer = todas.filter(
+        estado__in=['Pendiente', 'En Progreso'],
+        fechaEstimadaFin__gte=hoy,
+        fechaEstimadaFin__lte=hoy + timedelta(days=2),
+    ).count()
+    if proximas_vencer:
+        alertas.append({'tipo': 'warning', 'icono': '🟡', 'texto': f'{proximas_vencer} orden(es) próxima(s) a vencer (48h)'})
+
+    return JsonResponse({
+        'totalOrdenes': total,
+        'pendientes': pendientes,
+        'enProgreso': en_progreso,
+        'completadas': completadas,
+        'atrasadas': atrasadas,
+        'programadasHoy': programadas_hoy,
+        'programadasSemana': programadas_semana,
+        'progresoGeneral': progreso_general,
+        'alertas': alertas,
     })
 
 
-# ── ENDPOINTS DE PRODUCTOS ────────────────────────────────────────────
+# ── PRODUCTOS ────────────────────────────────────────
 @admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
@@ -90,12 +258,9 @@ def productos(request):
         lista = list(Producto.objects.all())
         return JsonResponse([producto_to_dict(p) for p in lista], safe=False)
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Cuerpo JSON inválido'}, status=400)
-
+    data = json.loads(request.body)
     nombre = (data.get('nombre') or '').strip()
+
     if not nombre:
         return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
 
@@ -111,10 +276,10 @@ def productos(request):
         )
 
     p = Producto.objects.create(
-        nombre=nombre,
-        descripcion=data.get('descripcion', ''),
-        precio=data.get('precio', 0),
-        categoria=data.get('categoria', ''),
+        nombre      = nombre,
+        descripcion = data.get('descripcion', ''),
+        precio      = data.get('precio', 0),
+        categoria   = data['categoria'],
     )
     return JsonResponse(producto_to_dict(p), status=201)
 
@@ -132,16 +297,12 @@ def producto_detalle(request, id):
         return JsonResponse(producto_to_dict(p))
 
     if request.method == 'PUT':
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Cuerpo JSON inválido'}, status=400)
+        data = json.loads(request.body)
 
         if 'nombre' in data:
             nuevo_nombre = (data['nombre'] or '').strip()
             if not nuevo_nombre:
                 return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
-
             nuevo_normalizado = _normalizar(nuevo_nombre)
             duplicado = any(
                 _normalizar(otro_nombre) == nuevo_normalizado
@@ -160,35 +321,47 @@ def producto_detalle(request, id):
         p.save()
         return JsonResponse(producto_to_dict(p))
 
-    if request.method == 'DELETE':
-        p.delete()
-        return JsonResponse({'mensaje': 'Producto eliminado'})
+    p.delete()
+    return JsonResponse({'mensaje': 'Producto eliminado'})
 
 
-# ── ENDPOINTS DE PRODUCCIÓN ───────────────────────────────────────────
+# ── ÓRDENES DE PRODUCCIÓN ────────────────────────────────────────
 @admin_required_api
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
 def ordenes(request):
     if request.method == 'GET':
+        filtro = request.GET.get('filtro', '')
         lista = Produccion.objects.select_related('idProducto').all()
+
+        hoy = timezone.now().date()
+        if filtro == 'hoy':
+            lista = lista.filter(fechaInicio=hoy)
+        elif filtro == 'semana':
+            fin_semana = hoy + timedelta(days=(6 - hoy.weekday()))
+            lista = lista.filter(fechaInicio__gte=hoy, fechaInicio__lte=fin_semana)
+        elif filtro == 'en_produccion':
+            lista = lista.filter(estado='En Progreso')
+        elif filtro == 'terminadas':
+            lista = lista.filter(estado='Completado')
+        elif filtro == 'atrasadas':
+            lista = [
+                p for p in lista.exclude(estado__in=['Completado', 'Detenido'])
+                if p.fechaEstimadaFin and p.fechaEstimadaFin < hoy
+            ]
+
         data = [produccion_to_dict(o) for o in lista]
         return JsonResponse(data, safe=False)
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Cuerpo JSON inválido'}, status=400)
-
+    data = json.loads(request.body)
     o = Produccion.objects.create(
-        idOrden=data.get('idOrden'),
-        idProducto_id=data.get('idProducto'),
-        descripcion=data.get('descripcion', ''),
-        cantidadRequerida=data.get('cantidadRequerida', 0),
-        fechaInicio=data.get('fechaInicio'),
-        fechaEstimadaFin=data.get('fechaEstimadaFin'),
-        costoEstimado=data.get('costoEstimado'),
-        estado=data.get('estado', 'Pendiente')
+        idOrden           = data.get('idOrden'),
+        idProducto_id     = data.get('idProducto'),
+        descripcion       = data.get('descripcion', ''),
+        cantidadRequerida = data.get('cantidadRequerida', 0),
+        fechaInicio       = data.get('fechaInicio'),
+        fechaEstimadaFin  = data.get('fechaEstimadaFin'),
+        estado            = data.get('estado', 'Pendiente'),
     )
     return JsonResponse(produccion_to_dict(o), status=201)
 
@@ -203,43 +376,57 @@ def orden_detalle(request, id):
         return JsonResponse({'error': 'Producción no encontrada'}, status=404)
 
     if request.method == 'GET':
-        return JsonResponse(produccion_to_dict(o))
+        # El detalle SÍ trae etapas + historial (para el modal grande)
+        return JsonResponse(produccion_to_dict(o, con_etapas=True))
 
     if request.method == 'PUT':
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Cuerpo JSON inválido'}, status=400)
+        data = json.loads(request.body)
 
-        # Transición de estados utilizando django-fsm
         if 'estado' in data and data['estado'] != o.estado:
-            metodo = TRANSICIONES.get(data['estado'])
-            if not metodo:
-                return JsonResponse({'error': f'Transición a "{data["estado"]}" no permitida.'}, status=400)
-            
-            fn = getattr(o, metodo, None)
-            if fn and can_proceed(fn):
-                try:
-                    fn()
-                except TransitionNotAllowed:
-                    return JsonResponse({'error': f'No se puede pasar de "{o.estado}" a "{data["estado"]}".'}, status=400)
-            else:
-                return JsonResponse({'error': f'No se puede pasar de "{o.estado}" a "{data["estado"]}".'}, status=400)
+            clave = (o.estado, data['estado'])
+            metodo_nombre = TRANSICIONES_PRODUCCION.get(clave)
+            if not metodo_nombre:
+                return JsonResponse(
+                    {'error': f'No se puede pasar de "{o.estado}" a "{data["estado"]}".'},
+                    status=400
+                )
 
-        for campo in ['idOrden', 'descripcion', 'cantidadRequerida', 'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin']:
+            if data['estado'] in ['Pendiente', 'En Progreso']:
+                otro_activo = Produccion.objects.filter(
+                    idProducto=o.idProducto,
+                    estado__in=['Pendiente', 'En Progreso']
+                ).exclude(pk=o.pk).exists()
+                if otro_activo:
+                    return JsonResponse(
+                        {'error': f'"{o.idProducto.nombre}" ya tiene otro proceso activo.'},
+                        status=400
+                    )
+
+            metodo = getattr(o, metodo_nombre)
+            if not can_proceed(metodo):
+                return JsonResponse(
+                    {'error': f'Transición "{metodo_nombre}" no permitida en este momento.'},
+                    status=400
+                )
+            metodo()
+
+        if 'idOrden' in data:
+            o.idOrden = data['idOrden']
+
+        for campo in ['descripcion', 'cantidadRequerida',
+                      'fechaInicio', 'fechaEstimadaFin', 'fechaRealFin']:
             if campo in data:
                 setattr(o, campo, data[campo])
-        
+
         o.save()
         sincronizar_estado_cliente(o)
-        return JsonResponse(produccion_to_dict(o))
+        return JsonResponse(produccion_to_dict(o, con_etapas=True))
 
-    if request.method == 'DELETE':
-        o.delete()
-        return JsonResponse({'mensaje': 'Registro eliminado'})
+    o.delete()
+    return JsonResponse({'mensaje': 'Registro eliminado'})
 
 
-# ── AVANCE DE OPERARIOS ───────────────────────────────────────────────
+# ── AVANCE DE OPERARIOS (proceso de confección) ───────
 @admin_required_api
 def avance_operarios(request):
     operarios = (
@@ -276,10 +463,10 @@ def avance_operarios(request):
             'especialidad': op.especialidad,
             'estado':       op.estado,
             'contadores': {
-                'pendiente':  pendientes,
-                'enProgreso': en_progreso,
-                'completada': completadas,
-                'cancelada':  canceladas,
+                'pendiente':   pendientes,
+                'enProgreso':  en_progreso,
+                'completada':  completadas,
+                'cancelada':   canceladas,
             },
             'avancePct': avance_pct,
             'tareas': [
@@ -287,6 +474,7 @@ def avance_operarios(request):
                     'idAsignacion':      t.idAsignacion,
                     'nombreTarea':       t.idTarea.nombreTarea,
                     'proceso':           t.idTarea.proceso,
+                    'idProduccion':      t.idTarea.idProduccion,
                     'tipoPrenda':        t.tipoPrenda,
                     'cantidadPrendas':   t.cantidadPrendas,
                     'estado':            t.estado,
@@ -303,17 +491,16 @@ def avance_operarios(request):
     return JsonResponse({'operarios': resultado})
 
 
-# ── KPIS Y DASHBOARD ──────────────────────────────────────────────────
+# ── KPIs (compatibilidad con admin_portal.html que ya los usa) ──────
 @admin_required_api
 def kpis(request):
     total_productos = Producto.objects.count()
     en_progreso     = Produccion.objects.filter(estado='En Progreso').count()
     pendientes      = Produccion.objects.filter(estado='Pendiente').count()
     completados     = Produccion.objects.filter(estado='Completado').count()
-    
     return JsonResponse({
-        'totalProductos':     total_productos,
-        'ordenesEnProceso':   en_progreso,
-        'ordenesPendientes':  pendientes,
+        'totalProductos':    total_productos,
+        'ordenesEnProceso':  en_progreso,
+        'ordenesPendientes': pendientes,
         'ordenesCompletadas': completados,
     })

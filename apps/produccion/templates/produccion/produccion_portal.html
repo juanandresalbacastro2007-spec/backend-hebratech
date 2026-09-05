@@ -2,23 +2,73 @@
 {% load static %}
 
 {% block titulo %}Producción{% endblock %}
-{% block topbar_titulo %}Producción{% endblock %}
-{% block topbar_sub %}Gestión de productos, órdenes y avance de operarios{% endblock %}
+{% block topbar_titulo %}Centro de Control de Producción{% endblock %}
+{% block topbar_sub %}Productos, órdenes, etapas y avance de operarios — todo conectado{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}?v={% now 'U' %}" />
+<link rel="stylesheet" href="{% static 'css/produccion/produccion_control.css' %}?v={% now 'U' %}" />
 {% endblock %}
 
 {% block contenido %}
 <div class="produccion-page">
 
   <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ═══════════ DASHBOARD KPI ═══════════ -->
+  <div id="dashboard-alertas" class="dashboard-alertas"></div>
+
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card kpi-total">
+      <span class="kpi-icono">📦</span>
+      <div class="kpi-valor" id="kpi-total">—</div>
+      <div class="kpi-label">Total órdenes</div>
+    </div>
+    <div class="kpi-card kpi-gris">
+      <span class="kpi-icono">⏳</span>
+      <div class="kpi-valor" id="kpi-pendientes">—</div>
+      <div class="kpi-label">Pendientes</div>
+    </div>
+    <div class="kpi-card kpi-azul">
+      <span class="kpi-icono">⚙️</span>
+      <div class="kpi-valor" id="kpi-en-progreso">—</div>
+      <div class="kpi-label">En producción</div>
+    </div>
+    <div class="kpi-card kpi-verde">
+      <span class="kpi-icono">✅</span>
+      <div class="kpi-valor" id="kpi-completadas">—</div>
+      <div class="kpi-label">Completadas</div>
+    </div>
+    <div class="kpi-card kpi-rojo">
+      <span class="kpi-icono">🔴</span>
+      <div class="kpi-valor" id="kpi-atrasadas">—</div>
+      <div class="kpi-label">Atrasadas</div>
+    </div>
+    <div class="kpi-card kpi-amarillo">
+      <span class="kpi-icono">📅</span>
+      <div class="kpi-valor" id="kpi-hoy">—</div>
+      <div class="kpi-label">Programadas hoy</div>
+    </div>
+  </div>
+
+  <div class="progreso-general-card">
+    <div class="progreso-general-header">
+      <span>Progreso general de producción</span>
+      <span id="progreso-general-pct">—%</span>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progreso-general-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TABS ═══════════ -->
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('productos', this)">👕 Producción</div>
+    <div class="tab active" onclick="switchTab('productos', this)">👕 Productos</div>
     <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
     <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance de Operarios</div>
   </div>
 
+  <!-- ═══════════ TAB PRODUCTOS ═══════════ -->
   <div id="tab-productos" class="tab-content active">
     <div class="table-card">
       <div class="table-toolbar">
@@ -65,11 +115,13 @@
     </div>
   </div>
 
+  <!-- ═══════════ TAB ÓRDENES (ahora: cards con progreso) ═══════════ -->
   <div id="tab-ordenes" class="tab-content">
     <div class="table-card">
       <div class="table-toolbar">
         <h3>Órdenes de Producción</h3>
         <div class="toolbar-right">
+          <button class="btn btn-primary" onclick="abrirModalNuevaOrden()">➕ Nueva Orden</button>
           <div class="search-wrap">
             <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -77,57 +129,26 @@
             </svg>
             <input id="search-ordenes" type="text" placeholder="Buscar orden..." oninput="filtrarOrdenes()" />
           </div>
-          <select id="filter-estado-ord" class="filter-select" onchange="filtrarOrdenes()">
-            <option value="">Todos los estados</option>
-            <option>Pendiente</option>
-            <option>En Progreso</option>
-            <option>Completado</option>
-            <option>Detenido</option>
-          </select>
         </div>
       </div>
-      <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Cliente</th>
-            <th>Producto</th>
-            <th>Descripción</th>
-            <th>Cantidad</th>
-            <th>Fecha Inicio</th>
-            <th>Fecha Est. Fin</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-ordenes">
-          <tr>
-            <td colspan="8" style="text-align:center;padding:30px">
-              <span class="spinner"></span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
-    </div>
 
-    <div class="table-card gantt-card">
-      <div class="table-toolbar">
-        <h3>📅 Calendario de Producción</h3>
-        <div class="gantt-legend">
-          <span class="legend-item"><span class="legend-dot estado-ord-Pendiente"></span>Pendiente</span>
-          <span class="legend-item"><span class="legend-dot estado-ord-En-Progreso"></span>En Progreso</span>
-          <span class="legend-item"><span class="legend-dot estado-ord-Completado"></span>Completado</span>
-          <span class="legend-item"><span class="legend-dot estado-ord-Detenido"></span>Detenido</span>
-        </div>
+      <!-- Filtros rápidos -->
+      <div class="filtros-rapidos" id="filtros-rapidos">
+        <button class="chip-filtro active" data-filtro="">Todas</button>
+        <button class="chip-filtro" data-filtro="hoy">Hoy</button>
+        <button class="chip-filtro" data-filtro="semana">Esta semana</button>
+        <button class="chip-filtro" data-filtro="atrasadas">🔴 Atrasadas</button>
+        <button class="chip-filtro" data-filtro="en_produccion">⚙️ En producción</button>
+        <button class="chip-filtro" data-filtro="terminadas">✅ Terminadas</button>
       </div>
-      <div id="gantt-ordenes" class="gantt-wrap">
+
+      <div id="ordenes-grid" class="ordenes-grid">
         <div class="empty-state"><span class="spinner"></span></div>
       </div>
     </div>
   </div>
 
+  <!-- ═══════════ TAB OPERARIOS ═══════════ -->
   <div id="tab-operarios" class="tab-content">
     <div class="table-card">
       <div class="table-toolbar">
@@ -204,7 +225,7 @@
     </div>
   </div>
 
-  <!-- MODAL: Nueva/Editar orden de producción -->
+  <!-- MODAL: Nueva/Editar orden de producción (formulario simple) -->
   <div class="prod-modal-backdrop" id="modal-orden">
     <div class="prod-modal">
       <div class="prod-modal-header">
@@ -247,16 +268,9 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Costo Estimado</label>
-            <input id="o-costo-estimado" type="number" min="0" step="0.01" />
-          </div>
-          <div class="form-group">
             <label>Estado *</label>
             <select id="o-estado">
               <option value="Pendiente">Pendiente</option>
-              <option value="En Progreso">En Progreso</option>
-              <option value="Completado">Completado</option>
-              <option value="Detenido">Detenido</option>
             </select>
             <span class="campo-error-msg" id="err-o-estado">Selecciona un estado.</span>
           </div>
@@ -269,6 +283,45 @@
     </div>
   </div>
 
+  <!-- MODAL: Detalle grande de orden, con pestañas -->
+  <div class="prod-modal-backdrop" id="modal-detalle-orden">
+    <div class="prod-modal prod-modal-grande">
+      <div class="prod-modal-header detalle-header" id="detalle-header">
+        <div>
+          <h3 id="detalle-titulo">ORD-000</h3>
+          <span id="detalle-subtitulo" class="detalle-subtitulo"></span>
+        </div>
+        <button class="prod-modal-close" onclick="cerrarModalDetalle()">×</button>
+      </div>
+
+      <div class="detalle-progreso-wrap">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="detalle-progress-fill" style="width:0%"></div>
+        </div>
+        <span id="detalle-progress-pct">0%</span>
+      </div>
+
+      <div class="detalle-tabs">
+        <button class="detalle-tab active" data-tab="resumen" onclick="cambiarTabDetalle('resumen')">Resumen</button>
+        <button class="detalle-tab" data-tab="etapas" onclick="cambiarTabDetalle('etapas')">Etapas</button>
+        <button class="detalle-tab" data-tab="operarios-tab" onclick="cambiarTabDetalle('operarios-tab')">Operarios</button>
+        <button class="detalle-tab" data-tab="historial" onclick="cambiarTabDetalle('historial')">Historial</button>
+      </div>
+
+      <div class="detalle-body">
+        <div class="detalle-panel active" id="panel-resumen"></div>
+        <div class="detalle-panel" id="panel-etapas"></div>
+        <div class="detalle-panel" id="panel-operarios-tab"></div>
+        <div class="detalle-panel" id="panel-historial"></div>
+      </div>
+
+      <div class="prod-modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModalDetalle()">Cerrar</button>
+        <button class="btn btn-primary" id="btn-editar-desde-detalle">✏️ Editar orden</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
 </div>
@@ -277,9 +330,6 @@
 {% block extra_js %}
 <script src="{% static 'js/produccion.js' %}?v={% now 'U' %}"></script>
 <script>
-  // Evita que "Fecha Est. Fin" quede antes de "Fecha Inicio",
-  // y evita que Inicio se retroceda por debajo de hoy si el JS externo
-  // llegara a reescribir el atributo min al abrir el modal.
   (function () {
     var HOY = "{% now 'Y-m-d' %}";
     var inpInicio = document.getElementById('o-fecha-inicio');

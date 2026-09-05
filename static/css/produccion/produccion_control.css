@@ -1,0 +1,155 @@
+/* ============================================================
+   HebraTech — Centro de Control de Producción
+   Paleta del proyecto: #2C3333, #395B64, #A5C9CA, #E7F6F2
+   ============================================================ */
+
+/* ── Dashboard: alertas ─────────────────────────── */
+.dashboard-alertas { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.alerta-banner {
+  padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 8px;
+}
+.alerta-danger  { background: #fee2e2; color: #991b1b; }
+.alerta-warning { background: #fef9c3; color: #854d0e; }
+.alerta-info    { background: #dbeafe; color: #1e40af; }
+
+/* ── Dashboard: KPI grid ─────────────────────────── */
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px; margin-bottom: 16px;
+}
+.kpi-card {
+  background: #fff; border-radius: 12px; padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center;
+  border-top: 4px solid #A5C9CA;
+}
+.kpi-icono { font-size: 22px; }
+.kpi-valor { font-size: 28px; font-weight: 700; color: #2C3333; margin: 4px 0; }
+.kpi-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; }
+.kpi-total     { border-top-color: #395B64; }
+.kpi-gris      { border-top-color: #9ca3af; }
+.kpi-azul      { border-top-color: #3b82f6; }
+.kpi-verde     { border-top-color: #22c55e; }
+.kpi-rojo      { border-top-color: #ef4444; }
+.kpi-amarillo  { border-top-color: #eab308; }
+
+/* ── Progreso general ────────────────────────────── */
+.progreso-general-card {
+  background: #fff; border-radius: 12px; padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px;
+}
+.progreso-general-header {
+  display: flex; justify-content: space-between; font-weight: 600;
+  color: #2C3333; margin-bottom: 8px;
+}
+
+/* ── Barra de progreso genérica ──────────────────── */
+.progress-bar-track {
+  width: 100%; height: 10px; background: #E7F6F2; border-radius: 6px; overflow: hidden;
+}
+.progress-bar-track.progress-bar-sm { height: 6px; }
+.progress-bar-fill {
+  height: 100%; background: linear-gradient(90deg, #395B64, #A5C9CA);
+  border-radius: 6px; transition: width .3s ease;
+}
+
+/* ── Filtros rápidos (chips) ─────────────────────── */
+.filtros-rapidos { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 0; }
+.chip-filtro {
+  border: 1px solid #d1d5db; background: #fff; border-radius: 999px;
+  padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.chip-filtro:hover { background: #E7F6F2; }
+.chip-filtro.active { background: #395B64; color: #fff; border-color: #395B64; }
+
+/* ── Grid de cards de órdenes ────────────────────── */
+.ordenes-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px; padding: 16px 20px;
+}
+.orden-card {
+  background: #fff; border-radius: 12px; padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer;
+  border-left: 4px solid #A5C9CA; transition: transform .15s, box-shadow .15s;
+}
+.orden-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.orden-card-atrasada { border-left-color: #ef4444; }
+.orden-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.orden-card-id { font-weight: 700; color: #395B64; font-size: 13px; }
+.orden-card-producto { font-size: 16px; font-weight: 600; color: #2C3333; }
+.orden-card-cantidad { font-size: 13px; color: #6b7280; margin-bottom: 10px; }
+.orden-card-progreso-pct { font-size: 12px; color: #395B64; margin: 4px 0 10px; }
+.orden-card-fechas { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; }
+.orden-card-acciones { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+
+/* ── Badges de estado ─────────────────────────────── */
+.badge {
+  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+  letter-spacing: .02em;
+}
+.badge-gris     { background: #f3f4f6; color: #4b5563; }
+.badge-azul     { background: #dbeafe; color: #1e40af; }
+.badge-verde    { background: #dcfce7; color: #166534; }
+.badge-amarillo { background: #fef9c3; color: #854d0e; }
+.badge-rojo     { background: #fee2e2; color: #991b1b; }
+
+/* ── Modal grande de detalle ─────────────────────── */
+.prod-modal-grande { max-width: 720px; width: 92%; }
+.detalle-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.detalle-subtitulo { font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.detalle-progreso-wrap { display: flex; align-items: center; gap: 10px; padding: 0 24px 16px; }
+.detalle-progreso-wrap .progress-bar-track { flex: 1; }
+
+.detalle-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e5e7eb; padding: 0 24px; }
+.detalle-tab {
+  border: none; background: none; padding: 10px 14px; font-size: 13px; font-weight: 600;
+  color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent;
+}
+.detalle-tab.active { color: #395B64; border-bottom-color: #395B64; }
+.detalle-body { padding: 16px 24px; max-height: 380px; overflow-y: auto; }
+.detalle-panel { display: none; }
+.detalle-panel.active { display: block; }
+
+.resumen-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 13px; color: #374151;
+}
+.resumen-grid strong { color: #2C3333; font-size: 12px; text-transform: uppercase; }
+
+/* ── Timeline de etapas ──────────────────────────── */
+.etapas-timeline { display: flex; flex-direction: column; gap: 0; }
+.etapa-item { display: flex; gap: 14px; position: relative; padding-bottom: 20px; }
+.etapa-item:not(:last-child)::before {
+  content: ''; position: absolute; left: 13px; top: 28px; bottom: 0; width: 2px; background: #e5e7eb;
+}
+.etapa-marcador {
+  width: 28px; height: 28px; border-radius: 50%; color: #fff; display: flex;
+  align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; z-index: 1;
+}
+.etapa-nombre { font-weight: 600; color: #2C3333; }
+.etapa-meta { font-size: 12px; color: #6b7280; margin: 2px 0; }
+.etapa-operarios { font-size: 12px; color: #395B64; }
+
+.lista-simple { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.lista-simple li { font-size: 14px; color: #374151; }
+
+.historial-lista { display: flex; flex-direction: column; gap: 10px; }
+.historial-item { display: flex; gap: 12px; font-size: 13px; }
+.historial-fecha { color: #9ca3af; white-space: nowrap; }
+.historial-texto { color: #374151; }
+
+/* ── Operarios ────────────────────────────────────── */
+.operarios-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px; padding: 16px 20px;
+}
+.operario-card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.operario-card-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.operario-nombre { font-weight: 600; color: #2C3333; }
+.operario-especialidad { font-size: 12px; color: #6b7280; }
+.operario-contadores { display: flex; gap: 12px; font-size: 12px; margin: 8px 0; }
+.operario-tarea-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-top: 1px dashed #e5e7eb; }
+.empty-inline { font-size: 12px; color: #9ca3af; }
+
+/* ── Errores de formulario ───────────────────────── */
+.campo-error { border-color: #ef4444 !important; }
+.campo-error-msg { display: none; color: #ef4444; font-size: 12px; margin-top: 4px; }

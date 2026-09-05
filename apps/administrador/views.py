@@ -6,6 +6,7 @@ from django.contrib.auth.hashers import make_password
 from django.db import connection, IntegrityError
 from django.db.models import Q
 from django.utils import timezone
+from django_fsm import can_proceed
 from .models import (
     Usuario, Operario, Tarea,
     AsignacionTarea, Orden, Cliente, Incidencia, Inventario, Material, Producto, Factura,
@@ -28,6 +29,20 @@ from apps.core.decorators import login_required_rol
 
 # ── Decorador de protección por rol (centralizado en apps.core) ────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
+
+
+# ── Transiciones válidas de Orden, para editar el estado desde el admin ──
+# (orden.estado, nuevo_estado) -> nombre del método @transition en el modelo.
+# Mismo criterio que en apps/produccion/views.py: nunca se asigna
+# orden.estado = texto_libre directamente.
+TRANSICIONES_ORDEN = {
+    ('Pendiente', 'Procesando'):  'marcar_en_produccion',
+    ('Procesando', 'Enviado'):    'marcar_enviado',
+    ('Enviado', 'Entregado'):     'marcar_entregado',
+    ('Enviado', 'Procesando'):    'revertir_a_produccion',
+    ('Pendiente', 'Cancelado'):   'cancelar',
+    ('Procesando', 'Cancelado'):  'cancelar',
+}
 
 
 # ── Ubicaciones predefinidas del inventario ─────────────────
@@ -146,7 +161,7 @@ def admin_portal(request):
 
     ordenes_retrasadas = Orden.objects.filter(
         fechaEntregaEstimada__lt=hoy
-    ).exclude(estado='Completada').count()
+    ).exclude(estado__in=['Entregado', 'Cancelado']).count()
     if ordenes_retrasadas:
         alertas.append({
             'tipo': 'danger', 'icono': '⏰',
@@ -363,6 +378,9 @@ def ordenes_lista(request):
         'estado_filtro': estado_filtro,
         'buscar_filtro': buscar_filtro,
         'prioridad_filtro': prioridad_filtro,
+        # Para que la plantilla sepa qué opciones de estado mostrar en el
+        # <select> de edición según el estado actual de cada orden.
+        'transiciones_orden': TRANSICIONES_ORDEN,
     })
 
 
@@ -374,13 +392,27 @@ def orden_editar(request, idOrden):
         precio_unitario = request.POST.get('precio_unitario')
         fecha_entrega = request.POST.get('fecha_entrega')
         prioridad = request.POST.get('prioridad')
-        estado = request.POST.get('estado')
+        nuevo_estado = request.POST.get('estado')
 
         orden.cantidad = int(cantidad) if cantidad and cantidad.strip() else None
         orden.precioUnitario = float(precio_unitario) if precio_unitario and precio_unitario.strip() else None
         orden.fechaEntregaEstimada = fecha_entrega if fecha_entrega and fecha_entrega.strip() else None
         orden.prioridad = prioridad
-        orden.estado = estado
+
+        if nuevo_estado and nuevo_estado != orden.estado:
+            metodo_nombre = TRANSICIONES_ORDEN.get((orden.estado, nuevo_estado))
+            if not metodo_nombre:
+                messages.error(
+                    request,
+                    f'No se puede pasar la orden #{idOrden} de "{orden.estado}" a "{nuevo_estado}".'
+                )
+                return redirect('admin_ordenes')
+            metodo = getattr(orden, metodo_nombre)
+            if not can_proceed(metodo):
+                messages.error(request, f'Transición "{metodo_nombre}" no permitida en este momento.')
+                return redirect('admin_ordenes')
+            metodo()
+
         orden.save()
         messages.success(request, f'La orden #{idOrden} se ha modificado con éxito.')
 
@@ -413,7 +445,7 @@ def tarea_asignar(request):
     operarios = Operario.objects.filter(estado='activo').select_related('idUsuario')
     tareas = Tarea.objects.all()
     # Solo mostramos órdenes que aún tiene sentido producir
-    ordenes = Orden.objects.exclude(estado__in=['Cancelada', 'Entregada']) \
+    ordenes = Orden.objects.exclude(estado__in=['Cancelado', 'Entregado']) \
         .select_related('idCliente') \
         .order_by('-fechaCreacion')
 
@@ -421,9 +453,8 @@ def tarea_asignar(request):
         id_tarea = request.POST.get('tarea')
         tarea_personalizada = request.POST.get('tarea_personalizada', '').strip()
         proceso_personalizado = request.POST.get('proceso_personalizado', '').strip()
-        # ── Antes: request.POST.get('operario') → ahora: lista de operarios ──
         ids_operarios = request.POST.getlist('operarios')
-        id_orden = request.POST.get('orden')  # 👈 nuevo
+        id_orden = request.POST.get('orden')
         descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fechaInicio')
         fecha_limite = request.POST.get('fechaLimite')
@@ -433,12 +464,10 @@ def tarea_asignar(request):
         horas_estimadas = request.POST.get('horasEstimadas')
 
         try:
-            # ── Validar que se haya seleccionado al menos un operario ──
             if not ids_operarios:
                 messages.error(request, 'Debes seleccionar al menos un operario.')
                 return redirect('admin_tarea_asignar')
 
-            # ── Manejar tarea personalizada ──────────────────────
             if id_tarea == 'otra':
                 if not tarea_personalizada:
                     messages.error(request, 'Por favor, ingresa el nombre de la tarea personalizada.')
@@ -447,7 +476,6 @@ def tarea_asignar(request):
                     messages.error(request, 'Por favor, ingresa el proceso/categoría de la tarea.')
                     return redirect('admin_tarea_asignar')
 
-                # Crear nueva tarea (una sola vez, aunque se asigne a varios operarios)
                 tarea = Tarea.objects.create(
                     nombreTarea=tarea_personalizada,
                     descripcionTarea=descripcion or f'Tarea personalizada: {tarea_personalizada}',
@@ -463,7 +491,6 @@ def tarea_asignar(request):
                     messages.error(request, 'La tarea seleccionada no existe.')
                     return redirect('admin_tarea_asignar')
 
-            # ── Obtener y validar operarios seleccionados ─────────
             operarios_seleccionados = list(
                 Operario.objects.select_related('idUsuario').filter(idOperario__in=ids_operarios)
             )
@@ -471,7 +498,6 @@ def tarea_asignar(request):
                 messages.error(request, 'Uno o más operarios seleccionados no existen.')
                 return redirect('admin_tarea_asignar')
 
-            # ── Restricción: un operario no puede tener más de 1 tarea activa ──
             ESTADOS_ACTIVOS = ['Pendiente', 'En Progreso']
             ocupados = []
             for operario in operarios_seleccionados:
@@ -491,7 +517,6 @@ def tarea_asignar(request):
                 )
                 return redirect('admin_tarea_asignar')
 
-            # ── Resolver orden asociada (opcional) ────────────────
             orden = None
             if id_orden:
                 try:
@@ -500,10 +525,8 @@ def tarea_asignar(request):
                     messages.error(request, 'La orden seleccionada no existe.')
                     return redirect('admin_tarea_asignar')
 
-            # ── Convertir cantidad a entero si existe ─────────────
             cantidad_int = int(cantidad) if cantidad and cantidad.strip() else None
 
-            # ── Validar fechas ────────────────────────────────────
             fecha_inicio_dt = _parsear_fecha(fecha_inicio)
             fecha_limite_dt = _parsear_fecha(fecha_limite)
 
@@ -522,20 +545,18 @@ def tarea_asignar(request):
                 )
                 return redirect('admin_tarea_asignar')
 
-            # ── Calcular horas estimadas ─────────────────────────
             if (not horas_estimadas or not horas_estimadas.strip()) and tipo_prenda and cantidad_int:
                 minutos_unidad = TIEMPOS_ESTANDAR_MINUTOS.get(tipo_prenda, 0)
                 horas_calculadas = round((cantidad_int * minutos_unidad) / 60, 2)
             else:
                 horas_calculadas = float(horas_estimadas) if horas_estimadas and horas_estimadas.strip() else 0.5
 
-            # ── Crear una asignación por cada operario seleccionado ──
             asignaciones_creadas = []
             for operario in operarios_seleccionados:
                 asignacion = AsignacionTarea.objects.create(
                     idTarea=tarea,
                     idOperario=operario,
-                    idOrden=orden,  # 👈 nuevo
+                    idOrden=orden,
                     descripcion=descripcion,
                     fechaInicio=fecha_inicio_dt,
                     fechaLimite=fecha_limite_dt,
@@ -589,8 +610,7 @@ def tareas_lista(request):
     if estado_filtro:
         asignaciones = asignaciones.filter(estado=estado_filtro)
 
-    # Para poder corregir la orden vinculada desde el modal de editar
-    ordenes = Orden.objects.exclude(estado__in=['Cancelada', 'Entregada']) \
+    ordenes = Orden.objects.exclude(estado__in=['Cancelado', 'Entregado']) \
         .select_related('idCliente') \
         .order_by('-fechaCreacion')
 
@@ -616,7 +636,7 @@ def tarea_editar(request, idAsignacion):
         tipo_prenda = request.POST.get('tipoPrenda')
         cantidad_prendas = request.POST.get('cantidadPrendas')
         horas_estimadas = request.POST.get('horas_estimadas')
-        id_orden = request.POST.get('orden')  # 👈 nuevo
+        id_orden = request.POST.get('orden')
 
         try:
             if descripcion is not None:
@@ -627,7 +647,6 @@ def tarea_editar(request, idAsignacion):
 
             if fecha_inicio_dt:
                 asignacion.fechaInicio = fecha_inicio_dt
-            # fecha_limite sí puede vaciarse intencionalmente desde el form
             asignacion.fechaLimite = fecha_limite_dt
 
             if estado:
@@ -640,9 +659,7 @@ def tarea_editar(request, idAsignacion):
 
             if horas_estimadas and horas_estimadas.strip():
                 asignacion.horasEstimadas = float(horas_estimadas)
-            # fechaFinalizacion y horasReales no vienen en este modal: no se tocan.
 
-            # ── Actualizar orden vinculada (opcional) ─────────────
             if id_orden:
                 try:
                     asignacion.idOrden = Orden.objects.get(idOrden=id_orden)
@@ -653,6 +670,14 @@ def tarea_editar(request, idAsignacion):
                 asignacion.idOrden = None
 
             asignacion.save()
+
+            # ── Igual que en apps/operarios/views.py: si esta tarea
+            # pertenece a un lote de producción, recalculamos su avance.
+            id_produccion = asignacion.idTarea.idProduccion
+            if id_produccion:
+                from apps.produccion.services import recalcular_produccion_desde_tareas
+                recalcular_produccion_desde_tareas(id_produccion)
+
             messages.success(request, f'Asignación #{idAsignacion} actualizada correctamente.')
         except Exception as e:
             messages.error(request, f'Error al actualizar la asignación: {str(e)}')
@@ -690,8 +715,6 @@ def incidencias_lista(request):
     if estado_filtro:
         incidencias = incidencias.filter(estado=estado_filtro)
 
-    # Período actual (ej: "Agosto 2026") para autocompletar "Período evaluado"
-    # en el modal de edición, así el admin ya no tiene que escribirlo a mano.
     MESES_ES = {
         1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio',
         7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre',
@@ -727,8 +750,6 @@ def incidencia_editar(request, idIncidencia):
         fecha_revision = request.POST.get('fechaRevision')
         incidencia.fechaRevision = fecha_revision if fecha_revision and fecha_revision.strip() else None
 
-        # ✅ Respuesta al operario: si el texto cambió, se marca como
-        # no leída para que le dispare la notificación en su portal.
         nueva_respuesta = (request.POST.get('respuesta') or '').strip() or None
         if nueva_respuesta != incidencia.respuesta:
             incidencia.respuestaLeida = False
@@ -923,15 +944,12 @@ def exportar_ordenes_pdf(request):
 def inventario_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
 
-    # Capturar término de búsqueda desde la URL (?buscar=texto)
     buscar = request.GET.get('buscar', '').strip()
 
-    # Consultas base
     inventario_list = Inventario.objects.all().select_related('producto')
     materiales_list = Material.objects.all()
     productos_list = Producto.objects.all()
 
-    # Aplicar filtro si se ingresó un valor en la caja de búsqueda
     if buscar:
         inventario_list = inventario_list.filter(
             Q(producto__nombre__icontains=buscar) |
@@ -952,9 +970,7 @@ def inventario_lista(request):
         'materiales_list': materiales_list,
         'total_materiales': materiales_list.count(),
         'productos_list': productos_list,
-        'buscar_filtro': buscar,  # Necesario para mantener el texto en el input
-        # Necesario en la plantilla para detectar si item.ubicacion es
-        # "personalizada" (no está en esta lista) y así preseleccionar "Otro".
+        'buscar_filtro': buscar,
         'ubicaciones_predefinidas': UBICACIONES_PREDEFINIDAS,
     }
     return render(request, 'administrador/inventario_lista.html', context)
@@ -1024,28 +1040,25 @@ def _resolver_ubicacion(request):
 
 
 # ── CRUD: INVENTARIO (PRODUCTOS) ─────────────────────────────
-# Reemplaza la función crear_inventario en apps/administrador/views.py
-
 @admin_required
 def crear_inventario(request):
     if request.method == 'POST':
-        # Captura el nombre escrito libremente
         nombre_producto = request.POST.get('nombre_producto', '').strip()
 
         if not nombre_producto:
             messages.error(request, "Debes ingresar el nombre del producto.")
             return redirect('admin_inventario')
 
-        # Busca si el producto ya existe o créalo automáticamente
         producto, creado = Producto.objects.get_or_create(
             nombre=nombre_producto,
             defaults={
                 'descripcion': f'Producto registrado desde inventario ({nombre_producto})',
-                'estado': 'activo'
+                'precio': 0,
+                'categoria': 'Sin categoría',
+                'estado': 'activo',
             }
         )
 
-        # Verificar si este producto ya cuenta con un registro en el inventario
         if not creado and Inventario.objects.filter(producto=producto).exists():
             messages.error(
                 request,
@@ -1113,7 +1126,6 @@ def crear_inventario(request):
     return redirect('admin_inventario')
 
 
-
 @admin_required
 def editar_inventario(request, pk):
     item = get_object_or_404(Inventario, pk=pk)
@@ -1121,7 +1133,6 @@ def editar_inventario(request, pk):
         producto_id = request.POST.get('producto')
         nuevo_producto = get_object_or_404(Producto, pk=producto_id)
 
-        # ── Si cambia de producto, verificar que el nuevo no tenga ya otro inventario ──
         if nuevo_producto.pk != item.producto.pk and \
                 Inventario.objects.filter(producto=nuevo_producto).exclude(pk=item.pk).exists():
             messages.error(
@@ -1137,7 +1148,6 @@ def editar_inventario(request, pk):
             messages.error(request, "La cantidad disponible y el mínimo definido deben ser números enteros.")
             return redirect('admin_inventario')
 
-        # ── Validaciones de negocio (respaldo del lado servidor) ──
         if cant_disponible < 0 or min_definido < 0:
             messages.error(request, "Los valores de stock no pueden ser negativos.")
             return redirect('admin_inventario')
@@ -1161,7 +1171,6 @@ def editar_inventario(request, pk):
         item.cantidadDisponible = cant_disponible
         item.minimoDefinido = min_definido
 
-        # Parseo seguro a entero para nivelStock
         nivel_stock_input = request.POST.get('nivelStock')
         try:
             item.nivelStock = int(nivel_stock_input)
@@ -1169,8 +1178,6 @@ def editar_inventario(request, pk):
             item.nivelStock = cant_disponible - min_definido
 
         item.unidades = request.POST.get('unidades')
-        # Ubicación: puede venir predefinida o, si se eligió "Otro", del
-        # campo de texto libre "ubicacion_personalizada".
         item.ubicacion = _resolver_ubicacion(request)
         item.cantidadIngresada = cant_ingresada
         item.cantidadEgresada = cant_egresada
@@ -1216,27 +1223,22 @@ def editar_perfil(request):
             pass1 = request.POST.get('password1', '').strip()
             foto = request.FILES.get('foto')
 
-            # Validar campos obligatorios
             if not correo or not nombre:
                 return JsonResponse({'success': False, 'message': 'Nombre y Correo electrónico son obligatorios.'}, status=400)
 
-            # Actualizar datos
             usuario.nombre = nombre
             usuario.apellido = apellido
             usuario.correoElectronico = correo
             usuario.telefono = telefono or None
 
-            # Actualizar foto si la subieron
             if foto:
-                usuario.foto = foto
+                usuario.fotoPerfil = foto
 
-            # Actualizar contraseña si la ingresaron
             if pass1:
                 usuario.contrasena = make_password(pass1)
 
             usuario.save()
 
-            # Actualizar datos de la sesión si guardas el nombre o correo ahí
             request.session['usuario_nombre'] = usuario.nombre
 
             return JsonResponse({'success': True, 'message': 'Perfil actualizado correctamente.'})

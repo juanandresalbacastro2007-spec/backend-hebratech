@@ -1,3 +1,5 @@
+#Views para el portal del cliente, incluyendo registro de órdenes, generación de facturas y cotizaciones, edición de perfil y manejo de notificaciones.
+
 import os
 
 from datetime import datetime

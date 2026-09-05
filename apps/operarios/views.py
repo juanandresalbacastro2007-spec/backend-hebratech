@@ -58,7 +58,6 @@ def perfil_operario(request):
     usuario = operario.idUsuario
 
     if request.method == 'POST':
-        # ── Datos personales
         usuario.nombre   = request.POST.get('nombre',   usuario.nombre).strip()
         usuario.apellido = request.POST.get('apellido', usuario.apellido).strip()
         usuario.telefono = request.POST.get('telefono', '').strip() or None
@@ -68,11 +67,9 @@ def perfil_operario(request):
         if especialidad:
             operario.especialidad = especialidad
 
-        # ── Foto de perfil
         if 'fotoPerfil' in request.FILES:
             usuario.fotoPerfil = request.FILES['fotoPerfil']
 
-        # ── Cambio de contraseña (solo si se llenaron los tres campos)
         pw_actual    = request.POST.get('password_actual', '')
         pw_nueva     = request.POST.get('password_nueva', '')
         pw_confirmar = request.POST.get('password_confirmar', '')
@@ -136,8 +133,6 @@ def api_tareas(request):
     for a in asignaciones:
         tarea = a.idTarea
 
-        # Timestamp epoch (ms) del momento en que se marcó "En Progreso".
-        # Se usa el campo fechaInicio de la asignación como proxy.
         fecha_inicio_ts = None
         if a.estado == 'En Progreso' and a.fechaInicio:
             try:
@@ -157,7 +152,6 @@ def api_tareas(request):
             'horasEstimadas':  float(a.horasEstimadas or 0),
             'tipoPrenda':      a.tipoPrenda or '',
             'cantidadPrendas': a.cantidadPrendas or 0,
-            # La tabla no tiene columna 'maquina'; se usa proceso como fallback
             'maquina':         tarea.proceso or 'Planta General',
             'fechaInicio':     str(a.fechaInicio) if a.fechaInicio else None,
             'fechaFinalizacion': str(a.fechaFinalizacion) if a.fechaFinalizacion else None,
@@ -197,14 +191,22 @@ def api_actualizar_estado(request, id_asignacion):
 
     asignacion.estado = nuevo_estado
 
-    # Si se completa, registrar fecha real de finalización
     if nuevo_estado == 'Completada':
         asignacion.fechaFinalizacion = date.today()
-    # Si se reinicia a Pendiente, borrar fecha de fin
     elif nuevo_estado == 'Pendiente':
         asignacion.fechaFinalizacion = None
 
     asignacion.save()
+
+    # ── Conexión con Producción: si esta tarea pertenece a un lote de
+    # producción (Tarea.idProduccion), recalculamos el avance de esa
+    # Produccion y dejamos que dispare sus propias transiciones FSM
+    # (iniciar()/completar()), que a su vez sincronizan el Orden del
+    # cliente. Import local para evitar ciclo de imports entre apps.
+    id_produccion = asignacion.idTarea.idProduccion
+    if id_produccion:
+        from apps.produccion.services import recalcular_produccion_desde_tareas
+        recalcular_produccion_desde_tareas(id_produccion)
 
     return JsonResponse({'ok': True, 'estado': nuevo_estado})
 
@@ -228,7 +230,7 @@ def api_guardar_reporte(request):
 
     tipo        = body.get('tipoIncidencia', '').strip()
     descripcion = body.get('descripcion', '').strip()
-    severidad   = body.get('severidad', 'Media').strip()   # campo extra del nuevo modal
+    severidad   = body.get('severidad', 'Media').strip()
 
     if not tipo:
         return _json_error('El tipo de incidencia es obligatorio')
@@ -236,7 +238,7 @@ def api_guardar_reporte(request):
         return _json_error('La descripción es demasiado corta')
 
     incidencia = Incidencia.objects.create(
-        idUsuario=operario,
+        idOperario=operario,
         tipoIncidencia=tipo[:50],
         descripcion=descripcion,
         estado='Generado',
@@ -265,7 +267,7 @@ def api_editar_reporte(request, id_incidencia):
     incidencia = get_object_or_404(
         Incidencia,
         idIncidencia=id_incidencia,
-        idUsuario=operario,
+        idOperario=operario,
     )
 
     try:
@@ -303,7 +305,7 @@ def api_eliminar_reporte(request, id_incidencia):
     incidencia = get_object_or_404(
         Incidencia,
         idIncidencia=id_incidencia,
-        idUsuario=operario,
+        idOperario=operario,
     )
 
     if incidencia.estado != 'Generado':
@@ -329,7 +331,7 @@ def api_historial_reportes(request):
 
     incidencias = (
         Incidencia.objects
-        .filter(idUsuario=operario)
+        .filter(idOperario=operario)
         .order_by('-fechaGeneracion', '-idIncidencia')
     )
 
@@ -340,7 +342,6 @@ def api_historial_reportes(request):
             'descripcion':   inc.descripcion,
             'estado':        inc.estado,
             'fechaReporte':  str(inc.fechaGeneracion) if inc.fechaGeneracion else '',
-            # Alias que usan ambas versiones del JS
             'fechaGeneracion': str(inc.fechaGeneracion) if inc.fechaGeneracion else '',
             'respuesta':       inc.respuesta,
             'respuestaLeida':  inc.respuestaLeida,
@@ -364,7 +365,7 @@ def api_marcar_respuesta_leida(request, id_incidencia):
         return _json_error('No autenticado', 401)
 
     incidencia = get_object_or_404(
-        Incidencia, idIncidencia=id_incidencia, idUsuario=operario,
+        Incidencia, idIncidencia=id_incidencia, idOperario=operario,
     )
     if not incidencia.respuestaLeida:
         incidencia.respuestaLeida = True
@@ -390,7 +391,7 @@ def generar_pdf_reporte(request, id_incidencia):
     incidencia = get_object_or_404(
         Incidencia,
         idIncidencia=id_incidencia,
-        idUsuario=operario,
+        idOperario=operario,
     )
 
     try:
@@ -431,7 +432,6 @@ def generar_pdf_reporte(request, id_incidencia):
         return response
 
     except ImportError:
-        # Fallback: texto plano si ReportLab no está disponible
         contenido = (
             f'HebraTech — Reporte de Incidencia\n'
             f'{"=" * 40}\n'

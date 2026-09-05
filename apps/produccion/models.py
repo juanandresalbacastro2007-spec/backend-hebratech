@@ -32,6 +32,7 @@ class Produccion(models.Model):
         ('En Progreso', 'En Progreso'),
         ('Completado',  'Completado'),
         ('Detenido',    'Detenido'),
+        ('Retrasado',   'Retrasado'),
     ]
 
     idProduccion      = models.AutoField(primary_key=True)
@@ -44,7 +45,9 @@ class Produccion(models.Model):
     fechaRealFin      = models.DateField(null=True, blank=True)
     estado            = FSMField(default='Pendiente', choices=ESTADO_CHOICES)
 
-    history = HistoricalRecords()   # tabla nueva propia, no toca 'produccion'
+    # Guarda cuándo pasó a cada estado (incluye 'En Progreso') sin agregar
+    # columnas a la tabla física 'produccion' — crea su propia tabla nueva.
+    history = HistoricalRecords()
 
     class Meta:
         db_table = 'produccion'
@@ -66,3 +69,6 @@ class Produccion(models.Model):
     @transition(field=estado, source='Detenido', target='En Progreso')
     def reanudar(self):
         pass
+
+    # NOTA: 'Retrasado' se aplica por management command vía queryset.update(),
+    # no pasa por el FSMField (igual que en Orden).

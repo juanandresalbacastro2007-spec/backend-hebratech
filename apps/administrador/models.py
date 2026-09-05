@@ -1,4 +1,12 @@
 # apps/administrador/models.py
+#
+# ── FUENTE ÚNICA DE VERDAD ────────────────────────────────────────
+# Este archivo consolida los modelos que antes estaban duplicados en
+# apps.clientes.models y apps.operarios.models (Usuario, Cliente,
+# Operario, Producto, Orden, AsignacionTarea, Tarea, Incidencia).
+# clientes/models.py y operarios/models.py ahora IMPORTAN de acá en
+# vez de redefinir sus propias clases sobre las mismas tablas MySQL.
+# ───────────────────────────────────────────────────────────────────
 
 from django.db import models
 from django_fsm import FSMField, transition
@@ -39,6 +47,10 @@ class Usuario(models.Model):
     direccion = models.CharField(max_length=255, null=True, blank=True)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='sin_asignar')
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    # Antes solo estaba en apps.operarios.models — la columna sí existe en 'usuarios'.
+    fotoPerfil = models.ImageField(
+        upload_to='perfiles/', null=True, blank=True, db_column='fotoPerfil'
+    )
 
     class Meta:
         db_table = 'usuarios'
@@ -46,6 +58,42 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f'{self.nombre} {self.apellido}'
+
+
+class Cliente(models.Model):
+    TIPO_CHOICES = [
+        ('Natural', 'Natural'),
+        ('Empresa', 'Empresa'),
+    ]
+    ESTADO_CHOICES = [
+        ('activo', 'Activo'),
+        ('inactivo', 'Inactivo'),
+        ('bloqueado', 'Bloqueado'),
+    ]
+
+    idCliente = models.AutoField(primary_key=True)
+    idUsuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column='idUsuario'
+    )
+    # Antes solo estaban en apps.clientes.models — las columnas sí existen en 'clientes'.
+    tipoCliente = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Natural')
+    empresa = models.CharField(max_length=150, null=True, blank=True)
+    nombre = models.CharField(max_length=150, null=True, blank=True)
+    correoElectronico = models.CharField(max_length=200, null=True, blank=True)
+    telefono = models.CharField(max_length=30, null=True, blank=True)
+    ciudad = models.CharField(max_length=100, null=True, blank=True)
+    direccion = models.CharField(max_length=255, null=True, blank=True)
+    nit = models.CharField(max_length=30, null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='activo')
+
+    class Meta:
+        db_table = 'clientes'
+        managed = False
+
+    def __str__(self):
+        return self.empresa or self.nombre or f'Cliente #{self.idCliente}'
 
 
 class Operario(models.Model):
@@ -75,6 +123,10 @@ class Tarea(models.Model):
     ]
 
     idTarea = models.AutoField(primary_key=True)
+    # La columna existe en la tabla real 'tareas' pero ningún modelo la
+    # tenía mapeada. Queda disponible como segundo posible camino de
+    # conexión Tarea → Produccion (a definir cuál usamos como fuente).
+    idProduccion = models.IntegerField(null=True, blank=True, db_column='idProduccion')
     nombreTarea = models.CharField(max_length=150)
     descripcionTarea = models.TextField()
     fechaCreacion = models.DateField(auto_now_add=True)
@@ -143,19 +195,47 @@ class AsignacionTarea(models.Model):
         return f'Asignación #{self.idAsignacion}'
 
 
+class Producto(models.Model):
+    idProducto = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=150, db_column='nombre')
+    descripcion = models.TextField()
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    categoria = models.CharField(max_length=100)  # texto libre en BD real, sin choices
+    estado = models.CharField(max_length=20, null=True, blank=True, default='activo')
+
+    class Meta:
+        db_table = 'productos'
+        managed = False
+
+    def __str__(self):
+        return self.nombre
+
+
 class Orden(models.Model):
     ESTADO_CHOICES = [
-        ('Pendiente',     'Pendiente'),
-        ('En producción', 'En producción'),
-        ('Enviado',       'Enviado'),
-        ('Entregado',     'Entregado'),
+        ('Pendiente',  'Pendiente'),
+        ('Procesando', 'Procesando'),
+        ('Enviado',    'Enviado'),
+        ('Entregado',  'Entregado'),
+        ('Cancelado',  'Cancelado'),
+        ('Retrasado',  'Retrasado'),
+    ]
+    PRIORIDAD_CHOICES = [
+        ('Normal',  'Normal'),
+        ('Urgente', 'Urgente'),
     ]
 
     idOrden = models.AutoField(primary_key=True)
     idCliente = models.ForeignKey(
-        'Cliente',
+        Cliente,
         on_delete=models.CASCADE,
         db_column='idCliente'
+    )
+    idProducto = models.ForeignKey(
+        Producto,
+        on_delete=models.SET_NULL,
+        db_column='idProducto',
+        null=True, blank=True
     )
     nombreProducto = models.CharField(max_length=150, null=True, blank=True, db_column='nombreProducto')
     fechaCreacion = models.DateField(auto_now_add=True)
@@ -163,7 +243,7 @@ class Orden(models.Model):
     instrucciones = models.CharField(max_length=1000)
     cantidad = models.IntegerField(null=True, blank=True)
     precioUnitario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    prioridad = models.CharField(max_length=10, default='Normal')
+    prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='Normal')
     estado = FSMField(default='Pendiente', choices=ESTADO_CHOICES)
 
     history = HistoricalRecords()
@@ -173,14 +253,14 @@ class Orden(models.Model):
         managed = False
 
     def __str__(self):
-        return f'Orden #{self.idOrden} — {self.nombreProducto or ""}'
+        return f'Orden #{self.idOrden} — {self.estado}'
 
-    # ── Transiciones válidas de cara al cliente ──────────────
-    @transition(field=estado, source='Pendiente', target='En producción')
+    # ── Transiciones normales, disparadas por producción ──────────
+    @transition(field=estado, source='Pendiente', target='Procesando')
     def marcar_en_produccion(self):
         pass
 
-    @transition(field=estado, source='En producción', target='Enviado')
+    @transition(field=estado, source='Procesando', target='Enviado')
     def marcar_enviado(self):
         pass
 
@@ -188,29 +268,18 @@ class Orden(models.Model):
     def marcar_entregado(self):
         pass
 
-    # Transición de corrección explícita, no libre (ver nota más abajo)
-    @transition(field=estado, source='Enviado', target='En producción')
+    @transition(field=estado, source='Enviado', target='Procesando')
     def revertir_a_produccion(self):
         pass
 
+    @transition(field=estado, source=['Pendiente', 'Procesando'], target='Cancelado')
+    def cancelar(self):
+        pass
 
-class Cliente(models.Model):
-    idCliente = models.AutoField(primary_key=True)
-    idUsuario = models.ForeignKey(
-        Usuario,
-        on_delete=models.CASCADE,
-        db_column='idUsuario'
-    )
-    empresa = models.CharField(max_length=150, null=True, blank=True)
-    nombre = models.CharField(max_length=150, null=True, blank=True)
-    estado = models.CharField(max_length=20, default='activo')
-
-    class Meta:
-        db_table = 'clientes'
-        managed = False
-
-    def __str__(self):
-        return self.empresa or self.nombre or f'Cliente #{self.idCliente}'
+    # NOTA: 'Retrasado' no es una transición manual — lo aplica el
+    # management command de detección de atrasos vía queryset.update(),
+    # que no pasa por el FSMField. Al avanzar de estado normalmente,
+    # la orden sale de 'Retrasado' sin necesidad de una transición extra.
 
 
 class Incidencia(models.Model):
@@ -224,14 +293,13 @@ class Incidencia(models.Model):
     idOperario = models.ForeignKey(
         Operario,
         on_delete=models.CASCADE,
-        db_column='idUsuario'   # 👈 la columna real en MySQL es idUsuario, no idOperario
+        db_column='idUsuario'   # la columna real en MySQL es idUsuario, no idOperario
     )
     tipoIncidencia = models.CharField(max_length=50)
     descripcion = models.TextField()
     estado = models.CharField(max_length=30, choices=ESTADO_CHOICES, default='Generado')
     fechaGeneracion = models.DateField(auto_now_add=True)
     fechaRevision = models.DateField(null=True, blank=True)
-
     periodoEvaluado = models.CharField(max_length=50, null=True, blank=True)
     respuesta = models.TextField(null=True, blank=True)
     respuestaLeida = models.BooleanField(default=True)
@@ -246,6 +314,7 @@ class Incidencia(models.Model):
 
 class Factura(models.Model):
     ESTADO_CHOICES = [
+        ('Emitida', 'Emitida'),
         ('Pendiente de pago', 'Pendiente de pago'),
         ('Pagada', 'Pagada'),
     ]
@@ -266,7 +335,7 @@ class Factura(models.Model):
     fechaPago = models.DateTimeField(null=True, blank=True)
     rutaPDF = models.CharField(max_length=255)
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente de pago')
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Emitida')
 
     class Meta:
         db_table = 'facturas'
@@ -274,19 +343,6 @@ class Factura(models.Model):
 
     def __str__(self):
         return f'Factura {self.numeroFactura}'
-
-
-class Producto(models.Model):
-    idProducto = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=150, db_column='nombre')
-    descripcion = models.TextField(null=True, blank=True)
-
-    class Meta:
-        db_table = 'productos'
-        managed = False
-
-    def __str__(self):
-        return self.nombre
 
 
 class Inventario(models.Model):
