@@ -1194,6 +1194,7 @@ html, body {
     border-color:  #7c3aed;
 }
 
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
