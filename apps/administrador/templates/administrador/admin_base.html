@@ -76,7 +76,7 @@
               <div class="admin-role">Administrador <i class="bi bi-pencil-fill perfil-edit-hint"></i></div>
             </div>
           </div>
-           <br>
+          <br>
           <a href="{% url 'logout' %}" class="btn-logout">
             <i class="bi bi-box-arrow-right"></i> Cerrar sesión
           </a>
@@ -101,32 +101,11 @@
     <!-- Contenido Principal -->
     <div class="content-wrap">
 
-      <!-- 🔔 Mensajes flash de Django (visible en TODAS las páginas de admin) -->
-      {% if messages %}
-        <div class="messages-wrapper mb-3">
-          {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
-              {% if message.tags == 'success' %}
-                <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
-              {% elif message.tags == 'error' or message.tags == 'danger' %}
-                <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
-              {% elif message.tags == 'warning' %}
-                <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
-              {% else %}  
-                <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
-              {% endif %}
-              <div>{{ message }}</div>
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-
       {% block contenido %}{% endblock %}
     </div>
   </div>
 
- <!-- ══ MODAL EDITAR PERFIL ══ -->
+<!-- ══ MODAL EDITAR PERFIL ══ -->
 <div class="modal fade" id="modalEditarPerfil" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content perfil-modal-content">
