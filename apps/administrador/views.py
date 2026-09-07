@@ -1207,6 +1207,42 @@ def eliminar_inventario(request, pk):
     return redirect('admin_inventario')
 
 
+@admin_required
+def registrar_egreso(request, pk):
+    item = get_object_or_404(Inventario, pk=pk)
+    if request.method == 'POST':
+        try:
+            cantidad = int(request.POST.get('cantidadEgreso') or 0)
+        except ValueError:
+            messages.error(request, "La cantidad a egresar debe ser un número entero.")
+            return redirect('admin_inventario')
+
+        if cantidad <= 0:
+            messages.error(request, "La cantidad a egresar debe ser mayor a 0.")
+            return redirect('admin_inventario')
+
+        if cantidad > item.cantidadDisponible:
+            messages.error(
+                request,
+                f"No puedes egresar {cantidad} unidades de '{item.producto.nombre}': "
+                f"solo hay {item.cantidadDisponible} disponibles."
+            )
+            return redirect('admin_inventario')
+
+        item.cantidadDisponible -= cantidad
+        item.cantidadEgresada += cantidad
+        item.fechaSalida = timezone.now().date()
+        item.save()
+
+        messages.success(
+            request,
+            f"Se registraron {cantidad} unidades egresadas de '{item.producto.nombre}'. "
+            f"Disponible actual: {item.cantidadDisponible}."
+        )
+
+    return redirect('admin_inventario')
+
+
 # ── Perfil de Usuario ────────────────────────────────────────
 
 @admin_required

@@ -40,6 +40,7 @@ urlpatterns = [
     path('inventario/crear/', views.crear_inventario, name='crear_inventario'),
     path('inventario/editar/<int:pk>/', views.editar_inventario, name='editar_inventario'),
     path('inventario/eliminar/<int:pk>/', views.eliminar_inventario, name='eliminar_inventario'),
+    path('inventario/egreso/<int:pk>/', views.registrar_egreso, name='registrar_egreso'),
 
     # Materiales
     path('materiales/crear/', views.crear_material, name='crear_material'),

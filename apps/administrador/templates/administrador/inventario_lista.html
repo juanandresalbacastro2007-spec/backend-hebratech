@@ -56,7 +56,10 @@
 <div class="section-card mb-4">
   <div class="section-card-header d-flex justify-content-between align-items-center">
     <h6 class="mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>Registros de Inventario (Productos)</h6>
-    <div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEgresos">
+        <i class="bi bi-box-arrow-up me-1"></i>Registrar Egreso
+      </button>
       <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearInventario">
         <i class="bi bi-plus-lg me-1"></i>Nuevo Registro
       </button>
@@ -142,6 +145,65 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- Modal Registrar Egresos (edición rápida) -->
+<div class="modal fade" id="modalEgresos" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-box-arrow-up me-2 text-danger"></i>Registrar Egresos Rápidos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+          <table class="table align-middle mb-0">
+            <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+              <tr>
+                <th>Producto</th>
+                <th class="text-center">Disponible</th>
+                <th class="text-center" style="width: 150px;">Cantidad a egresar</th>
+                <th class="text-center" style="width: 90px;">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in inventario_list %}
+              <tr>
+                <td>
+                  <span class="fw-medium">{{ item.producto.nombre|default:item.producto_id }}</span>
+                  <br><small class="text-muted">#{{ item.idInventario }} · {{ item.ubicacion|default:"—" }}</small>
+                </td>
+                <td class="text-center">
+                  <span class="badge-ht {% if item.cantidadDisponible <= item.minimoDefinido %}badge-danger{% else %}badge-success{% endif %}">
+                    {{ item.cantidadDisponible }}
+                  </span>
+                </td>
+                <td colspan="2" class="p-1">
+                  <form method="POST" action="{% url 'registrar_egreso' item.idInventario %}" class="d-flex justify-content-center align-items-center gap-2">
+                    {% csrf_token %}
+                    <input type="number" name="cantidadEgreso" class="form-control form-control-sm text-center"
+                           min="1" max="{{ item.cantidadDisponible }}" placeholder="0" style="width: 90px;" required>
+                    <button type="submit" class="btn btn-sm btn-danger" title="Confirmar egreso"
+                            {% if item.cantidadDisponible == 0 %}disabled{% endif %}>
+                      <i class="bi bi-check-lg"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">No hay productos en inventario.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -716,7 +778,6 @@
         const disponible = parseInt(disponibleInput.value, 10);
         let esValido = true;
 
-        // No permitir negativos en ninguno de los dos
         if (isNaN(minimo) || minimo < 0) {
           minimoInput.setCustomValidity("El mínimo no puede ser negativo.");
           esValido = false;
@@ -743,14 +804,12 @@
         input.addEventListener('input', function () {
           ocultarAlertaInventario();
           validarStockInventario();
-          // Refleja el estado visual sin esperar al submit
           if (formCrearInventario.classList.contains('was-validated')) {
             formCrearInventario.classList.add('was-validated');
           }
         });
       });
 
-      // Bloquear valores negativos también desde el teclado/flechas del input
       [minimoInput, disponibleInput].forEach(function (input) {
         input.addEventListener('keydown', function (e) {
           if (e.key === '-' || e.key === 'e' || e.key === '+') {
@@ -788,12 +847,10 @@
     }
 
     // --- VALIDACIÓN DE FORMULARIOS ---
-    // (se excluye #formCrearInventario porque ya tiene su propio validador más arriba)
     const forms = document.querySelectorAll('.needs-validation:not(#formCrearInventario)');
 
     Array.from(forms).forEach(form => {
       form.addEventListener('submit', event => {
-        // Sincronizar campo visible de costo con el hidden antes de evaluar validez
         const costoVis = form.querySelector('#costoVisible');
         const costoHid = form.querySelector('#costoUnitario');
         if (costoVis && costoHid) {
