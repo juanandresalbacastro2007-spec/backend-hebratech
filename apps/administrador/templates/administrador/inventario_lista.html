@@ -148,60 +148,74 @@
   </div>
 </div>
 
-<!-- Modal Registrar Egresos (edición rápida) -->
+<!-- Modal Registrar Egresos Masivos -->
 <div class="modal fade" id="modalEgresos" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-box-arrow-up me-2 text-danger"></i>Registrar Egresos Rápidos</h5>
+        <h5 class="modal-title"><i class="bi bi-box-arrow-up me-2 text-danger"></i>Registrar Egresos Rápido</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
-          <table class="table align-middle mb-0">
-            <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
-              <tr>
-                <th>Producto</th>
-                <th class="text-center">Disponible</th>
-                <th class="text-center" style="width: 150px;">Cantidad a egresar</th>
-                <th class="text-center" style="width: 90px;">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in inventario_list %}
-              <tr>
-                <td>
-                  <span class="fw-medium">{{ item.producto.nombre|default:item.producto_id }}</span>
-                  <br><small class="text-muted">#{{ item.idInventario }} · {{ item.ubicacion|default:"—" }}</small>
-                </td>
-                <td class="text-center">
-                  <span class="badge-ht {% if item.cantidadDisponible <= item.minimoDefinido %}badge-danger{% else %}badge-success{% endif %}">
-                    {{ item.cantidadDisponible }}
-                  </span>
-                </td>
-                <td colspan="2" class="p-1">
-                  <form method="POST" action="{% url 'registrar_egreso' item.idInventario %}" class="d-flex justify-content-center align-items-center gap-2">
-                    {% csrf_token %}
-                    <input type="number" name="cantidadEgreso" class="form-control form-control-sm text-center"
-                           min="1" max="{{ item.cantidadDisponible }}" placeholder="0" style="width: 90px;" required>
-                    <button type="submit" class="btn btn-sm btn-danger" title="Confirmar egreso"
-                            {% if item.cantidadDisponible == 0 %}disabled{% endif %}>
-                      <i class="bi bi-check-lg"></i>
-                    </button>
-                  </form>
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="text-center text-muted py-4">No hay productos en inventario.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+
+        <!-- 🔍 BARRA DE BÚSQUEDA DENTRO DEL MODAL -->
+        <div class="mb-3">
+          <div class="input-group">
+            <span class="input-group-text bg-white text-muted border-end-0">
+              <i class="bi bi-search"></i>
+            </span>
+            <input type="text" id="buscarModalEgreso" class="form-control border-start-0" placeholder="Buscar producto por nombre o ID...">
+          </div>
         </div>
+
+        <form id="formEgresosMasivos" method="POST" action="{% url 'registrar_egresos_masivo' %}">
+          {% csrf_token %}
+          <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+            <table class="table align-middle mb-0" id="tablaModalEgresos">
+              <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                <tr>
+                  <th>Producto</th>
+                  <th class="text-center">Disponible</th>
+                  <th class="text-center" style="width: 160px;">Cantidad a egresar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in inventario_list %}
+                <tr class="fila-egreso" data-nombre="{{ item.producto.nombre|lower }}" data-id="{{ item.idInventario }}">
+                  <td>
+                    <span class="fw-medium">{{ item.producto.nombre|default:item.producto_id }}</span>
+                    <br><small class="text-muted">#{{ item.idInventario }} · {{ item.ubicacion|default:"—" }}</small>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge-ht {% if item.cantidadDisponible <= item.minimoDefinido %}badge-danger{% else %}badge-success{% endif %}">
+                      {{ item.cantidadDisponible }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <input type="number" 
+                           name="egreso_{{ item.idInventario }}" 
+                           class="form-control form-control-sm text-center input-egreso" 
+                           value="0" 
+                           min="0" 
+                           max="{{ item.cantidadDisponible }}"
+                           {% if item.cantidadDisponible == 0 %}disabled{% endif %}>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted py-4">No hay productos disponibles en inventario.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </form>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer d-flex justify-content-between">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="submit" form="formEgresosMasivos" class="btn btn-danger">
+          <i class="bi bi-check-lg me-1"></i> Aplicar Egresos
+        </button>
       </div>
     </div>
   </div>
@@ -237,8 +251,7 @@
               </div>
               <div class="col-6 mb-3">
                 <label class="form-label">Mínimo Definido</label>
-                <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" min="0" 
-                required>
+                <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" min="0" required>
               </div>
             </div>
             <div class="row">
@@ -284,7 +297,6 @@
                      value="{% if item.ubicacion and item.ubicacion not in ubicaciones_predefinidas %}{{ item.ubicacion }}{% endif %}">
             </div>
 
-            <!-- INGRESADO / EGRESADO: no se muestran al editar, se definen solo al crear el registro -->
             <input type="hidden" name="cantidadIngresada" value="{{ item.cantidadIngresada }}">
             <input type="hidden" name="cantidadEgresada" value="{{ item.cantidadEgresada }}">
 
@@ -351,7 +363,7 @@
           <th class="text-center">Acciones</th>
         </tr>
       </thead>
-     <tbody>
+      <tbody>
         {% for mat in materiales_list %}
         <tr>
           <td class="text-center"><strong>#{{ mat.idMaterial }}</strong></td>
@@ -429,17 +441,14 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-
             <div class="mb-3">
               <label class="form-label">Nombre del Material</label>
               <input type="text" name="nombreMaterial" class="form-control" value="{{ mat.nombreMaterial }}" required>
             </div>
-
             <div class="mb-3">
               <label class="form-label">Descripción</label>
               <textarea name="descripcion" class="form-control" rows="2">{{ mat.descripcion }}</textarea>
             </div>
-
             <div class="row">
               <div class="col-6 mb-3">
                 <label class="form-label">Stock Actual</label>
@@ -450,7 +459,6 @@
                 <input type="number" name="stockMinimo" class="form-control" value="{{ mat.stockMinimo }}" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
               </div>
             </div>
-
             <div class="row">
               <div class="col-6 mb-3">
                 <label class="form-label">Unidad Base</label>
@@ -464,27 +472,23 @@
                   <option value="Unidad" {% if mat.unidadBase == 'Unidad' or mat.unidadBase == 'und' %}selected{% endif %}>Unidad</option>
                 </select>
               </div>
-
               <div class="col-6 mb-3">
                 <label class="form-label">Costo Unitario</label>
                 <div class="input-group">
                   <span class="input-group-text">$</span>
-                  <input
-                    type="text"
-                    class="form-control"
-                    placeholder="1.000.000"
-                    value="{% if mat.costoUnitario %}{{ mat.costoUnitario|intcomma }}{% endif %}"
-                    oninput="formatearMilesEdit(this, 'costoUnitarioEdit{{ mat.idMaterial }}')"
-                    required>
+                  <input type="text"
+                         class="form-control"
+                         placeholder="1.000.000"
+                         value="{% if mat.costoUnitario %}{{ mat.costoUnitario|intcomma }}{% endif %}"
+                         oninput="formatearMilesEdit(this, 'costoUnitarioEdit{{ mat.idMaterial }}')"
+                         required>
                 </div>
-                <input
-                  type="hidden"
-                  name="costoUnitario"
-                  id="costoUnitarioEdit{{ mat.idMaterial }}"
-                  value="{{ mat.costoUnitario|default:'' }}">
+                <input type="hidden"
+                       name="costoUnitario"
+                       id="costoUnitarioEdit{{ mat.idMaterial }}"
+                       value="{{ mat.costoUnitario|default:'' }}">
               </div>
             </div>
-
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -529,8 +533,6 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-
-          <!-- Aviso general de error (para errores que vengan del backend/Django) -->
           {% if error_inventario %}
             <div class="alert alert-danger d-flex align-items-center" role="alert">
               <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -552,13 +554,13 @@
             <div class="col-6 mb-3">
               <label class="form-label">Mínimo Definido</label>
               <input type="number" name="minimoDefinido" id="minimoDefinidoInv" class="form-control" value="0" min="0" step="1" 
-              oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
+                     oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
               <div class="invalid-feedback">El mínimo no puede ser negativo.</div>
             </div>
             <div class="col-6 mb-3">
               <label class="form-label">Stock Actual (Disponible)</label>
               <input type="number" name="cantidadDisponible" id="cantidadDisponibleInv" class="form-control" value="0" min="0" step="1" 
-              oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
+                     oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
               <div class="invalid-feedback" id="feedbackDisponibleInv">El stock actual no puede ser negativo ni menor al mínimo definido.</div>
             </div>
           </div>
@@ -609,7 +611,6 @@
             <div class="invalid-feedback">La cantidad ingresada no puede ser negativa.</div>
           </div>
 
-          <!-- Se elimina el campo "Cantidad Egresada": un registro nuevo no debería nacer con egresos -->
           <input type="hidden" name="cantidadEgresada" value="0">
         </div>
         <div class="modal-footer">
@@ -625,47 +626,52 @@
 <div class="modal fade" id="modalCrearMaterial" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <form method="POST" action="{% url 'crear_material' %}" class="needs-validation" novalidate>
+      <form method="POST" action="{% url 'crear_material' %}" id="formCrearMaterial" class="needs-validation" novalidate>
         {% csrf_token %}
         <div class="modal-header">
-          <h5 class="modal-title">Registrar Nuevo Material</h5>
+          <h5 class="modal-title">Nuevo Material</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          {% if error_material %}
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <div>{{ error_material }}</div>
+            </div>
+          {% endif %}
+          <div class="alert alert-danger d-none" id="alertErrorMaterial" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span id="alertErrorMaterialTexto"></span>
+          </div>
 
           <div class="mb-3">
             <label class="form-label">Nombre del Material</label>
-            <input type="text" name="nombreMaterial" class="form-control" required placeholder="Ej: Tela Algodón 100%">
+            <input type="text" name="nombreMaterial" class="form-control" placeholder="Ej: Hilo de Nylon" required>
             <div class="invalid-feedback">Ingresa el nombre del material.</div>
           </div>
-
           <div class="mb-3">
             <label class="form-label">Descripción</label>
-            <textarea name="descripcion" class="form-control" rows="2" placeholder="Detalles o especificaciones" required></textarea>
-            <div class="invalid-feedback">Ingresa una descripción para el material.</div>
+            <textarea name="descripcion" class="form-control" rows="2" placeholder="Opcional..."></textarea>
           </div>
-
           <div class="row">
             <div class="col-6 mb-3">
-              <label class="form-label">Stock Actual</label>
-              <input type="number" name="stockActual" class="form-control" placeholder="Ej: 10" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57"
-              oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
-              <div class="invalid-feedback">El stock actual debe ser mayor a 0.</div>
+              <label class="form-label">Stock Mínimo</label>
+              <input type="number" name="stockMinimo" id="stockMinimoMat" class="form-control" value="0" min="0" step="1"
+                     oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
+              <div class="invalid-feedback">El stock mínimo no puede ser negativo.</div>
             </div>
             <div class="col-6 mb-3">
-              <label class="form-label">Stock Mínimo</label>
-              <input type="number" name="stockMinimo" class="form-control" placeholder="Ej: 5" min="1" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" 
-              oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
-              <div class="invalid-feedback">El stock mínimo debe ser mayor a 0.</div>
+              <label class="form-label">Stock Actual</label>
+              <input type="number" name="stockActual" id="stockActualMat" class="form-control" value="0" min="0" step="1"
+                     oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
+              <div class="invalid-feedback" id="feedbackStockActualMat">El stock actual no puede ser negativo ni menor al stock mínimo.</div>
             </div>
           </div>
-
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Unidad Base</label>
               <select name="unidadBase" class="form-select" required>
-                <option value="" disabled selected>Selecciona una opción...</option>
-                <option value="Metros">Metros</option>
+                <option value="Metros" selected>Metros</option>
                 <option value="Centímetros">Centímetros</option>
                 <option value="Milímetros">Milímetros</option>
                 <option value="Kilogramos">Kilogramos</option>
@@ -673,237 +679,224 @@
                 <option value="Conos">Conos</option>
                 <option value="Unidad">Unidad</option>
               </select>
-              <div class="invalid-feedback">Selecciona una unidad base.</div>
             </div>
-
             <div class="col-6 mb-3">
               <label class="form-label">Costo Unitario</label>
-              <div class="input-group has-validation">
+              <div class="input-group">
                 <span class="input-group-text">$</span>
-                <input type="text" id="costoVisible" class="form-control" placeholder="1.000.000" oninput="formatearMiles(this)" required>
-                <div class="invalid-feedback">Ingresa un costo unitario válido.</div>
+                <input type="text"
+                       id="costoUnitarioMaterialMostrar"
+                       class="form-control"
+                       placeholder="1.000.000"
+                       oninput="formatearMiles(this, 'costoUnitarioMaterial')"
+                       required>
               </div>
-              <input type="hidden" name="costoUnitario" id="costoUnitario" required>
+              <input type="hidden" name="costoUnitario" id="costoUnitarioMaterial">
+              <div class="invalid-feedback">Ingresa el costo unitario.</div>
             </div>
           </div>
-
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar Material</button>
+          <button type="submit" class="btn btn-primary">Crear Material</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-{% endblock %}
-
-{% block extra_js %}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const buscarInput = document.getElementById('buscarInput');
-    const searchForm = document.getElementById('searchForm');
+document.addEventListener('DOMContentLoaded', function() {
 
-    if (buscarInput && searchForm) {
-      buscarInput.addEventListener('input', function () {
-        if (this.value.trim() === "") {
-          searchForm.submit();
+  // 🔍 Lógica de búsqueda dinámica dentro del Modal de Egresos
+  const inputBuscar = document.getElementById('buscarModalEgreso');
+  const filas = document.querySelectorAll('#tablaModalEgresos .fila-egreso');
+
+  if (inputBuscar) {
+    inputBuscar.addEventListener('input', function () {
+      const termino = this.value.toLowerCase().trim();
+
+      filas.forEach(fila => {
+        const nombre = fila.getAttribute('data-nombre') || '';
+        const id = fila.getAttribute('data-id') || '';
+
+        if (nombre.includes(termino) || id.includes(termino)) {
+          fila.style.display = '';
+        } else {
+          fila.style.display = 'none';
         }
-      });
-    }
-
-    // Bloquear fechas anteriores a hoy en todos los inputs type="date"
-    function bloquearFechasPasadas() {
-      const hoy = new Date();
-      const yyyy = hoy.getFullYear();
-      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-      const dd = String(hoy.getDate()).padStart(2, '0');
-      const fechaHoy = `${yyyy}-${mm}-${dd}`;
-
-      document.querySelectorAll('input[type="date"]').forEach(function (input) {
-        input.setAttribute('min', fechaHoy);
-      });
-    }
-
-    bloquearFechasPasadas();
-    document.body.addEventListener('shown.bs.modal', bloquearFechasPasadas);
-
-    // --- MOSTRAR/OCULTAR CAMPO "OTRO" EN UBICACIÓN ---
-    function togglaUbicacionOtro(select) {
-      const wrap = document.getElementById(select.dataset.target);
-      if (!wrap) return;
-      const input = wrap.querySelector('input[name="ubicacion_personalizada"]');
-      if (select.value === 'otro') {
-        wrap.classList.remove('d-none');
-        if (input) input.setAttribute('required', 'required');
-      } else {
-        wrap.classList.add('d-none');
-        if (input) {
-          input.removeAttribute('required');
-          input.value = '';
-        }
-      }
-    }
-
-    document.querySelectorAll('.ubicacion-select').forEach(function (select) {
-      togglaUbicacionOtro(select); // estado inicial (útil al editar un registro con ubicación personalizada)
-      select.addEventListener('change', function () {
-        togglaUbicacionOtro(select);
       });
     });
+  }
 
-    // --- VALIDACIÓN ESPECÍFICA: FORMULARIO CREAR INVENTARIO ---
-    const formCrearInventario = document.getElementById('formCrearInventario');
-    if (formCrearInventario) {
-      const minimoInput = document.getElementById('minimoDefinidoInv');
-      const disponibleInput = document.getElementById('cantidadDisponibleInv');
-      const alertBox = document.getElementById('alertErrorInventario');
-      const alertTexto = document.getElementById('alertErrorInventarioTexto');
-      const feedbackDisponible = document.getElementById('feedbackDisponibleInv');
+  // Manejo de desplegable "Otro (especificar)" en ubicación
+  document.querySelectorAll('.ubicacion-select').forEach(function(select) {
+    select.addEventListener('change', function() {
+      var targetId = this.getAttribute('data-target');
+      var wrap = document.getElementById(targetId);
+      if (!wrap) return;
 
-      function mostrarAlertaInventario(mensaje) {
-        if (alertBox && alertTexto) {
-          alertTexto.textContent = mensaje;
-          alertBox.classList.remove('d-none');
-        }
+      if (this.value === 'otro') {
+        wrap.classList.remove('d-none');
+      } else {
+        wrap.classList.add('d-none');
+        var inputCustom = wrap.querySelector('input');
+        if (inputCustom) inputCustom.value = '';
       }
-
-      function ocultarAlertaInventario() {
-        if (alertBox) alertBox.classList.add('d-none');
-      }
-
-      function validarStockInventario() {
-        const minimo = parseInt(minimoInput.value, 10);
-        const disponible = parseInt(disponibleInput.value, 10);
-        let esValido = true;
-
-        if (isNaN(minimo) || minimo < 0) {
-          minimoInput.setCustomValidity("El mínimo no puede ser negativo.");
-          esValido = false;
-        } else {
-          minimoInput.setCustomValidity("");
-        }
-
-        if (isNaN(disponible) || disponible < 0) {
-          disponibleInput.setCustomValidity("El stock actual no puede ser negativo.");
-          feedbackDisponible.textContent = "El stock actual no puede ser negativo.";
-          esValido = false;
-        } else if (!isNaN(minimo) && disponible < minimo) {
-          disponibleInput.setCustomValidity("El stock actual no puede ser menor al mínimo definido.");
-          feedbackDisponible.textContent = "El stock actual no puede ser menor al mínimo definido (" + minimo + ").";
-          esValido = false;
-        } else {
-          disponibleInput.setCustomValidity("");
-        }
-
-        return esValido;
-      }
-
-      [minimoInput, disponibleInput].forEach(function (input) {
-        input.addEventListener('input', function () {
-          ocultarAlertaInventario();
-          validarStockInventario();
-          if (formCrearInventario.classList.contains('was-validated')) {
-            formCrearInventario.classList.add('was-validated');
-          }
-        });
-      });
-
-      [minimoInput, disponibleInput].forEach(function (input) {
-        input.addEventListener('keydown', function (e) {
-          if (e.key === '-' || e.key === 'e' || e.key === '+') {
-            e.preventDefault();
-          }
-        });
-        input.addEventListener('change', function () {
-          if (input.value !== '' && parseInt(input.value, 10) < 0) {
-            input.value = 0;
-          }
-        });
-      });
-
-      formCrearInventario.addEventListener('submit', function (event) {
-        ocultarAlertaInventario();
-        const stockValido = validarStockInventario();
-
-        if (!formCrearInventario.checkValidity() || !stockValido) {
-          event.preventDefault();
-          event.stopPropagation();
-
-          if (!stockValido) {
-            const minimo = parseInt(minimoInput.value, 10);
-            const disponible = parseInt(disponibleInput.value, 10);
-            if (disponible < 0 || minimo < 0) {
-              mostrarAlertaInventario("Los valores de stock no pueden ser negativos.");
-            } else if (disponible < minimo) {
-              mostrarAlertaInventario("El stock actual (" + disponible + ") no puede ser menor al mínimo definido (" + minimo + ").");
-            }
-          }
-        }
-
-        formCrearInventario.classList.add('was-validated');
-      }, false);
-    }
-
-    // --- VALIDACIÓN DE FORMULARIOS ---
-    const forms = document.querySelectorAll('.needs-validation:not(#formCrearInventario)');
-
-    Array.from(forms).forEach(form => {
-      form.addEventListener('submit', event => {
-        const costoVis = form.querySelector('#costoVisible');
-        const costoHid = form.querySelector('#costoUnitario');
-        if (costoVis && costoHid) {
-          if (costoVis.value.trim() === "") {
-            costoVis.setCustomValidity("Campo requerido");
-            costoHid.value = "";
-          } else {
-            costoVis.setCustomValidity("");
-          }
-        }
-
-        if (!form.checkValidity()) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-
-        form.classList.add('was-validated');
-      }, false);
     });
   });
 
-  function formatearMiles(input) {
-    let valor = input.value.replace(/\D/g, "");
-    const hiddenField = document.getElementById("costoUnitario");
+  // Validaciones del Modal Crear Inventario
+  const formInv = document.getElementById('formCrearInventario');
+  if (formInv) {
+    const minInv = document.getElementById('minimoDefinidoInv');
+    const dispInv = document.getElementById('cantidadDisponibleInv');
+    const alertInv = document.getElementById('alertErrorInventario');
+    const alertInvTexto = document.getElementById('alertErrorInventarioTexto');
+    const feedbackDisp = document.getElementById('feedbackDisponibleInv');
 
-    if (hiddenField) {
-      hiddenField.value = valor;
+    function validarStockInventario() {
+      const minVal = parseInt(minInv.value, 10) || 0;
+      const dispVal = parseInt(dispInv.value, 10) || 0;
+
+      if (dispVal < 0) {
+        dispInv.classList.add('is-invalid');
+        feedbackDisp.textContent = 'El stock actual no puede ser negativo.';
+        return false;
+      }
+
+      if (dispVal < minVal) {
+        dispInv.classList.add('is-invalid');
+        feedbackDisp.textContent = 'El stock actual no puede ser menor al mínimo definido (' + minVal + ').';
+        return false;
+      } else {
+        dispInv.classList.remove('is-invalid');
+        return true;
+      }
     }
 
-    if (valor !== "") {
-      input.value = new Intl.NumberFormat("es-CO").format(valor);
-      input.setCustomValidity("");
-    } else {
-      input.value = "";
-      input.setCustomValidity("Campo requerido");
+    if (minInv && dispInv) {
+      minInv.addEventListener('input', validarStockInventario);
+      dispInv.addEventListener('input', validarStockInventario);
     }
+
+    formInv.addEventListener('submit', function(e) {
+      alertInv.classList.add('d-none');
+
+      if (!validarStockInventario()) {
+        e.preventDefault();
+        e.stopPropagation();
+        alertInvTexto.textContent = 'El stock actual no puede ser menor al mínimo definido.';
+        alertInv.classList.remove('d-none');
+        formInv.classList.add('was-validated');
+        return;
+      }
+
+      if (!formInv.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+        alertInvTexto.textContent = 'Por favor completa todos los campos requeridos correctamente.';
+        alertInv.classList.remove('d-none');
+      }
+
+      formInv.classList.add('was-validated');
+    });
   }
 
-  function formatearMilesEdit(input, hiddenId) {
-    let valor = input.value.replace(/\D/g, "");
-    const hiddenField = document.getElementById(hiddenId);
+  // Validaciones del Modal Crear Material
+  const formMat = document.getElementById('formCrearMaterial');
+  if (formMat) {
+    const minMat = document.getElementById('stockMinimoMat');
+    const actMat = document.getElementById('stockActualMat');
+    const alertMat = document.getElementById('alertErrorMaterial');
+    const alertMatTexto = document.getElementById('alertErrorMaterialTexto');
+    const feedbackActMat = document.getElementById('feedbackStockActualMat');
 
-    if (hiddenField) {
-      hiddenField.value = valor;
+    function validarStockMaterial() {
+      const minVal = parseInt(minMat.value, 10) || 0;
+      const actVal = parseInt(actMat.value, 10) || 0;
+
+      if (actVal < 0) {
+        actMat.classList.add('is-invalid');
+        feedbackActMat.textContent = 'El stock actual no puede ser negativo.';
+        return false;
+      }
+
+      if (actVal < minVal) {
+        actMat.classList.add('is-invalid');
+        feedbackActMat.textContent = 'El stock actual no puede ser menor al stock mínimo (' + minVal + ').';
+        return false;
+      } else {
+        actMat.classList.remove('is-invalid');
+        return true;
+      }
     }
 
-    if (valor !== "") {
-      input.value = new Intl.NumberFormat("es-CO").format(valor);
-      input.setCustomValidity("");
-    } else {
-      input.value = "";
-      input.setCustomValidity("Campo requerido");
+    if (minMat && actMat) {
+      minMat.addEventListener('input', validarStockMaterial);
+      actMat.addEventListener('input', validarStockMaterial);
     }
+
+    formMat.addEventListener('submit', function(e) {
+      alertMat.classList.add('d-none');
+
+      if (!validarStockMaterial()) {
+        e.preventDefault();
+        e.stopPropagation();
+        alertMatTexto.textContent = 'El stock actual no puede ser menor al stock mínimo.';
+        alertMat.classList.remove('d-none');
+        formMat.classList.add('was-validated');
+        return;
+      }
+
+      if (!formMat.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+        alertMatTexto.textContent = 'Por favor completa todos los campos requeridos correctamente.';
+        alertMat.classList.remove('d-none');
+      }
+
+      formMat.classList.add('was-validated');
+    });
   }
+
+  // Si hubo un error al crear inventario, reabrir modal
+  {% if error_inventario %}
+    var modalInv = new bootstrap.Modal(document.getElementById('modalCrearInventario'));
+    modalInv.show();
+  {% endif %}
+
+  // Si hubo un error al crear material, reabrir modal
+  {% if error_material %}
+    var modalMat = new bootstrap.Modal(document.getElementById('modalCrearMaterial'));
+    modalMat.show();
+  {% endif %}
+
+});
+
+// Formatear separadores de miles para inputs de texto (Crear)
+function formatearMiles(input, targetHiddenId) {
+  let valor = input.value.replace(/\D/g, '');
+  if (!valor) {
+    input.value = '';
+    document.getElementById(targetHiddenId).value = '';
+    return;
+  }
+  document.getElementById(targetHiddenId).value = valor;
+  input.value = new Intl.NumberFormat('es-CO').format(valor);
+}
+
+// Formatear separadores de miles para inputs de texto (Editar)
+function formatearMilesEdit(input, targetHiddenId) {
+  let valor = input.value.replace(/\D/g, '');
+  if (!valor) {
+    input.value = '';
+    document.getElementById(targetHiddenId).value = '';
+    return;
+  }
+  document.getElementById(targetHiddenId).value = valor;
+  input.value = new Intl.NumberFormat('es-CO').format(valor);
+}
 </script>
+
 {% endblock %}

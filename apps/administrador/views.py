@@ -1,29 +1,39 @@
 # apps/administrador/views.py
 
+import io
+import os
+import json
+import openpyxl
+from datetime import datetime, date
+
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+
+from xhtml2pdf import pisa
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
-from django.db import connection, IntegrityError
+from django.db import connection, IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.http import HttpResponse, JsonResponse, FileResponse, Http404
+from django.conf import settings
+from django.views.decorators.http import require_POST
+from django.template.loader import render_to_string
+
 from django_fsm import can_proceed
+
 from .models import (
     Usuario, Operario, Tarea,
     AsignacionTarea, Orden, Cliente, Incidencia, Inventario, Material, Producto, Factura,
     TIEMPOS_ESTANDAR_MINUTOS,
 )
-import json
-import openpyxl
-from datetime import datetime, date
-from django.http import HttpResponse, JsonResponse, FileResponse, Http404
-from django.conf import settings
-import os
-from django.views.decorators.http import require_POST
-from django.template.loader import render_to_string
-from xhtml2pdf import pisa
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-
 from apps.core.decorators import login_required_rol
 
 
@@ -32,9 +42,6 @@ admin_required = login_required_rol(rol_esperado='administrador', session_key='u
 
 
 # ── Transiciones válidas de Orden, para editar el estado desde el admin ──
-# (orden.estado, nuevo_estado) -> nombre del método @transition en el modelo.
-# Mismo criterio que en apps/produccion/views.py: nunca se asigna
-# orden.estado = texto_libre directamente.
 TRANSICIONES_ORDEN = {
     ('Pendiente', 'Procesando'):  'marcar_en_produccion',
     ('Procesando', 'Enviado'):    'marcar_enviado',
@@ -46,9 +53,6 @@ TRANSICIONES_ORDEN = {
 
 
 # ── Ubicaciones predefinidas del inventario ─────────────────
-# Usadas tanto para validar/generar el <select> como para detectar,
-# en la plantilla, cuándo una ubicación guardada es "personalizada"
-# (es decir, no está en esta lista) y así preseleccionar "Otro".
 UBICACIONES_PREDEFINIDAS = [
     'Bodega Principal',
     'Bodega Secundaria',
@@ -58,7 +62,7 @@ UBICACIONES_PREDEFINIDAS = [
 ]
 
 
-# ── Helpers para KPIs cross-módulo (antes vivían en produccion/views.py) ──
+# ── Helpers para KPIs cross-módulo ──
 def _count(modelo, **filtros):
     try:
         return modelo.objects.filter(**filtros).count() if filtros else modelo.objects.count()
@@ -90,7 +94,7 @@ def admin_portal(request):
     ultimas_ordenes = Orden.objects.order_by('-fechaCreacion')[:5]
     ultimas_asignaciones = AsignacionTarea.objects.order_by('-fechaAsignacion')[:5]
 
-    # ── KPIs exclusivos que venían de "Producción · Vista General" ──
+    # ── KPIs exclusivos ──
     Produccion = _safe_import('apps.produccion.models', 'Produccion')
     Proveedor = _safe_import('apps.proveedores.models', 'Proveedor')
 
@@ -106,7 +110,7 @@ def admin_portal(request):
     )
     total_proveedores = _count(Proveedor) if Proveedor else None
 
-    # ── Actividad reciente unificada (Órdenes + Producción + Incidencias) ──
+    # ── Actividad reciente unificada ──
     actividad = []
 
     for o in Orden.objects.select_related('idCliente').order_by('-fechaCreacion')[:5]:
@@ -201,8 +205,6 @@ def admin_portal(request):
         'usuarios_pendientes': usuarios_pendientes,
         'ultimas_ordenes': ultimas_ordenes,
         'ultimas_asignaciones': ultimas_asignaciones,
-
-        # ── Nuevos: exclusivos de producción trasladados al dashboard ──
         'ordenes_urgentes': ordenes_urgentes,
         'incidencias_abiertas': incidencias_abiertas,
         'productos_catalogo': productos_catalogo,
@@ -336,7 +338,6 @@ def usuario_eliminar(request, idUsuario):
     if request.method == 'POST':
         usuario_obj = get_object_or_404(Usuario, idUsuario=idUsuario)
 
-        # Validación de seguridad: Solo permitir eliminar si es operario
         if usuario_obj.rol != 'operario':
             messages.error(request, '⚠️ No está permitido eliminar usuarios con rol diferente a Operario.')
             return redirect('admin_usuarios')
@@ -366,8 +367,6 @@ def ordenes_lista(request):
     if estado_filtro:
         ordenes = ordenes.filter(estado=estado_filtro)
 
-    # Soporta también el filtro por prioridad que ahora enlazan las
-    # tarjetas KPI de "Órdenes Urgentes" del dashboard.
     prioridad_filtro = request.GET.get('prioridad', '')
     if prioridad_filtro:
         ordenes = ordenes.filter(prioridad=prioridad_filtro)
@@ -378,8 +377,6 @@ def ordenes_lista(request):
         'estado_filtro': estado_filtro,
         'buscar_filtro': buscar_filtro,
         'prioridad_filtro': prioridad_filtro,
-        # Para que la plantilla sepa qué opciones de estado mostrar en el
-        # <select> de edición según el estado actual de cada orden.
         'transiciones_orden': TRANSICIONES_ORDEN,
     })
 
@@ -444,7 +441,6 @@ def tarea_asignar(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     operarios = Operario.objects.filter(estado='activo').select_related('idUsuario')
     tareas = Tarea.objects.all()
-    # Solo mostramos órdenes que aún tiene sentido producir
     ordenes = Orden.objects.exclude(estado__in=['Cancelado', 'Entregado']) \
         .select_related('idCliente') \
         .order_by('-fechaCreacion')
@@ -671,9 +667,7 @@ def tarea_editar(request, idAsignacion):
 
             asignacion.save()
 
-            # ── Igual que en apps/operarios/views.py: si esta tarea
-            # pertenece a un lote de producción, recalculamos su avance.
-            id_produccion = asignacion.idTarea.idProduccion
+            id_produccion = getattr(asignacion.idTarea, 'idProduccion', None)
             if id_produccion:
                 from apps.produccion.services import recalcular_produccion_desde_tareas
                 recalcular_produccion_desde_tareas(id_produccion)
@@ -819,7 +813,6 @@ def factura_marcar_pagada(request, idFactura):
 
 @admin_required
 def factura_descargar(request, idFactura):
-    """Descarga de PDF para admin — sin el filtro de 'factura propia del cliente'."""
     factura = get_object_or_404(Factura, pk=idFactura)
     ruta = os.path.join(settings.MEDIA_ROOT, factura.rutaPDF)
     if not os.path.exists(ruta):
@@ -837,7 +830,7 @@ def produccion_placeholder(request):
     return redirect('produccion_portal')
 
 
-# ── Exportar Órdenes a Excel ──────────────────────────────────
+# ── Exportar Órdenes a Excel y PDF ───────────────────────────
 @admin_required
 def exportar_ordenes_excel(request):
     wb = openpyxl.Workbook()
@@ -1028,11 +1021,6 @@ def eliminar_material(request, pk):
 
 # ── Helper: resolver ubicación (predefinida u "Otro") ────────
 def _resolver_ubicacion(request):
-    """
-    Si el <select name="ubicacion"> viene con value="otro", usa el texto libre
-    escrito en el input "ubicacion_personalizada". En cualquier otro caso,
-    devuelve tal cual el valor seleccionado (o None si viene vacío).
-    """
     ubicacion = request.POST.get('ubicacion')
     if ubicacion == 'otro':
         ubicacion = (request.POST.get('ubicacion_personalizada') or '').strip() or None
@@ -1243,8 +1231,134 @@ def registrar_egreso(request, pk):
     return redirect('admin_inventario')
 
 
-# ── Perfil de Usuario ────────────────────────────────────────
+@admin_required
+def registrar_egresos_masivo(request):
+    if request.method == 'POST':
+        egresos_realizados = 0
 
+        with transaction.atomic():
+            for key, value in request.POST.items():
+                if key.startswith('egreso_'):
+                    try:
+                        inventario_id = int(key.split('_')[1])
+                        cantidad_egreso = int(value) if value else 0
+
+                        if cantidad_egreso > 0:
+                            item = Inventario.objects.get(pk=inventario_id)
+
+                            if cantidad_egreso <= item.cantidadDisponible:
+                                item.cantidadDisponible -= cantidad_egreso
+                                item.cantidadEgresada = (item.cantidadEgresada or 0) + cantidad_egreso
+                                item.fechaSalida = timezone.now().date()
+                                item.save()
+                                egresos_realizados += 1
+                            else:
+                                messages.error(
+                                    request, 
+                                    f"No hay suficiente stock disponible para {item.producto.nombre}. Disponible: {item.cantidadDisponible}."
+                                )
+                                return redirect('admin_inventario')
+
+                    except (ValueError, Inventario.DoesNotExist):
+                        continue
+
+        if egresos_realizados > 0:
+            messages.success(request, f"Se registraron exitosamente {egresos_realizados} egresos de inventario.")
+        else:
+            messages.warning(request, "No se ingresó ninguna cantidad a egresar mayor a 0.")
+
+    return redirect('admin_inventario')
+
+
+# ── EXPORTACIÓN DE INVENTARIO ────────────────────────────────
+@admin_required
+def exportar_inventario_pdf(request):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="inventario_hebratech.pdf"'
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'TitleStyle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor=colors.HexColor("#1A252C"),
+        alignment=1,
+        spaceAfter=15
+    )
+    
+    elements.append(Paragraph("<b>Reporte General de Inventario - HebraTech</b>", title_style))
+    elements.append(Spacer(1, 10))
+    
+    data = [["ID", "Producto", "Disponible", "Mínimo", "Ubicación"]]
+    items = Inventario.objects.all().select_related('producto')
+    
+    for item in items:
+        data.append([
+            str(item.idInventario),
+            item.producto.nombre if item.producto else 'N/A',
+            str(item.cantidadDisponible),
+            str(item.minimoDefinido),
+            item.ubicacion or 'N/A'
+        ])
+        
+    t = Table(data, colWidths=[40, 180, 80, 80, 110])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2C3E50")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8F9FA")])
+    ]))
+    
+    elements.append(t)
+    doc.build(elements)
+    
+    pdf = buffer.getvalue()
+    buffer.close()
+    response.write(pdf)
+    return response
+
+
+@admin_required
+def exportar_inventario_excel(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Inventario"
+    
+    headers = ["ID Inventario", "Producto", "Cantidad Disponible", "Mínimo Definido", "Unidades", "Ubicación"]
+    ws.append(headers)
+    
+    header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='2C3E50', end_color='2C3E50', fill_type='solid')
+    
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+    for item in Inventario.objects.all().select_related('producto'):
+        ws.append([
+            item.idInventario,
+            item.producto.nombre if item.producto else 'N/A',
+            item.cantidadDisponible,
+            item.minimoDefinido,
+            item.unidades,
+            item.ubicacion or 'N/A'
+        ])
+        
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="inventario_hebratech.xlsx"'
+    wb.save(response)
+    return response
+
+
+# ── Perfil de Usuario ────────────────────────────────────────
 @admin_required
 @require_POST
 def editar_perfil(request):

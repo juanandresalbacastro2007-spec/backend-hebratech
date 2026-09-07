@@ -6,8 +6,65 @@
 {% block topbar_sub %}Productos, órdenes, etapas y avance de operarios — todo conectado{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" />
 <link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}?v={% now 'U' %}" />
 <link rel="stylesheet" href="{% static 'css/produccion/produccion_control.css' %}?v={% now 'U' %}" />
+<style>
+  /* Estilos para el timeline */
+  .timeline-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    position: relative;
+  }
+  .timeline-container::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #d1d5db;
+    z-index: 0;
+  }
+  .timeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+  }
+  .timeline-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #d1d5db;
+    background: #fff;
+    margin-bottom: 6px;
+  }
+  .timeline-step.completed .timeline-dot {
+    background: #198754;
+    border-color: #198754;
+  }
+  .timeline-step.active .timeline-dot {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59,130,246,0.3);
+  }
+  .timeline-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+  }
+  .timeline-step.active .timeline-label {
+    color: #3b82f6;
+  }
+  .timeline-step.completed .timeline-label {
+    color: #198754;
+  }
+</style>
 {% endblock %}
 
 {% block contenido %}
@@ -15,14 +72,13 @@
 
   <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- ═══════════ DASHBOARD KPI ═══════════ -->
+  <!-- DASHBOARD KPI -->
   <div id="dashboard-alertas" class="dashboard-alertas"></div>
-
   <div class="kpi-grid" id="kpi-grid">
     <div class="kpi-card kpi-total">
       <span class="kpi-icono">📦</span>
       <div class="kpi-valor" id="kpi-total">—</div>
-      <div class="kpi-label">Total órdenes</div>
+      <div class="kpi-label">Total órdenes prod.</div>
     </div>
     <div class="kpi-card kpi-gris">
       <span class="kpi-icono">⏳</span>
@@ -61,61 +117,51 @@
     </div>
   </div>
 
-  <!-- ═══════════ TABS ═══════════ -->
+  <!-- TABS -->
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('productos', this)">👕 Productos</div>
-    <div class="tab" onclick="switchTab('ordenes', this)">📋 Órdenes de Producción</div>
-    <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance de Operarios</div>
+    <div class="tab active" onclick="switchTab('clientes', this)">📋 Órdenes Cliente</div>
+    <div class="tab" onclick="switchTab('ordenes', this)">🏭 Órdenes Producción</div>
+    <div class="tab" onclick="switchTab('calendario', this)">📅 Calendario</div>
+    <div class="tab" onclick="switchTab('productos', this)">👕 Productos</div>
+    <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance Operarios</div>
   </div>
 
-  <!-- ═══════════ TAB PRODUCTOS ═══════════ -->
-  <div id="tab-productos" class="tab-content active">
+  <!-- TAB: Órdenes Cliente -->
+  <div id="tab-clientes" class="tab-content active">
     <div class="table-card">
       <div class="table-toolbar">
-        <h3>Productos Registrados</h3>
+        <h3>Órdenes de Clientes (Pedidos)</h3>
         <div class="toolbar-right">
           <div class="search-wrap">
             <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input id="search-productos" type="text" placeholder="Buscar producto..."
-              oninput="filtrarProductos()" />
+            <input id="search-clientes" type="text" placeholder="Buscar orden cliente..." oninput="filtrarOrdenesCliente()" />
           </div>
-          <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
-            <option value="">Todas las categorías</option>
-            <option>Camisa</option>
-            <option>Pantalón</option>
-            <option>Uniforme</option>
-            <option>Chaqueta</option>
-            <option>Accesorio</option>
-          </select>
         </div>
       </div>
       <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Categoría</th>
-            <th>Precio</th>
-            <th>Descripción</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-productos">
-          <tr>
-            <td colspan="5" style="text-align:center;padding:30px">
-              <span class="spinner"></span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <table>
+          <thead>
+            <tr>
+              <th>ID Orden</th>
+              <th>Cliente</th>
+              <th>Fecha Pedido</th>
+              <th>Fecha Entrega</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-clientes">
+            <tr><td colspan="6" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════ TAB ÓRDENES (ahora: cards con progreso) ═══════════ -->
+  <!-- TAB: Órdenes Producción -->
   <div id="tab-ordenes" class="tab-content">
     <div class="table-card">
       <div class="table-toolbar">
@@ -127,12 +173,11 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input id="search-ordenes" type="text" placeholder="Buscar orden..." oninput="filtrarOrdenes()" />
+            <input id="search-ordenes" type="text" placeholder="Buscar orden prod..." oninput="filtrarOrdenes()" />
           </div>
         </div>
       </div>
 
-      <!-- Filtros rápidos -->
       <div class="filtros-rapidos" id="filtros-rapidos">
         <button class="chip-filtro active" data-filtro="">Todas</button>
         <button class="chip-filtro" data-filtro="hoy">Hoy</button>
@@ -148,7 +193,57 @@
     </div>
   </div>
 
-  <!-- ═══════════ TAB OPERARIOS ═══════════ -->
+  <!-- TAB: Calendario -->
+  <div id="tab-calendario" class="tab-content">
+    <div class="table-card">
+      <div class="table-toolbar">
+        <h3>Calendario de Producción</h3>
+        <div class="toolbar-right">
+          <span style="font-size:13px;color:var(--muted);">Arrastra los eventos para cambiar fechas</span>
+        </div>
+      </div>
+      <div id="calendar" style="padding:16px;"></div>
+    </div>
+  </div>
+
+  <!-- TAB: Productos -->
+  <div id="tab-productos" class="tab-content">
+    <div class="table-card">
+      <div class="table-toolbar">
+        <h3>Productos Registrados</h3>
+        <div class="toolbar-right">
+          <div class="search-wrap">
+            <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input id="search-productos" type="text" placeholder="Buscar producto..." oninput="filtrarProductos()" />
+          </div>
+          <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
+            <option value="">Todas las categorías</option>
+            <option>Camisa</option>
+            <option>Pantalón</option>
+            <option>Uniforme</option>
+            <option>Chaqueta</option>
+            <option>Accesorio</option>
+          </select>
+          <button class="btn btn-primary" onclick="abrirModalNuevoProducto()">➕ Nuevo Producto</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Descripción</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tbody-productos">
+            <tr><td colspan="5" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Avance Operarios -->
   <div id="tab-operarios" class="tab-content">
     <div class="table-card">
       <div class="table-toolbar">
@@ -176,7 +271,9 @@
     </div>
   </div>
 
-  <!-- MODAL: Nuevo/Editar producto -->
+  <!-- ==================== MODALES ==================== -->
+
+  <!-- MODAL: Nuevo/Editar Producto -->
   <div class="prod-modal-backdrop" id="modal-producto">
     <div class="prod-modal">
       <div class="prod-modal-header">
@@ -207,7 +304,7 @@
         <div class="form-row">
           <div class="form-group">
             <label>Precio</label>
-            <input id="prod-precio" type="number" value="0" min="0" step="1000" oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" />
+            <input id="prod-precio" type="number" value="0" min="0" step="1000" />
           </div>
         </div>
         <div class="form-row">
@@ -225,7 +322,39 @@
     </div>
   </div>
 
-  <!-- MODAL: Nueva/Editar orden de producción (formulario simple) -->
+  <!-- MODAL: Editar Orden Cliente -->
+  <div class="prod-modal-backdrop" id="modal-cliente">
+    <div class="prod-modal">
+      <div class="prod-modal-header">
+        <h3 id="modal-cliente-title">✏️ Editar Orden Cliente</h3>
+        <button class="prod-modal-close" onclick="cerrarModalCliente()">×</button>
+      </div>
+      <div class="prod-modal-body">
+        <input type="hidden" id="cliente-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="c-estado">
+              <option value="Pendiente">Pendiente</option>
+              <option value="En Proceso">En Proceso</option>
+              <option value="Completado">Completado</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fecha Entrega</label>
+            <input id="c-fecha-entrega" type="date" />
+          </div>
+        </div>
+      </div>
+      <div class="prod-modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModalCliente()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarCliente()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Nueva/Editar Orden Producción -->
   <div class="prod-modal-backdrop" id="modal-orden">
     <div class="prod-modal">
       <div class="prod-modal-header">
@@ -234,45 +363,84 @@
       </div>
       <div class="prod-modal-body">
         <input type="hidden" id="orden-id" />
+        <input type="hidden" id="orden-cliente-id" />
+
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Orden de Cliente (opcional)</label>
+            <select id="op-orden-cliente">
+              <option value="">-- Seleccionar orden de cliente --</option>
+            </select>
+            <span style="font-size:11px;color:#6b7280;">Al seleccionar, se autocompletarán los datos.</span>
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label>Producto *</label>
-            <select id="o-producto">
+            <select id="op-producto">
               <option value="">Seleccionar producto...</option>
             </select>
-            <span class="campo-error-msg" id="err-o-producto">Selecciona un producto.</span>
+            <span class="campo-error-msg" id="err-op-producto">Selecciona un producto.</span>
           </div>
           <div class="form-group">
             <label>Cantidad *</label>
-            <input id="o-cantidad" type="number"  step="10" oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" />
-            <span class="campo-error-msg" id="err-o-cantidad">Ingresa una cantidad válida.</span>
+            <input id="op-cantidad" type="number" min="1" step="1" />
+            <span class="campo-error-msg" id="err-op-cantidad">Ingresa una cantidad válida.</span>
           </div>
         </div>
+
         <div class="form-row">
-          <div class="form-group full">
-            <label>Descripción</label>
-            <textarea id="o-descripcion" placeholder="Descripción de la orden..."></textarea>
+          <div class="form-group">
+            <label>Cliente *</label>
+            <select id="op-cliente">
+              <option value="">Seleccionar cliente...</option>
+            </select>
+            <span class="campo-error-msg" id="err-op-cliente">Selecciona un cliente.</span>
+          </div>
+          <div class="form-group">
+            <label>Prioridad</label>
+            <select id="op-prioridad">
+              <option value="Normal">Normal</option>
+              <option value="Urgente">Urgente</option>
+            </select>
           </div>
         </div>
+
         <div class="form-row">
           <div class="form-group">
             <label>Fecha Inicio *</label>
-            <input id="o-fecha-inicio" type="date" min="{% now 'Y-m-d' %}" />
-            <span class="campo-error-msg" id="err-o-fecha-inicio">Selecciona la fecha de inicio.</span>
+            <input id="op-fecha-inicio" type="date" />
+            <span class="campo-error-msg" id="err-op-fecha-inicio">Selecciona la fecha de inicio.</span>
           </div>
           <div class="form-group">
-            <label>Fecha Est. Fin *</label>
-            <input id="o-fecha-fin" type="date" min="{% now 'Y-m-d' %}" />
-            <span class="campo-error-msg" id="err-o-fecha-fin">Selecciona la fecha estimada de fin.</span>
+            <label>Fecha Entrega *</label>
+            <input id="op-fecha-entrega" type="date" />
+            <span class="campo-error-msg" id="err-op-fecha-entrega">Selecciona la fecha de entrega.</span>
           </div>
         </div>
+
         <div class="form-row">
           <div class="form-group">
-            <label>Estado *</label>
-            <select id="o-estado">
+            <label>Fecha Fin Real</label>
+            <input id="op-fecha-fin-real" type="date" />
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="op-estado">
               <option value="Pendiente">Pendiente</option>
+              <option value="En Progreso">En Progreso</option>
+              <option value="Completado">Completado</option>
+              <option value="Atrasada">Atrasada</option>
+              <option value="Cancelada">Cancelada</option>
             </select>
-            <span class="campo-error-msg" id="err-o-estado">Selecciona un estado.</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Observaciones</label>
+            <input id="op-observaciones" type="text" placeholder="Observaciones..." />
           </div>
         </div>
       </div>
@@ -283,7 +451,7 @@
     </div>
   </div>
 
-  <!-- MODAL: Detalle grande de orden, con pestañas -->
+  <!-- MODAL: Detalle Orden Producción -->
   <div class="prod-modal-backdrop" id="modal-detalle-orden">
     <div class="prod-modal prod-modal-grande">
       <div class="prod-modal-header detalle-header" id="detalle-header">
@@ -303,15 +471,11 @@
 
       <div class="detalle-tabs">
         <button class="detalle-tab active" data-tab="resumen" onclick="cambiarTabDetalle('resumen')">Resumen</button>
-        <button class="detalle-tab" data-tab="etapas" onclick="cambiarTabDetalle('etapas')">Etapas</button>
-        <button class="detalle-tab" data-tab="operarios-tab" onclick="cambiarTabDetalle('operarios-tab')">Operarios</button>
         <button class="detalle-tab" data-tab="historial" onclick="cambiarTabDetalle('historial')">Historial</button>
       </div>
 
       <div class="detalle-body">
         <div class="detalle-panel active" id="panel-resumen"></div>
-        <div class="detalle-panel" id="panel-etapas"></div>
-        <div class="detalle-panel" id="panel-operarios-tab"></div>
         <div class="detalle-panel" id="panel-historial"></div>
       </div>
 
@@ -328,25 +492,13 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 <script src="{% static 'js/produccion.js' %}?v={% now 'U' %}"></script>
 <script>
-  (function () {
-    var HOY = "{% now 'Y-m-d' %}";
-    var inpInicio = document.getElementById('o-fecha-inicio');
-    var inpFin = document.getElementById('o-fecha-fin');
-
-    function sincronizarMinFin() {
-      if (!inpInicio || !inpFin) return;
-      var base = inpInicio.value && inpInicio.value >= HOY ? inpInicio.value : HOY;
-      inpFin.min = base;
-      if (inpFin.value && inpFin.value < base) {
-        inpFin.value = base;
-      }
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.querySelector('#tab-calendario.active')) {
+      iniciarCalendario();
     }
-
-    if (inpInicio) {
-      inpInicio.addEventListener('change', sincronizarMinFin);
-    }
-  })();
+  });
 </script>
 {% endblock %}

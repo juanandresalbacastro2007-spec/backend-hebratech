@@ -4,11 +4,15 @@
 
 const API_BASE = '/produccion';
 let PRODUCTOS_CACHE = [];
-let ORDENES_CACHE = [];
+let ORDENES_PROD_CACHE = [];
+let ORDENES_CLIENTE_CACHE = [];
 let OPERARIOS_CACHE = [];
+let PRODUCTOS_LISTA_CACHE = [];
+let CLIENTES_CACHE = [];
 let FILTRO_ACTUAL = '';
+let calendar = null;
 
-// ── Utilidades generales ─────────────────────────────
+// ── Utilidades ─────────────────────────────
 function mostrarToast(mensaje, tipo = 'success') {
   const toast = document.getElementById('toast');
   if (!toast) return;
@@ -50,21 +54,34 @@ async function apiFetch(url, opciones = {}) {
   return data;
 }
 
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return '—';
+  const fecha = new Date(fechaStr);
+  return fecha.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 function switchTab(nombre, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('tab-' + nombre).classList.add('active');
 
+  if (nombre === 'clientes' && ORDENES_CLIENTE_CACHE.length === 0) cargarOrdenesCliente();
+  if (nombre === 'ordenes' && ORDENES_PROD_CACHE.length === 0) cargarOrdenesProduccion();
   if (nombre === 'productos' && PRODUCTOS_CACHE.length === 0) cargarProductos();
-  if (nombre === 'ordenes' && ORDENES_CACHE.length === 0) cargarOrdenes();
   if (nombre === 'operarios' && OPERARIOS_CACHE.length === 0) cargarOperarios();
+  if (nombre === 'calendario') {
+    if (!calendar) {
+      iniciarCalendario();
+    } else {
+      calendar.render();
+    }
+  }
 }
 
 // ============================================================
 // DASHBOARD
 // ============================================================
-
 async function cargarDashboard() {
   try {
     const d = await apiFetch(`${API_BASE}/dashboard/`);
@@ -90,14 +107,96 @@ async function cargarDashboard() {
 }
 
 // ============================================================
-// PRODUCTOS
+// ÓRDENES DE CLIENTE
 // ============================================================
+async function cargarOrdenesCliente() {
+  try {
+    ORDENES_CLIENTE_CACHE = await apiFetch(`${API_BASE}/ordenes-cliente/`);
+    renderOrdenesCliente(ORDENES_CLIENTE_CACHE);
+    poblarSelectOrdenesCliente();
+  } catch (e) {
+    mostrarToast('No se pudieron cargar las órdenes de clientes.', 'error');
+  }
+}
 
+function renderOrdenesCliente(lista) {
+  const tbody = document.getElementById('tbody-clientes');
+  if (!lista.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No hay órdenes de clientes.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = lista.map(o => `
+    <tr>
+      <td><strong>#${o.idOrden}</strong></td>
+      <td>${o.cliente}</td>
+      <td>${formatearFecha(o.fechaPedido)}</td>
+      <td>${formatearFecha(o.fechaEntrega)}</td>
+      <td><span class="badge ${estadoClienteBadge(o.estado)}">${o.estado}</span></td>
+      <td>
+        <button class="action-btn edit" onclick="editarCliente(${o.idOrden})">✏️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function estadoClienteBadge(estado) {
+  const map = {
+    'Pendiente': 'badge-gris',
+    'En Proceso': 'badge-azul',
+    'Completado': 'badge-verde',
+    'Cancelado': 'badge-rojo'
+  };
+  return map[estado] || 'badge-gris';
+}
+
+function filtrarOrdenesCliente() {
+  const texto = (document.getElementById('search-clientes').value || '').toLowerCase();
+  if (!texto) { renderOrdenesCliente(ORDENES_CLIENTE_CACHE); return; }
+  const filtradas = ORDENES_CLIENTE_CACHE.filter(o =>
+    o.cliente.toLowerCase().includes(texto) ||
+    String(o.idOrden).includes(texto)
+  );
+  renderOrdenesCliente(filtradas);
+}
+
+function editarCliente(id) {
+  const o = ORDENES_CLIENTE_CACHE.find(x => x.idOrden === id);
+  if (!o) return;
+  document.getElementById('cliente-id').value = o.idOrden;
+  document.getElementById('c-estado').value = o.estado;
+  document.getElementById('c-fecha-entrega').value = o.fechaEntrega || '';
+  document.getElementById('modal-cliente').classList.add('open');
+}
+
+function cerrarModalCliente() {
+  document.getElementById('modal-cliente').classList.remove('open');
+}
+
+async function guardarCliente() {
+  const id = document.getElementById('cliente-id').value;
+  const estado = document.getElementById('c-estado').value;
+  const fechaEntrega = document.getElementById('c-fecha-entrega').value;
+
+  try {
+    await apiFetch(`${API_BASE}/ordenes-cliente/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify({ estado, fechaEntrega })
+    });
+    mostrarToast('Orden de cliente actualizada.');
+    cerrarModalCliente();
+    cargarOrdenesCliente();
+  } catch (e) {
+    mostrarToast(e.message, 'error');
+  }
+}
+
+// ============================================================
+// PRODUCTOS (gestión)
+// ============================================================
 async function cargarProductos() {
   try {
     PRODUCTOS_CACHE = await apiFetch(`${API_BASE}/productos/`);
     renderProductos(PRODUCTOS_CACHE);
-    poblarSelectProductos();
   } catch (e) {
     mostrarToast('No se pudieron cargar los productos.', 'error');
   }
@@ -131,15 +230,6 @@ function filtrarProductos() {
     (!cat || p.categoria === cat)
   );
   renderProductos(filtrados);
-}
-
-function poblarSelectProductos() {
-  const select = document.getElementById('o-producto');
-  if (!select) return;
-  const seleccionado = select.value;
-  select.innerHTML = `<option value="">Seleccionar producto...</option>` +
-    PRODUCTOS_CACHE.map(p => `<option value="${p.idProducto}">${p.nombre}</option>`).join('');
-  if (seleccionado) select.value = seleccionado;
 }
 
 function abrirModalNuevoProducto() {
@@ -211,28 +301,74 @@ async function eliminarProducto(id) {
 }
 
 // ============================================================
-// ÓRDENES DE PRODUCCIÓN (cards con progreso + etapas)
+// PRODUCTOS PARA SELECT, CLIENTES
 // ============================================================
+async function cargarProductosLista() {
+  try {
+    PRODUCTOS_LISTA_CACHE = await apiFetch(`${API_BASE}/productos-lista/`);
+    poblarSelectProductos();
+  } catch (e) {
+    console.error('Error cargando productos:', e);
+  }
+}
 
-async function cargarOrdenes(filtro = FILTRO_ACTUAL) {
+async function cargarClientes() {
+  try {
+    CLIENTES_CACHE = await apiFetch(`${API_BASE}/clientes/`);
+    poblarSelectClientes();
+  } catch (e) {
+    console.error('Error cargando clientes:', e);
+  }
+}
+
+function poblarSelectProductos() {
+  const select = document.getElementById('op-producto');
+  if (!select) return;
+  const seleccionado = select.value;
+  select.innerHTML = `<option value="">Seleccionar producto...</option>` +
+    PRODUCTOS_LISTA_CACHE.map(p => `<option value="${p.idProducto}">${p.nombre}</option>`).join('');
+  if (seleccionado) select.value = seleccionado;
+}
+
+function poblarSelectClientes() {
+  const select = document.getElementById('op-cliente');
+  if (!select) return;
+  const seleccionado = select.value;
+  select.innerHTML = `<option value="">Seleccionar cliente...</option>` +
+    CLIENTES_CACHE.map(c => `<option value="${c.idCliente}">${c.nombre}</option>`).join('');
+  if (seleccionado) select.value = seleccionado;
+}
+
+function poblarSelectOrdenesCliente() {
+  const select = document.getElementById('op-orden-cliente');
+  if (!select) return;
+  const seleccionado = select.value;
+  select.innerHTML = `<option value="">-- Seleccionar orden de cliente --</option>` +
+    ORDENES_CLIENTE_CACHE.map(o => `<option value="${o.idOrden}">#${o.idOrden} - ${o.cliente}</option>`).join('');
+  if (seleccionado) select.value = seleccionado;
+}
+
+// ============================================================
+// ÓRDENES DE PRODUCCIÓN
+// ============================================================
+async function cargarOrdenesProduccion(filtro = FILTRO_ACTUAL) {
   try {
     const qs = filtro ? `?filtro=${filtro}` : '';
-    ORDENES_CACHE = await apiFetch(`${API_BASE}/ordenes/${qs}`);
-    renderOrdenesGrid(ORDENES_CACHE);
+    ORDENES_PROD_CACHE = await apiFetch(`${API_BASE}/ordenes-produccion/${qs}`);
+    renderOrdenesGrid(ORDENES_PROD_CACHE);
   } catch (e) {
-    mostrarToast('No se pudieron cargar las órdenes.', 'error');
+    mostrarToast('No se pudieron cargar las órdenes de producción.', 'error');
   }
   cargarDashboard();
 }
 
-function badgeEstado(estado, atrasada) {
-  if (atrasada) return `<span class="badge badge-rojo">🔴 ATRASADA</span>`;
+function badgeEstado(estado) {
   const map = {
     'Pendiente':   'badge-gris',
     'En Progreso': 'badge-azul',
     'Completado':  'badge-verde',
-    'Detenido':    'badge-amarillo',
-    'Retrasado':   'badge-rojo',
+    'Atrasada':    'badge-rojo',
+    'Cancelada':   'badge-rojo',
   };
   return `<span class="badge ${map[estado] || 'badge-gris'}">${estado.toUpperCase()}</span>`;
 }
@@ -244,45 +380,44 @@ function renderOrdenesGrid(lista) {
     return;
   }
 
-  cont.innerHTML = lista.map(o => `
-    <div class="orden-card ${o.atrasada ? 'orden-card-atrasada' : ''}" onclick="abrirModalDetalle(${o.idProduccion})">
+  cont.innerHTML = lista.map(o => {
+    const avance = o.progreso || 0;
+    return `
+    <div class="orden-card ${o.estado === 'Atrasada' ? 'orden-card-atrasada' : ''}" onclick="abrirModalDetalle(${o.idOrdenProduccion})">
       <div class="orden-card-header">
-        <span class="orden-card-id">ORD-${String(o.idProduccion).padStart(5, '0')}</span>
-        ${badgeEstado(o.estado, o.atrasada)}
+        <span class="orden-card-id">${o.numero}</span>
+        ${badgeEstado(o.estado)}
       </div>
-      <div class="orden-card-producto">${o.producto}</div>
-      <div class="orden-card-cantidad">${o.cantidadRequerida} unidades ${o.cliente ? '· ' + o.cliente : ''}</div>
-
+      <div class="orden-card-producto">${o.nombreProducto}</div>
+      <div class="orden-card-cantidad">${o.cantidad} unidades · Cliente: ${o.cliente}</div>
       <div class="progress-bar-track progress-bar-sm">
-        <div class="progress-bar-fill" style="width:${o.avancePct}%"></div>
+        <div class="progress-bar-fill" style="width:${avance}%"></div>
       </div>
-      <div class="orden-card-progreso-pct">${o.avancePct}% completado</div>
-
+      <div class="orden-card-progreso-pct">${avance}% completado</div>
       <div class="orden-card-fechas">
-        <span>Inicio: ${o.fechaInicio}</span>
-        <span>Entrega: ${o.fechaEstimadaFin}</span>
+        <span>Inicio: ${formatearFecha(o.fechaInicio)}</span>
+        <span>Entrega: ${formatearFecha(o.fechaEntrega)}</span>
       </div>
-
       <div class="orden-card-acciones" onclick="event.stopPropagation()">
-        <button class="action-btn edit" onclick="editarOrden(${o.idProduccion})">✏️</button>
-        <button class="action-btn delete" onclick="eliminarOrden(${o.idProduccion})">🗑️</button>
+        <button class="action-btn edit" onclick="editarOrden(${o.idOrdenProduccion})">✏️</button>
+        <button class="action-btn delete" onclick="eliminarOrden(${o.idOrdenProduccion})">🗑️</button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function filtrarOrdenes() {
   const texto = (document.getElementById('search-ordenes').value || '').toLowerCase();
-  if (!texto) { renderOrdenesGrid(ORDENES_CACHE); return; }
-  const filtradas = ORDENES_CACHE.filter(o =>
-    o.producto.toLowerCase().includes(texto) ||
-    String(o.idProduccion).includes(texto) ||
-    (o.cliente || '').toLowerCase().includes(texto)
+  if (!texto) { renderOrdenesGrid(ORDENES_PROD_CACHE); return; }
+  const filtradas = ORDENES_PROD_CACHE.filter(o =>
+    o.nombreProducto.toLowerCase().includes(texto) ||
+    o.numero.toLowerCase().includes(texto) ||
+    o.cliente.toLowerCase().includes(texto)
   );
   renderOrdenesGrid(filtradas);
 }
 
-// Filtros rápidos (chips)
+// Filtros rápidos
 document.addEventListener('DOMContentLoaded', () => {
   const cont = document.getElementById('filtros-rapidos');
   if (!cont) return;
@@ -291,61 +426,142 @@ document.addEventListener('DOMContentLoaded', () => {
       cont.querySelectorAll('.chip-filtro').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       FILTRO_ACTUAL = chip.dataset.filtro;
-      cargarOrdenes(FILTRO_ACTUAL);
+      cargarOrdenesProduccion(FILTRO_ACTUAL);
     });
   });
 });
 
-function poblarSelectEstado(o) {
-  const select = document.getElementById('o-estado');
-  select.innerHTML = `<option value="${o.estado}">${o.estado} (actual)</option>`;
-  (o.transicionesDisponibles || []).forEach(destino => {
-    select.innerHTML += `<option value="${destino}">${destino}</option>`;
-  });
-}
-
-function poblarSelectEstadoNuevaOrden() {
-  const select = document.getElementById('o-estado');
-  select.innerHTML = `<option value="Pendiente">Pendiente</option>`;
-}
-
-function abrirModalNuevaOrden() {
-  limpiarValidacion(['o-producto', 'o-cantidad', 'o-fecha-inicio', 'o-fecha-fin', 'o-estado']);
+// ── Abrir modal de nueva orden ──────────────────────
+function abrirModalNuevaOrden(idOrden = null) {
+  limpiarValidacion(['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega']);
   document.getElementById('modal-orden-title').textContent = '🗒 Nueva Orden de Producción';
   document.getElementById('orden-id').value = '';
+  document.getElementById('orden-cliente-id').value = idOrden || '';
+
+  // Cargar datos en selects
   poblarSelectProductos();
-  document.getElementById('o-producto').value = '';
-  document.getElementById('o-cantidad').value = 1;
-  document.getElementById('o-descripcion').value = '';
-  document.getElementById('o-fecha-inicio').value = '';
-  document.getElementById('o-fecha-fin').value = '';
-  poblarSelectEstadoNuevaOrden();
+  poblarSelectClientes();
+  poblarSelectOrdenesCliente();
+
+  // Limpiar campos
+  document.getElementById('op-producto').value = '';
+  document.getElementById('op-cantidad').value = 1;
+  document.getElementById('op-cliente').value = '';
+  document.getElementById('op-fecha-inicio').value = '';
+  document.getElementById('op-fecha-entrega').value = '';
+  document.getElementById('op-fecha-fin-real').value = '';
+  document.getElementById('op-prioridad').value = 'Normal';
+  document.getElementById('op-estado').value = 'Pendiente';
+  document.getElementById('op-observaciones').value = '';
+  document.getElementById('op-orden-cliente').value = '';
+
+  // Si se pasa idOrden, autocompletar
+  if (idOrden) {
+    autocompletarDesdeOrdenCliente(idOrden);
+  }
+
   document.getElementById('modal-orden').classList.add('open');
-  enfocarPrimerCampo('o-producto');
+  enfocarPrimerCampo('op-producto');
 }
 
+// ── Autocompletar desde orden de cliente ────────────
+async function autocompletarDesdeOrdenCliente(idOrden) {
+  try {
+    const data = await apiFetch(`${API_BASE}/orden-cliente/${idOrden}/`);
+    // Cliente
+    if (data.cliente) {
+      const clienteSelect = document.getElementById('op-cliente');
+      const clienteOpt = Array.from(clienteSelect.options).find(opt => opt.text === data.cliente);
+      if (clienteOpt) {
+        clienteSelect.value = clienteOpt.value;
+      } else {
+        const option = document.createElement('option');
+        option.value = data.cliente;
+        option.text = data.cliente;
+        clienteSelect.add(option);
+        clienteSelect.value = data.cliente;
+      }
+    }
+    // Producto
+    if (data.idProducto) {
+      document.getElementById('op-producto').value = data.idProducto;
+    } else if (data.nombreProducto) {
+      const productoSelect = document.getElementById('op-producto');
+      const prodOpt = Array.from(productoSelect.options).find(opt => opt.text === data.nombreProducto);
+      if (prodOpt) {
+        productoSelect.value = prodOpt.value;
+      } else {
+        const option = document.createElement('option');
+        option.value = data.nombreProducto;
+        option.text = data.nombreProducto;
+        productoSelect.add(option);
+        productoSelect.value = data.nombreProducto;
+      }
+    }
+    // Cantidad
+    if (data.cantidad) {
+      document.getElementById('op-cantidad').value = data.cantidad;
+    }
+    // Fecha entrega
+    if (data.fechaEntrega) {
+      document.getElementById('op-fecha-entrega').value = data.fechaEntrega;
+    }
+    if (data.fechaPedido) {
+      document.getElementById('op-fecha-inicio').value = data.fechaPedido;
+    }
+    mostrarToast('Datos de la orden de cliente cargados automáticamente.', 'info');
+  } catch (e) {
+    mostrarToast('Error al cargar datos de la orden de cliente.', 'error');
+  }
+}
+
+// ── Evento change del selector de orden de cliente ──
+document.addEventListener('DOMContentLoaded', () => {
+  const selectOrdenCliente = document.getElementById('op-orden-cliente');
+  if (selectOrdenCliente) {
+    selectOrdenCliente.addEventListener('change', function() {
+      const id = this.value;
+      if (id) {
+        autocompletarDesdeOrdenCliente(id);
+      }
+    });
+  }
+});
+
+// ── Editar orden ──────────────────────────────────────
 function editarOrden(id) {
-  const o = ORDENES_CACHE.find(x => x.idProduccion === id);
+  const o = ORDENES_PROD_CACHE.find(x => x.idOrdenProduccion === id);
   if (!o) return;
-  limpiarValidacion(['o-producto', 'o-cantidad', 'o-fecha-inicio', 'o-fecha-fin', 'o-estado']);
-  document.getElementById('modal-orden-title').textContent = `✏️ Editar Orden ORD-${String(id).padStart(5, '0')}`;
-  document.getElementById('orden-id').value = o.idProduccion;
-  poblarSelectProductos();
-  document.getElementById('o-producto').value = o.idProducto;
-  document.getElementById('o-cantidad').value = o.cantidadRequerida;
-  document.getElementById('o-descripcion').value = o.descripcion || '';
-  document.getElementById('o-fecha-inicio').value = o.fechaInicio;
-  document.getElementById('o-fecha-fin').value = o.fechaEstimadaFin;
-  poblarSelectEstado(o);
-  document.getElementById('modal-orden').classList.add('open');
-  ajustarMinFechasOrden(o.fechaInicio, o.fechaEstimadaFin);
-}
+  limpiarValidacion(['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega']);
+  document.getElementById('modal-orden-title').textContent = `✏️ Editar Orden ${o.numero}`;
+  document.getElementById('orden-id').value = o.idOrdenProduccion;
+  document.getElementById('orden-cliente-id').value = o.idOrden || '';
 
-function ajustarMinFechasOrden(fechaInicioExistente, fechaFinExistente) {
-  const inpInicio = document.getElementById('o-fecha-inicio');
-  const inpFin = document.getElementById('o-fecha-fin');
-  if (fechaInicioExistente) inpInicio.value = fechaInicioExistente;
-  if (fechaFinExistente) inpFin.value = fechaFinExistente;
+  poblarSelectProductos();
+  poblarSelectClientes();
+
+  document.getElementById('op-producto').value = o.idProducto || '';
+  document.getElementById('op-cantidad').value = o.cantidad;
+  const clienteSelect = document.getElementById('op-cliente');
+  const clienteOpt = Array.from(clienteSelect.options).find(opt => opt.text === o.cliente);
+  if (clienteOpt) {
+    clienteSelect.value = clienteOpt.value;
+  } else if (o.cliente) {
+    const option = document.createElement('option');
+    option.value = o.cliente;
+    option.text = o.cliente;
+    clienteSelect.add(option);
+    clienteSelect.value = o.cliente;
+  }
+  document.getElementById('op-fecha-inicio').value = o.fechaInicio;
+  document.getElementById('op-fecha-entrega').value = o.fechaEntrega;
+  document.getElementById('op-fecha-fin-real').value = o.fechaFinReal || '';
+  document.getElementById('op-prioridad').value = o.prioridad;
+  document.getElementById('op-estado').value = o.estado;
+  document.getElementById('op-observaciones').value = o.observaciones || '';
+  document.getElementById('op-orden-cliente').value = '';
+
+  document.getElementById('modal-orden').classList.add('open');
 }
 
 function cerrarModalOrden() {
@@ -354,38 +570,48 @@ function cerrarModalOrden() {
 
 async function guardarOrden() {
   const id = document.getElementById('orden-id').value;
-  const idProducto = document.getElementById('o-producto').value;
-  const cantidad = parseInt(document.getElementById('o-cantidad').value, 10);
-  const descripcion = document.getElementById('o-descripcion').value.trim();
-  const fechaInicio = document.getElementById('o-fecha-inicio').value;
-  const fechaFin = document.getElementById('o-fecha-fin').value;
-  const estado = document.getElementById('o-estado').value;
+  const idProducto = document.getElementById('op-producto').value;
+  const cantidad = parseInt(document.getElementById('op-cantidad').value, 10);
+  const clienteSelect = document.getElementById('op-cliente');
+  const clienteNombre = clienteSelect.options[clienteSelect.selectedIndex]?.text || '';
+  const fechaInicio = document.getElementById('op-fecha-inicio').value;
+  const fechaEntrega = document.getElementById('op-fecha-entrega').value;
+  const fechaFinReal = document.getElementById('op-fecha-fin-real').value || null;
+  const prioridad = document.getElementById('op-prioridad').value;
+  const estado = document.getElementById('op-estado').value;
+  const observaciones = document.getElementById('op-observaciones').value.trim();
+  const idOrden = document.getElementById('orden-cliente-id').value || null;
 
-  limpiarValidacion(['o-producto', 'o-cantidad', 'o-fecha-inicio', 'o-fecha-fin']);
+  limpiarValidacion(['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega']);
   let valido = true;
-  if (!idProducto) { marcarError('o-producto'); valido = false; }
-  if (!cantidad || cantidad < 1) { marcarError('o-cantidad'); valido = false; }
-  if (!fechaInicio) { marcarError('o-fecha-inicio'); valido = false; }
-  if (!fechaFin) { marcarError('o-fecha-fin'); valido = false; }
+  if (!idProducto) { marcarError('op-producto'); valido = false; }
+  if (!cantidad || cantidad < 1) { marcarError('op-cantidad'); valido = false; }
+  if (!clienteNombre) { marcarError('op-cliente'); valido = false; }
+  if (!fechaInicio) { marcarError('op-fecha-inicio'); valido = false; }
+  if (!fechaEntrega) { marcarError('op-fecha-entrega'); valido = false; }
   if (!valido) return;
 
   const payload = {
     idProducto: parseInt(idProducto, 10),
-    cantidadRequerida: cantidad,
-    descripcion,
+    cantidad,
+    cliente: clienteNombre,
     fechaInicio,
-    fechaEstimadaFin: fechaFin,
+    fechaEntrega,
+    fechaFinReal,
+    prioridad,
     estado,
+    observaciones,
   };
+  if (idOrden) payload.idOrden = parseInt(idOrden, 10);
 
-  const url = id ? `${API_BASE}/ordenes/${id}/` : `${API_BASE}/ordenes/`;
+  const url = id ? `${API_BASE}/ordenes-produccion/${id}/` : `${API_BASE}/ordenes-produccion/`;
   const metodo = id ? 'PUT' : 'POST';
 
   try {
     await apiFetch(url, { method: metodo, body: JSON.stringify(payload) });
     mostrarToast(id ? 'Orden actualizada.' : 'Orden creada.');
     cerrarModalOrden();
-    await cargarOrdenes();
+    await cargarOrdenesProduccion();
   } catch (e) {
     mostrarToast(e.message, 'error');
   }
@@ -394,84 +620,78 @@ async function guardarOrden() {
 async function eliminarOrden(id) {
   if (!confirm('¿Eliminar esta orden de producción?')) return;
   try {
-    await apiFetch(`${API_BASE}/ordenes/${id}/`, { method: 'DELETE' });
+    await apiFetch(`${API_BASE}/ordenes-produccion/${id}/`, { method: 'DELETE' });
     mostrarToast('Orden eliminada.');
-    await cargarOrdenes();
+    await cargarOrdenesProduccion();
   } catch (e) {
     mostrarToast(e.message, 'error');
   }
 }
 
-// ── Modal de detalle grande, con pestañas ────────────
+// ── Modal de detalle con timeline ────────────────────
 async function abrirModalDetalle(id) {
   let o;
   try {
-    o = await apiFetch(`${API_BASE}/ordenes/${id}/`);
+    o = await apiFetch(`${API_BASE}/ordenes-produccion/${id}/`);
   } catch (e) {
     mostrarToast('No se pudo cargar el detalle de la orden.', 'error');
     return;
   }
 
-  document.getElementById('detalle-titulo').textContent = `ORD-${String(o.idProduccion).padStart(5, '0')} — ${o.producto}`;
-  document.getElementById('detalle-subtitulo').innerHTML =
-    `${o.cantidadRequerida} unidades ${o.cliente ? '· ' + o.cliente : ''} ${badgeEstado(o.estado, o.atrasada)}`;
-  document.getElementById('detalle-progress-fill').style.width = o.avancePct + '%';
-  document.getElementById('detalle-progress-pct').textContent = o.avancePct + '%';
+  const avance = o.progreso || 0;
 
-  // Panel Resumen
-  document.getElementById('panel-resumen').innerHTML = `
-    <div class="resumen-grid">
-      <div><strong>Producto</strong><br>${o.producto}</div>
-      <div><strong>Cantidad</strong><br>${o.cantidadRequerida} unidades</div>
-      <div><strong>Fecha inicio</strong><br>${o.fechaInicio}</div>
-      <div><strong>Entrega estimada</strong><br>${o.fechaEstimadaFin}</div>
-      <div><strong>Fecha real de fin</strong><br>${o.fechaRealFin || '—'}</div>
-      <div><strong>Cliente</strong><br>${o.cliente || '—'}</div>
-      <div><strong>Descripción</strong><br>${o.descripcion || '—'}</div>
+  document.getElementById('detalle-titulo').textContent = `${o.numero} — ${o.nombreProducto}`;
+  document.getElementById('detalle-subtitulo').innerHTML =
+    `${o.cantidad} unidades · Cliente: ${o.cliente} ${badgeEstado(o.estado)}`;
+  document.getElementById('detalle-progress-fill').style.width = avance + '%';
+  document.getElementById('detalle-progress-pct').textContent = avance + '%';
+
+  const estados = ['Pendiente', 'En Progreso', 'Completado'];
+  const estadoActual = o.estado;
+  const timelineHtml = `
+    <div class="timeline-container">
+      ${estados.map((est, idx) => {
+        let clase = 'timeline-step';
+        if (est === estadoActual) clase += ' active';
+        else if (estados.indexOf(estadoActual) > idx) clase += ' completed';
+        return `
+          <div class="${clase}">
+            <div class="timeline-dot"></div>
+            <div class="timeline-label">${est}</div>
+          </div>
+        `;
+      }).join('')}
     </div>
   `;
 
-  // Panel Etapas — timeline horizontal con colores reales
-  const etapas = o.etapas || [];
-  document.getElementById('panel-etapas').innerHTML = etapas.length
-    ? `<div class="etapas-timeline">${etapas.map((e, i) => `
-        <div class="etapa-item">
-          <div class="etapa-marcador" style="background:${e.color}">
-            ${e.estado === 'COMPLETADA' ? '✓' : (i === etapas.findIndex(x => x.estado !== 'COMPLETADA') ? '●' : '○')}
-          </div>
-          <div class="etapa-info">
-            <div class="etapa-nombre">${e.nombre}</div>
-            <div class="etapa-meta">${e.estado} · ${e.avancePct}% · ${e.completadas}/${e.totalTareas} tareas</div>
-            <div class="etapa-operarios">${e.operarios.join(', ') || 'Sin operario asignado'}</div>
-          </div>
-        </div>
-      `).join('')}</div>`
-    : `<div class="empty-state">Esta orden todavía no tiene tareas asignadas por etapa.</div>`;
+  document.getElementById('panel-resumen').innerHTML = `
+    <div class="resumen-grid">
+      <div><strong>Número</strong><br>${o.numero}</div>
+      <div><strong>Producto</strong><br>${o.nombreProducto}</div>
+      <div><strong>Cantidad</strong><br>${o.cantidad} unidades</div>
+      <div><strong>Cliente</strong><br>${o.cliente}</div>
+      <div><strong>Fecha Inicio</strong><br>${formatearFecha(o.fechaInicio)}</div>
+      <div><strong>Fecha Entrega</strong><br>${formatearFecha(o.fechaEntrega)}</div>
+      <div><strong>Fecha Fin Real</strong><br>${o.fechaFinReal ? formatearFecha(o.fechaFinReal) : '—'}</div>
+      <div><strong>Prioridad</strong><br>${o.prioridad}</div>
+      <div><strong>Estado</strong><br>${o.estado}</div>
+      <div><strong>Observaciones</strong><br>${o.observaciones || '—'}</div>
+    </div>
+    <div style="margin-top:20px;">
+      <strong>Progreso</strong>
+      ${timelineHtml}
+    </div>
+  `;
 
-  // Panel Operarios (resumen por operario involucrado en esta orden)
-  const operariosUnicos = [...new Set(etapas.flatMap(e => e.operarios))];
-  document.getElementById('panel-operarios-tab').innerHTML = operariosUnicos.length
-    ? `<ul class="lista-simple">${operariosUnicos.map(n => `<li>👤 ${n}</li>`).join('')}</ul>`
-    : `<div class="empty-state">Sin operarios asignados todavía.</div>`;
-
-  // Panel Historial — viene de django-simple-history
-  const historial = o.historial || [];
-  document.getElementById('panel-historial').innerHTML = historial.length
-    ? `<div class="historial-lista">${historial.map(h => `
-        <div class="historial-item">
-          <span class="historial-fecha">${h.fecha}</span>
-          <span class="historial-texto">Estado cambiado a <strong>${h.estado}</strong></span>
-        </div>
-      `).join('')}</div>`
-    : `<div class="empty-state">Sin historial registrado todavía.</div>`;
+  document.getElementById('panel-historial').innerHTML = `
+    <div class="empty-state">No hay historial de cambios disponible.</div>
+  `;
 
   cambiarTabDetalle('resumen');
-
   document.getElementById('btn-editar-desde-detalle').onclick = () => {
     cerrarModalDetalle();
-    editarOrden(o.idProduccion);
+    editarOrden(o.idOrdenProduccion);
   };
-
   document.getElementById('modal-detalle-orden').classList.add('open');
 }
 
@@ -487,9 +707,110 @@ function cerrarModalDetalle() {
 }
 
 // ============================================================
+// CALENDARIO (con español)
+// ============================================================
+function iniciarCalendario() {
+  const calendarEl = document.getElementById('calendar');
+  if (!calendarEl) return;
+  if (calendar) {
+    calendar.destroy();
+    calendar = null;
+  }
+
+  calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    locale: 'es',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    buttonText: {
+      today: 'Hoy',
+      month: 'Mes',
+      week: 'Semana',
+      day: 'Día'
+    },
+    events: function(info, successCallback, failureCallback) {
+      fetch(`${API_BASE}/eventos-calendario/`)
+        .then(res => res.json())
+        .then(data => {
+          const events = data.map(e => ({
+            id: String(e.id),
+            title: e.title,
+            start: e.start,
+            end: e.end,
+            color: e.color,
+            extendedProps: {
+              estado: e.estado,
+              producto: e.producto,
+              cantidad: e.cantidad
+            }
+          }));
+          successCallback(events);
+        })
+        .catch(err => {
+          console.error('Error cargando eventos:', err);
+          failureCallback(err);
+        });
+    },
+    eventDrop: function(info) {
+      const id = parseInt(info.event.id, 10);
+      const nuevaFecha = info.event.startStr.slice(0, 10);
+      fetch(`${API_BASE}/ordenes-produccion/${id}/`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fechaInicio: nuevaFecha })
+      })
+      .then(res => res.json())
+      .then(() => {
+        mostrarToast('Fecha de inicio actualizada correctamente.');
+        calendar.refetchEvents();
+        cargarDashboard();
+        cargarOrdenesProduccion();
+      })
+      .catch(err => {
+        mostrarToast('Error al actualizar la fecha.', 'error');
+        console.error(err);
+        info.revert();
+      });
+    },
+    eventResize: function(info) {
+      const id = parseInt(info.event.id, 10);
+      const nuevaFecha = info.event.endStr ? info.event.endStr.slice(0, 10) : null;
+      if (nuevaFecha) {
+        fetch(`${API_BASE}/ordenes-produccion/${id}/`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fechaEntrega: nuevaFecha })
+        })
+        .then(res => res.json())
+        .then(() => {
+          mostrarToast('Fecha de entrega actualizada.');
+          calendar.refetchEvents();
+          cargarDashboard();
+          cargarOrdenesProduccion();
+        })
+        .catch(err => {
+          mostrarToast('Error al redimensionar.', 'error');
+          console.error(err);
+          info.revert();
+        });
+      }
+    },
+    eventClick: function(info) {
+      const id = parseInt(info.event.id, 10);
+      abrirModalDetalle(id);
+    },
+    height: 'auto'
+  });
+
+  calendar.render();
+}
+
+// ============================================================
 // AVANCE DE OPERARIOS
 // ============================================================
-
 async function cargarOperarios() {
   try {
     const data = await apiFetch(`${API_BASE}/operarios-avance/`);
@@ -525,7 +846,7 @@ function renderOperarios(lista) {
         ${op.tareas.slice(0, 4).map(t => `
           <div class="operario-tarea-row">
             <span>${t.nombreTarea} (${t.proceso || 'General'})</span>
-            ${badgeEstado(t.estado === 'Completada' ? 'Completado' : t.estado, false)}
+            ${badgeEstado(t.estado)}
           </div>
         `).join('') || '<span class="empty-inline">Sin tareas asignadas.</span>'}
       </div>
@@ -546,10 +867,12 @@ function filtrarOperarios() {
 }
 
 // ============================================================
-// INIT
+// INICIALIZACIÓN
 // ============================================================
-
 document.addEventListener('DOMContentLoaded', () => {
   cargarDashboard();
-  cargarProductos();
+  cargarOrdenesCliente();
+  cargarProductosLista();
+  cargarClientes();
+  cargarOperarios();
 });
