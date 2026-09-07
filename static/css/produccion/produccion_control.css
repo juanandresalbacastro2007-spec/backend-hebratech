@@ -251,57 +251,111 @@
 .timeline-step.completed .timeline-label {
   color: #198754;
 }
-/* ── Timeline de estados ───────────────────────────── */
-.timeline-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 20px 0;
-  position: relative;
+/* ── Tabla de Productos ──────────────────────────── */
+#tab-productos table, 
+.tabla-productos {
+  width: 100%;
+  border-collapse: collapse;
 }
-.timeline-container::before {
-  content: '';
-  position: absolute;
-  top: 12px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #d1d5db;
-  z-index: 0;
+
+#tab-productos th, 
+#tab-productos td {
+  padding: 12px 16px;
+  vertical-align: middle;
 }
-.timeline-step {
+
+/* Alineación y contenedor para los botones de acción */
+#tab-productos td:last-child {
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
-  z-index: 1;
-  flex: 1;
+  justify-content: center;
+  gap: 4px;
 }
-.timeline-dot {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid #d1d5db;
+
+/* Botones de editar / eliminar en productos */
+#tab-productos .btn-accion,
+#tab-productos .action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
   background: #fff;
-  margin-bottom: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #374151;
+  transition: all .15s ease;
 }
-.timeline-step.completed .timeline-dot {
-  background: #198754;
-  border-color: #198754;
+
+#tab-productos .btn-accion:hover,
+#tab-productos .action-btn:hover {
+  background: #E7F6F2;
+  border-color: #A5C9CA;
+  color: #395B64;
 }
-.timeline-step.active .timeline-dot {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59,130,246,0.3);
+
+#tab-productos .btn-eliminar:hover,
+#tab-productos .action-btn-danger:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
 }
-.timeline-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
+/* ── Alineación horizontal para la columna Acciones en Productos ── */
+#tab-productos table td:last-child {
+  vertical-align: middle !important;
+  text-align: center !important;
 }
-.timeline-step.active .timeline-label {
-  color: #3b82f6;
+
+/* Forzar contenedor horizontal dentro de la celda de acciones */
+#tab-productos table td:last-child,
+#tab-productos table td:last-child > div,
+#tab-productos table td:last-child > span {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 6px !important;
 }
-.timeline-step.completed .timeline-label {
-  color: #198754;
+
+/* Estilo y tamaño de los botones de acción */
+#tab-productos table td:last-child button,
+#tab-productos table td:last-child a,
+#tab-productos table td:last-child .action-btn {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  border: 1px solid #e5e7eb !important;
+  background-color: #ffffff !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+#tab-productos table td:last-child button:hover,
+#tab-productos table td:last-child a:hover {
+  background-color: #E7F6F2 !important;
+  border-color: #A5C9CA !important;
+  color: #395B64 !important;
+}
+/* ── Borde y acabado de botones de acción en Productos ── */
+#tab-productos table td:last-child button,
+#tab-productos table td:last-child a,
+#tab-productos table td:last-child .action-btn {
+  border: 1px solid #d1d5db !important; /* Borde visible gris suave */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important; /* Ligera sombra de relieve */
+}
+
+/* Efecto hover con borde acentuado */
+#tab-productos table td:last-child button:hover,
+#tab-productos table td:last-child a:hover {
+  border-color: #395B64 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
