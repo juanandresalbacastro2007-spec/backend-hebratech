@@ -744,3 +744,61 @@ body {
   color: var(--primary);
   text-decoration: underline;
 }
+/* ══ MODO OSCURO GLOBAL (data-bs-theme="dark") ═════════════ */
+[data-bs-theme="dark"] {
+  --primary:        #A5C9CA;        /* El tono claro pasa a ser la fuente primaria */
+  --primary-dark:   #E7F6F2;        /* Textos principales en blanco/gris suave */
+  --primary-deep:   #12181b;        /* Fondo súper oscuro para contrastes */
+  --accent:         #395B64;        /* Acentos en tonos medios */
+  --bg-light:       #212b30;        /* Fondos secundarios/hover */
+  --bg-page:        #182024;        /* Fondo general de la pantalla */
+  --border:         rgba(165, 201, 202, 0.15); /* Bordes más sutiles */
+}
+
+/* Adaptación de elementos con fondo blanco estático en modo oscuro */
+[data-bs-theme="dark"] .topbar,
+[data-bs-theme="dark"] .kpi-card,
+[data-bs-theme="dark"] .section-card,
+[data-bs-theme="dark"] .btn-notif-ht,
+[data-bs-theme="dark"] .ht-toast,
+[data-bs-theme="dark"] .notif-dropdown-ht {
+  background-color: #212b30 !important;
+  color: var(--primary-dark) !important;
+}
+
+/* Tablas en Modo Oscuro */
+[data-bs-theme="dark"] .ht-table thead th {
+  background-color: #1a2226;
+  color: var(--primary);
+}
+
+[data-bs-theme="dark"] .ht-table tbody td {
+  color: var(--primary-dark);
+}
+
+[data-bs-theme="dark"] .ht-table tbody tr:hover {
+  background-color: rgba(165, 201, 202, 0.08);
+}
+
+/* Formularios en Modo Oscuro */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  background-color: #182024;
+  color: #fff;
+  border-color: var(--border);
+}
+
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+  background-color: #182024;
+  color: #fff;
+}
+
+/* Textos secundarios / mutados */
+[data-bs-theme="dark"] .topbar-sub,
+[data-bs-theme="dark"] .top-clock,
+[data-bs-theme="dark"] .kpi-label,
+[data-bs-theme="dark"] .placeholder-wrap p,
+[data-bs-theme="dark"] .ht-toast-msg {
+  color: #9ab0b7 !important;
+}
