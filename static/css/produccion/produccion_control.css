@@ -1,8 +1,3 @@
-/* ============================================================
-   HebraTech — Centro de Control de Producción
-   Paleta del proyecto: #2C3333, #395B64, #A5C9CA, #E7F6F2
-   ============================================================ */
-
 /* ── Dashboard: alertas ─────────────────────────── */
 .dashboard-alertas { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .alerta-banner {
@@ -13,7 +8,7 @@
 .alerta-warning { background: #fef9c3; color: #854d0e; }
 .alerta-info    { background: #dbeafe; color: #1e40af; }
 
-/* ── Dashboard: KPI grid ─────────────────────────── */
+/* ── KPI grid ────────────────────────────────────── */
 .kpi-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px; margin-bottom: 16px;
@@ -33,7 +28,7 @@
 .kpi-rojo      { border-top-color: #ef4444; }
 .kpi-amarillo  { border-top-color: #eab308; }
 
-/* ── Progreso general ────────────────────────────── */
+/* ── Progreso general ───────────────────────────── */
 .progreso-general-card {
   background: #fff; border-radius: 12px; padding: 16px 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px;
@@ -43,7 +38,7 @@
   color: #2C3333; margin-bottom: 8px;
 }
 
-/* ── Barra de progreso genérica ──────────────────── */
+/* ── Barra de progreso ──────────────────────────── */
 .progress-bar-track {
   width: 100%; height: 10px; background: #E7F6F2; border-radius: 6px; overflow: hidden;
 }
@@ -53,7 +48,7 @@
   border-radius: 6px; transition: width .3s ease;
 }
 
-/* ── Filtros rápidos (chips) ─────────────────────── */
+/* ── Filtros rápidos ────────────────────────────── */
 .filtros-rapidos { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 0; }
 .chip-filtro {
   border: 1px solid #d1d5db; background: #fff; border-radius: 999px;
@@ -62,7 +57,7 @@
 .chip-filtro:hover { background: #E7F6F2; }
 .chip-filtro.active { background: #395B64; color: #fff; border-color: #395B64; }
 
-/* ── Grid de cards de órdenes ────────────────────── */
+/* ── Grid de órdenes ────────────────────────────── */
 .ordenes-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px; padding: 16px 20px;
@@ -82,7 +77,7 @@
 .orden-card-fechas { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; }
 .orden-card-acciones { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
 
-/* ── Badges de estado ─────────────────────────────── */
+/* ── Badges ──────────────────────────────────────── */
 .badge {
   font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
   letter-spacing: .02em;
@@ -93,7 +88,7 @@
 .badge-amarillo { background: #fef9c3; color: #854d0e; }
 .badge-rojo     { background: #fee2e2; color: #991b1b; }
 
-/* ── Modal grande de detalle ─────────────────────── */
+/* ── Modal grande ────────────────────────────────── */
 .prod-modal-grande { max-width: 720px; width: 92%; }
 .detalle-header { display: flex; justify-content: space-between; align-items: flex-start; }
 .detalle-subtitulo { font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 8px; margin-top: 4px; }
@@ -115,7 +110,7 @@
 }
 .resumen-grid strong { color: #2C3333; font-size: 12px; text-transform: uppercase; }
 
-/* ── Timeline de etapas ──────────────────────────── */
+/* ── Timeline de etapas ─────────────────────────── */
 .etapas-timeline { display: flex; flex-direction: column; gap: 0; }
 .etapa-item { display: flex; gap: 14px; position: relative; padding-bottom: 20px; }
 .etapa-item:not(:last-child)::before {
@@ -137,7 +132,7 @@
 .historial-fecha { color: #9ca3af; white-space: nowrap; }
 .historial-texto { color: #374151; }
 
-/* ── Operarios ────────────────────────────────────── */
+/* ── Operarios ───────────────────────────────────── */
 .operarios-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px; padding: 16px 20px;
@@ -150,6 +145,163 @@
 .operario-tarea-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-top: 1px dashed #e5e7eb; }
 .empty-inline { font-size: 12px; color: #9ca3af; }
 
-/* ── Errores de formulario ───────────────────────── */
+/* ── Errores de formulario ──────────────────────── */
 .campo-error { border-color: #ef4444 !important; }
 .campo-error-msg { display: none; color: #ef4444; font-size: 12px; margin-top: 4px; }
+
+/* ── Calendario ──────────────────────────────────── */
+#calendar {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+}
+.fc .fc-button-primary {
+  background-color: #395B64 !important;
+  border-color: #395B64 !important;
+}
+.fc .fc-button-primary:hover {
+  background-color: #2C3333 !important;
+}
+.fc .fc-daygrid-day-number {
+  color: #2C3333;
+}
+.fc .fc-col-header-cell-cushion {
+  color: #395B64;
+  font-weight: 600;
+}
+
+/* ── Tabla de clientes ───────────────────────────── */
+#tab-clientes .badge {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+#tab-clientes .action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all .12s;
+}
+#tab-clientes .action-btn.edit:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--primary);
+}
+#tab-clientes .action-btn:hover {
+  background: rgba(57, 91, 100, 0.08);
+}
+
+/* ── Timeline de estados ───────────────────────────── */
+.timeline-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+  position: relative;
+}
+.timeline-container::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #d1d5db;
+  z-index: 0;
+}
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+.timeline-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  margin-bottom: 6px;
+}
+.timeline-step.completed .timeline-dot {
+  background: #198754;
+  border-color: #198754;
+}
+.timeline-step.active .timeline-dot {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.3);
+}
+.timeline-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.timeline-step.active .timeline-label {
+  color: #3b82f6;
+}
+.timeline-step.completed .timeline-label {
+  color: #198754;
+}
+/* ── Timeline de estados ───────────────────────────── */
+.timeline-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+  position: relative;
+}
+.timeline-container::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #d1d5db;
+  z-index: 0;
+}
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+.timeline-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  margin-bottom: 6px;
+}
+.timeline-step.completed .timeline-dot {
+  background: #198754;
+  border-color: #198754;
+}
+.timeline-step.active .timeline-dot {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.3);
+}
+.timeline-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.timeline-step.active .timeline-label {
+  color: #3b82f6;
+}
+.timeline-step.completed .timeline-label {
+  color: #198754;
+}
