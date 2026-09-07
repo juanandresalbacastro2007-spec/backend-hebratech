@@ -2,7 +2,7 @@
    proveedores.css — HebraTech · Módulo de Proveedores v2
    ============================================================ */
 
-/* ── Variables locales (extienden admin.css) ──────────────── */
+/* ── Variables locales ────────────────────────────────────── */
 :root {
   --prov-sidebar-w: 300px;
   --prov-sidebar-bg: #1A2F3B;
@@ -13,22 +13,20 @@
   --prov-transition: 0.18s ease;
 }
 
-body{
-
-  background-color:#e7f6f2 !important;
+body {
+  background-color: #e7f6f2;
 }
 
 /* ── KPI Strip ───────────────────────────────────────────── */
 .kpi-strip {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 0.5rem;
   background: #fff;
   border: 1px solid rgba(165,201,202,0.35);
   border-radius: 12px;
   padding: 0.6rem 1.2rem;
   flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 .kpi-pill {
@@ -513,14 +511,12 @@ body{
 .ht-modal-header .modal-title { color: #fff; font-size: 1rem; }
 
 /* ── Responsive ──────────────────────────────────────────── */
-/* Ajustes para móviles y tablets */
 @media (max-width: 900px) {
   .prov-layout {
     flex-direction: column;
     height: auto;
   }
 
-  /* La lista de proveedores se oculta a la izquierda como Drawer */
   .prov-sidebar {
     position: fixed;
     top: 0;
@@ -540,7 +536,6 @@ body{
     transform: translateX(0);
   }
 
-  /* Fondo oscuro al desplegar la lista */
   .prov-backdrop {
     display: none;
     position: fixed;
@@ -568,4 +563,79 @@ body{
 @media (max-width: 576px) {
   .kpi-strip { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
   .kpi-divider { display: none; }
+}
+
+/* ══ REGLAS EXPLÍCITAS DE MODO OSCURO ([data-bs-theme="dark"]) ════════════ */
+[data-bs-theme="dark"] body {
+  background-color: #182024 !important;
+  color: #E7F6F2 !important;
+}
+
+/* KPI Strip */
+[data-bs-theme="dark"] .kpi-strip {
+  background-color: #212b30 !important;
+  border-color: rgba(165, 201, 202, 0.2) !important;
+}
+
+[data-bs-theme="dark"] .kpi-num {
+  color: #E7F6F2 !important;
+}
+
+[data-bs-theme="dark"] .kpi-lbl {
+  color: #9ab0b7 !important;
+}
+
+/* Filtros */
+[data-bs-theme="dark"] .filtro-tabs {
+  background-color: #182024 !important;
+}
+
+[data-bs-theme="dark"] .ftab {
+  color: #9ab0b7 !important;
+}
+
+[data-bs-theme="dark"] .ftab.active {
+  background-color: #212b30 !important;
+  color: #A5C9CA !important;
+}
+
+/* Tarjeta y Panel de Detalle */
+[data-bs-theme="dark"] .prov-detail-wrap,
+[data-bs-theme="dark"] .prov-card,
+[data-bs-theme="dark"] .prov-empty-detail {
+  background-color: #212b30 !important;
+  color: #E7F6F2 !important;
+}
+
+[data-bs-theme="dark"] .prov-card-header {
+  border-bottom-color: rgba(165, 201, 202, 0.2) !important;
+}
+
+[data-bs-theme="dark"] .prov-card-empresa,
+[data-bs-theme="dark"] .info-value,
+[data-bs-theme="dark"] .info-link {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .info-label {
+  color: #8da4ac !important;
+}
+
+[data-bs-theme="dark"] .quick-actions {
+  border-top-color: rgba(165, 201, 202, 0.2) !important;
+}
+
+[data-bs-theme="dark"] .quick-btn {
+  border-color: rgba(165, 201, 202, 0.2) !important;
+  color: #A5C9CA !important;
+}
+
+[data-bs-theme="dark"] .quick-btn:hover {
+  background-color: rgba(165, 201, 202, 0.1) !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .prov-empty-icon {
+  background-color: #182024 !important;
+  color: #A5C9CA !important;
 }

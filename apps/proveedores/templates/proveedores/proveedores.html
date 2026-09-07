@@ -18,8 +18,8 @@
 {% endblock %}
 
 {% block contenido %}
-<div class="proveedores-page ">
-  <!-- ── KPI Strip ────────────────────────────────────────── -->
+<div class="proveedores-page">
+  <!-- KPI Strip -->
   <div class="kpi-strip mb-3">
     <div class="kpi-pill">
       <span class="kpi-dot dot-all"></span>
@@ -39,13 +39,13 @@
       <span class="kpi-lbl">Inactivos</span>
     </div>
     <div class="kpi-spacer"></div>
+    
     <!-- Filtro rápido -->
     <div class="filtro-tabs d-none d-md-block" id="filtroEstado" role="group" aria-label="Filtrar por estado">
       <button class="ftab active" data-filtro="todos">Todos</button>
       <button class="ftab" data-filtro="activo">Activos</button>
       <button class="ftab" data-filtro="inactivo">Inactivos</button>
     </div>
-    <!-- Cambiar d-md-none por d-lg-none para que coincida con la vista de 900px -->
     <div class="d-flex gap-2 d-lg-none mt-2 w-100">
       <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" id="btnProvAnterior">
         <i class="bi bi-chevron-left me-1"></i> Anterior
@@ -56,11 +56,11 @@
     </div>
   </div>
 
-  <!-- ── Layout principal ─────────────────────────────────── -->
+  <!-- Layout principal -->
   <section>
     <div class="prov-layout">
 
-      <!-- ── Panel izquierdo: lista ───── -->
+      <!-- Panel izquierdo: lista -->
       <aside class="prov-sidebar">
         <div class="prov-sidebar-head">
           <p class="sidebar-eyebrow">Proveedores registrados</p>
@@ -107,7 +107,7 @@
         </div>
       </aside>
 
-      <!-- ── Panel derecho: detalle ───── -->
+      <!-- Panel derecho: detalle -->
       <main class="prov-detail-wrap">
         <div class="tab-content h-100">
 
@@ -117,8 +117,7 @@
                role="tabpanel">
 
             <div class="prov-card">
-
-              <!-- Cabecera ─────────── -->
+              <!-- Cabecera -->
               <div class="prov-card-header">
                 <div class="prov-avatar">{{ p.nombreEmpresa|first|upper }}</div>
                 <div class="prov-card-title-group">
@@ -147,10 +146,8 @@
                 </div>
               </div>
 
-              <!-- Cuerpo ──────────── -->
+              <!-- Cuerpo -->
               <div class="prov-card-body">
-
-                <!-- Fila 1: Contacto + NIT -->
                 <div class="info-grid">
                   <div class="info-block">
                     <label class="info-label"><i class="bi bi-person-fill me-1"></i>Contacto principal</label>
@@ -182,7 +179,7 @@
                   </div>
                 </div>
 
-                <!-- Accesos rápidos ─ -->
+                <!-- Accesos rápidos -->
                 <div class="quick-actions mt-4">
                   <a href="mailto:{{ p.correo }}" class="quick-btn">
                     <i class="bi bi-envelope me-1"></i>Enviar correo
@@ -194,13 +191,11 @@
                     <i class="bi bi-clipboard me-1"></i>Copiar NIT
                   </button>
                 </div>
-
               </div>
             </div>
           </div>
           {% empty %}
-
-          <!-- Estado vacío ─────────── -->
+          <!-- Estado vacío -->
           <div class="prov-empty-detail">
             <div class="prov-empty-icon">
               <i class="bi bi-truck-flatbed"></i>
@@ -212,16 +207,15 @@
               <i class="bi bi-plus-lg me-1"></i>Agregar proveedor
             </button>
           </div>
-
           {% endfor %}
+
         </div>
       </main>
 
     </div>
   </section>
 
-
-  <!-- ══════════ MODALES EDITAR ══════════════════════════════ -->
+  <!-- MODALES EDITAR -->
   {% for p in proveedores %}
   <div class="modal fade" id="modalEditarProveedor-{{ p.idProveedor }}" tabindex="-1"
        aria-labelledby="modalEditarLabel-{{ p.idProveedor }}" aria-hidden="true">
@@ -273,7 +267,7 @@
               <div class="col-md-6">
                 <label class="form-label">Estado</label>
                 <select name="estado" class="form-select" required>
-                  <option value="activo"   {% if p.estado == "activo"   %}selected{% endif %}>🟢 Activo</option>
+                  <option value="activo" {% if p.estado == "activo" %}selected{% endif %}>🟢 Activo</option>
                   <option value="inactivo" {% if p.estado == "inactivo" %}selected{% endif %}>🔴 Inactivo</option>
                 </select>
               </div>
@@ -290,9 +284,7 @@
   </div>
   {% endfor %}
 
-
-  <!-- ══════════ MODAL AGREGAR ═══════════════════════════════ -->
-    <!-- ══════════ MODAL AGREGAR ═══════════════════════════════ -->
+  <!-- MODAL AGREGAR -->
   <div class="modal fade" id="modalAgregarProveedor" tabindex="-1"
        aria-labelledby="modalAgregarLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -379,6 +371,7 @@
     </div>
   </div>
 
+  {% include 'includes/theme_toggle.html' %}
 </div>
 {% endblock %}
 

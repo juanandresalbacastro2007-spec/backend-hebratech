@@ -61,7 +61,7 @@
           <i class="bi bi-people-fill fs-6"></i>
         </div>
       </div>
-      <div class="kpi-value fs-4 fw-bold text-dark">{{ total_usuarios|default:0 }}</div>
+      <div class="kpi-value fs-4 fw-bold ">{{ total_usuarios|default:0 }}</div>
     </a>
   </div>
 
@@ -191,39 +191,6 @@
 {% endif %}
 </div>
 
-<!-- Acciones Rápidas -->
-<div class="row g-3 mb-4">
-  <div class="col-12">
-    <div class="section-card">
-      <div class="section-card-header d-flex align-items-center">
-        <h6 class="mb-0"><i class="bi bi-lightning-charge-fill me-2 text-warning"></i>Acciones Rápidas</h6>
-      </div>
-      <div class="section-card-body p-3 d-flex flex-wrap gap-2">
-        <a href="{% url 'admin_usuario_crear' %}" class="btn btn-primary-ht btn-sm">
-          <i class="bi bi-person-plus me-1"></i>Nuevo Usuario
-        </a>
-        <a href="{% url 'admin_tarea_asignar' %}" class="btn btn-outline-ht btn-sm">
-          <i class="bi bi-clipboard2-plus me-1"></i>Asignar Tarea
-        </a>
-        <a href="{% url 'admin_ordenes' %}" class="btn btn-outline-ht btn-sm">
-          <i class="bi bi-bag me-1"></i>Ver Órdenes
-        </a>
-        <a href="{% url 'admin_tareas' %}" class="btn btn-outline-ht btn-sm">
-          <i class="bi bi-list-check me-1"></i>Ver Tareas
-        </a>
-        <a href="{% url 'admin_inventario' %}" class="btn btn-outline-ht btn-sm">
-          <i class="bi bi-box-seam me-1"></i>Ver Inventario
-        </a>
-        <a href="{% url 'produccion_portal' %}" class="btn btn-outline-ht btn-sm">
-          <i class="bi bi-gear me-1"></i>Ver Producción
-        </a>
-        <a href="{% url 'admin_incidencias' %}" class="btn btn-outline-ht btn-sm">
-          <i class="bi bi-exclamation-triangle me-1"></i>Ver Incidencias
-        </a>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Listados Recientes -->
 <div class="row g-3 mb-4">
@@ -305,7 +272,7 @@
             {% for asig in ultimas_asignaciones %}
             <tr>
               <td>
-                <span class="fw-medium text-dark">{{ asig.idTarea.nombreTarea }}</span>
+                <span class="fw-medium">{{ asig.idTarea.nombreTarea }}</span>
               </td>
               <td>
                 <div class="d-flex align-items-center gap-2">

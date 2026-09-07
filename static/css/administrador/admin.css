@@ -29,7 +29,7 @@ body {
 .sidebar {
   width: var(--sidebar-w);
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--primary-deep) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(180deg, var(--primary-deep)  );
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -138,7 +138,7 @@ body {
   width: 34px; height: 34px;
   border-radius: 50%;
   background: var(--accent);
-  color: var(--primary-dark);
+  color: var(--primary-dark);                                     
   font-family: var(--ff-display);
   font-weight: 700;
   font-size: 0.9rem;
@@ -151,7 +151,7 @@ body {
 .admin-name {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #fff;
+  color: #ffff;
   line-height: 1.1;
 }
 
@@ -264,8 +264,8 @@ body {
   font-family: var(--ff-display);
   font-size: 1.6rem;
   font-weight: 700;
-  color: var(--primary-dark);
   line-height: 1;
+  color: #000000; /* Negro absoluto en modo claro */
 }
 
 .kpi-label {
@@ -288,6 +288,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  color: ;
 }
 
 .section-card-header h6 {
@@ -745,9 +746,9 @@ body {
   text-decoration: underline;
 }
 /* ══ MODO OSCURO GLOBAL (data-bs-theme="dark") ═════════════ */
-[data-bs-theme="dark"] {
+[data-bs-theme="dark"]   {
   --primary:        #A5C9CA;        /* El tono claro pasa a ser la fuente primaria */
-  --primary-dark:   #E7F6F2;        /* Textos principales en blanco/gris suave */
+  --primary-dark:   #158eff;        /* Textos principales en blanco/gris suave */
   --primary-deep:   #12181b;        /* Fondo súper oscuro para contrastes */
   --accent:         #395B64;        /* Acentos en tonos medios */
   --bg-light:       #212b30;        /* Fondos secundarios/hover */
@@ -761,6 +762,7 @@ body {
 [data-bs-theme="dark"] .section-card,
 [data-bs-theme="dark"] .btn-notif-ht,
 [data-bs-theme="dark"] .ht-toast,
+[data-bs-theme="dark"] .section-card-header
 [data-bs-theme="dark"] .notif-dropdown-ht {
   background-color: #212b30 !important;
   color: var(--primary-dark) !important;
@@ -768,16 +770,26 @@ body {
 
 /* Tablas en Modo Oscuro */
 [data-bs-theme="dark"] .ht-table thead th {
-  background-color: #1a2226;
-  color: var(--primary);
+ background-color: #1a2226 !important;
+ color: var(--primary) !important;
 }
 
-[data-bs-theme="dark"] .ht-table tbody td {
-  color: var(--primary-dark);
+[data-bs-theme="dark"] .ht-table tbody td, .brand-sub, .admin-role, {
+  color: #e7f6f2 !important;
+}
+
+[data-bs-theme="dark"] .brand-title, .admin-name{
+  color: #158eff !important;
 }
 
 [data-bs-theme="dark"] .ht-table tbody tr:hover {
-  background-color: rgba(165, 201, 202, 0.08);
+  background-color: rgba(247, 250, 250, 0.05) !important;
+}
+
+
+/* Fuerza a los spans internos (como las tareas) a usar el color claro */
+[data-bs-theme="dark"] .ht-table tbody td span {
+  color: #e7f6f2 !important;
 }
 
 /* Formularios en Modo Oscuro */
@@ -786,6 +798,11 @@ body {
   background-color: #182024;
   color: #fff;
   border-color: var(--border);
+}
+
+/* Estado vacío (cuando no hay registros) */
+[data-bs-theme="dark"] .ht-table .text-muted {
+  color: #9ab0b7 !important;
 }
 
 [data-bs-theme="dark"] .form-control:focus,
@@ -800,5 +817,8 @@ body {
 [data-bs-theme="dark"] .kpi-label,
 [data-bs-theme="dark"] .placeholder-wrap p,
 [data-bs-theme="dark"] .ht-toast-msg {
-  color: #9ab0b7 !important;
+  color: #f8f8f8 !important;
+}
+[data-bs-theme="dark"] .kpi-value {
+  color: #158eff !important; /* Color azul en modo oscuro */
 }
