@@ -905,7 +905,7 @@ h2, h3 {
 }
 
 .team-section {
-  font-family: 'Graduate', serif !important;
+  font-family: 'Roboto', sans-serif;
 }
 .section-title{
     font-family: 'Fredoka', serif !important;
@@ -953,14 +953,68 @@ h2, h3 {
 }
 
 .team-name {
-  font-family: 'Graduate', serif !important;
-  font-size: 0.85rem; /* Ajustado para que nombres largos no se rompan feo */
-  font-weight: 700;
+  font-family: 'Fredoka', serif !important;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: #ffffff; 
-  text-transform: uppercase; /* Fuerza las mayúsculas de la imagen */
-  letter-spacing: 0.5px;    /* Espaciado elegante */
+  letter-spacing: 0.2px;
   margin-top: 0.5rem;
 }
+
+.team-card {
+  position: relative;
+}
+
+.team-role {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--accent);
+  opacity: .85;
+  margin-top: 0.15rem;
+  letter-spacing: .2px;
+}
+
+.team-socials {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.team-social-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.9) !important;
+  color: #24292f !important;
+  font-size: 0.85rem;
+  transition: all .25s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+
+.team-social-icon.icon-linkedin {
+  background: #0A66C2 !important;
+  color: #ffffff !important;
+}
+
+.team-social-icon.icon-mail {
+  background: var(--accent) !important;
+  color: var(--primary-dark) !important;
+}
+
+.team-social-icon i {
+  color: inherit !important;
+}
+
+.team-social-icon:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 4px 10px rgba(0,0,0,.3);
+}
+
+
 
 
 /* ──────────────────────────────────────────
