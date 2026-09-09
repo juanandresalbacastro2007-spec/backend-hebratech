@@ -113,7 +113,7 @@ def api_tareas(request):
 
     Campos que el JS espera por cada tarea:
         idAsignacion, nombreTarea, descripcionTarea, proceso,
-        complejidad, prioridad, estado, horasEstimadas,
+        complejidad, prioridad, estado, horasEstimadas, horasReales,
         tipoPrenda, cantidadPrendas, maquina,
         fechaInicio, fechaFinalizacion, fechaInicioTs
     """
@@ -150,6 +150,7 @@ def api_tareas(request):
             'prioridad':       a.prioridad or 'Media',
             'estado':          a.estado,
             'horasEstimadas':  float(a.horasEstimadas or 0),
+            'horasReales':     float(a.horasReales) if a.horasReales is not None else None,
             'tipoPrenda':      a.tipoPrenda or '',
             'cantidadPrendas': a.cantidadPrendas or 0,
             'maquina':         tarea.proceso or 'Planta General',
