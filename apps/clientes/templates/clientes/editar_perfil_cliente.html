@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,18 +8,12 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}">
+  <script src="{% static 'js/theme.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}?v=3">
   <style>
-    :root {
-      --primary: #395B64;
-      --primary-dark: #2C3333;
-      --accent: #A5C9CA;
-      --bg-light: #E7F6F2;
-      --ff-display: 'Fredoka', sans-serif;
-      --ff-body: 'Roboto', sans-serif;
-    }
-
-    body { background: #f0f4f5; font-family: var(--ff-body); }
+    /* Nota: --primary, --accent, etc. ya los define cliente.css (con su
+       variante para [data-bs-theme="dark"]); no se redefinen aquí para
+       no pisar el modo oscuro. */
 
     /* Topbar igual que el portal */
     .topbar {
@@ -57,7 +51,7 @@
 
     /* Card principal */
     .perfil-card {
-      background: #fff;
+      background: var(--bg-card);
       border-radius: 16px;
       border: 1px solid rgba(165,201,202,0.35);
       overflow: hidden;
@@ -88,7 +82,7 @@
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #9aa;
+      color: var(--inactive);
       margin-bottom: 0.8rem;
       padding-bottom: 0.4rem;
       border-bottom: 1px solid rgba(165,201,202,0.2);
@@ -98,7 +92,7 @@
     .form-label {
       font-size: 0.82rem;
       font-weight: 600;
-      color: #2C3333;
+      color: var(--primary-dark);
       margin-bottom: 0.3rem;
     }
 
@@ -118,9 +112,9 @@
 
     /* Campo bloqueado (solo lectura) */
     .campo-bloqueado {
-      background: #f5f7f8 !important;
+      background: var(--bg-mid) !important;
       border-color: rgba(165,201,202,0.25) !important;
-      color: #8aa !important;
+      color: var(--inactive) !important;
       cursor: not-allowed;
     }
     .campo-bloqueado-wrap {
@@ -130,11 +124,11 @@
       position: absolute;
       right: 10px; top: 50%; transform: translateY(-50%);
       display: flex; align-items: center; gap: 4px;
-      font-size: 0.68rem; color: #aab;
+      font-size: 0.68rem; color: var(--inactive);
     }
     .aviso-bloqueado {
       font-size: 0.72rem;
-      color: #9aa;
+      color: var(--inactive);
       margin-top: 0.3rem;
       display: flex; align-items: center; gap: 4px;
     }
@@ -173,7 +167,7 @@
       border-radius: 9px;
       padding: 0.75rem 1rem;
       font-size: 0.78rem;
-      color: #6a7f85;
+      color: var(--inactive);
     }
     .info-nota i { color: var(--primary); }
   </style>
@@ -366,5 +360,9 @@
     });
   </script>
 
+<!-- BOTÓN FLOTANTE DE MODO OSCURO -->
+<div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
+  {% include 'includes/theme_toggle.html' %}
+</div>
 </body>
 </html>
