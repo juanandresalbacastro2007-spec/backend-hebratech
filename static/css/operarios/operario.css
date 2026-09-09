@@ -1415,4 +1415,49 @@ html, body {
   .ht-kanban-col { display: none; }
   .ht-kanban-col.active-mobile-col { display: flex; }
 }
-
+[data-bs-theme="dark"] {
+  --bg:        #182024;
+  --surface:   #212b30;
+  --surface2:  #263239;
+  --border:    rgba(165,201,202,0.15);
+  --border-md: rgba(165,201,202,0.3);
+  --text:      #E7F6F2;
+  --text-muted:#93a9af;
+}
+ 
+[data-bs-theme="dark"] html,
+[data-bs-theme="dark"] body { background: var(--bg); color: var(--text); }
+ 
+[data-bs-theme="dark"] .ht-navbar-top,
+[data-bs-theme="dark"] .ht-search-input,
+[data-bs-theme="dark"] .ht-filter-select,
+[data-bs-theme="dark"] .ht-stat,
+[data-bs-theme="dark"] .ht-kanban-col,
+[data-bs-theme="dark"] .ht-modal-content,
+[data-bs-theme="dark"] .ht-card-panel,
+[data-bs-theme="dark"] .ht-toast {
+  background: var(--surface) !important;
+  border-color: var(--border-md) !important;
+  color: var(--text) !important;
+}
+ 
+[data-bs-theme="dark"] .ht-card,
+[data-bs-theme="dark"] .ht-detail-item,
+[data-bs-theme="dark"] .ht-input,
+[data-bs-theme="dark"] .ht-panel-header,
+[data-bs-theme="dark"] .ht-panel-footer,
+[data-bs-theme="dark"] .ht-detail-desc,
+[data-bs-theme="dark"] .brand-icon {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+ 
+[data-bs-theme="dark"] .ht-brand .brand-title { color: #ffffff !important; }
+[data-bs-theme="dark"] .ht-brand .brand-sub   { color: var(--text-muted) !important; }
+ 
+[data-bs-theme="dark"] .ht-btn-secondary:hover,
+[data-bs-theme="dark"] .ht-nav-btn:hover,
+[data-bs-theme="dark"] .ht-profile-btn:hover { background: rgba(165,201,202,0.08) !important; }
+ 
+[data-bs-theme="dark"] .ht-controls-bar { background: var(--bg) !important; border-color: var(--border) !important; }

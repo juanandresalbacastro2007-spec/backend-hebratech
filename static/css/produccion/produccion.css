@@ -301,10 +301,19 @@ body {
     font-size: 22px;
 }
 
-.kpi-icon.teal   { background: var(--accent-light); color: var(--primary); }
-.kpi-icon.green  { background: rgba(25, 135, 84, 0.12); color: #157347; }
-.kpi-icon.orange { background: rgba(255, 193, 7, 0.18); color: #a07800; }
-.kpi-icon.red    { background: rgba(220, 53, 69, 0.12); color: #b02a37; }
+/* FIX: mismo fondo (accent-light) para todos los íconos KPI,
+   solo cambia el color del ícono según la variante */
+.kpi-icon.teal,
+.kpi-icon.green,
+.kpi-icon.orange,
+.kpi-icon.red {
+    background: var(--accent-light);
+}
+
+.kpi-icon.teal   { color: var(--primary); }
+.kpi-icon.green  { color: #157347; }
+.kpi-icon.orange { color: #a07800; }
+.kpi-icon.red    { color: #b02a37; }
 
 .kpi-val {
     font-family: var(--ff-display);
@@ -623,6 +632,8 @@ td {
 .estado-ord-Completado  { background: rgba(25, 135, 84, 0.12); color: #157347; }
 .estado-ord-Pausado     { background: #f1f5f9; color: var(--muted); }
 .estado-ord-Detenido    { background: rgba(220, 53, 69, 0.12); color: #b02a37; }
+.estado-ord-Entregado   { background: rgba(25, 135, 84, 0.12); color: #157347; }
+.estado-ord-Retrasado   { background: rgba(255, 193, 7, 0.18); color: #a07800; }
 
 /* ── AVANCE DE OPERARIOS ── */
 .operarios-grid {
@@ -768,6 +779,7 @@ td {
 .estado-tarea-En-Progreso { background: rgba(255, 193, 7, 0.18);   color: #a07800; }
 .estado-tarea-Completada  { background: rgba(25, 135, 84, 0.12);   color: #157347; }
 .estado-tarea-Cancelada   { background: rgba(220, 53, 69, 0.12);   color: #b02a37; }
+.estado-tarea-Retrasada   { background: rgba(255, 193, 7, 0.18);   color: #a07800; }
 
 .operario-sin-tareas {
     padding: 20px 18px;
@@ -1633,3 +1645,67 @@ textarea {
     background-color: #1f3541;
     color: white;
 }
+[data-bs-theme="dark"] {
+  --bg:           #182024;
+  --card:         #212b30;
+  --text:         #E7F6F2;
+  --muted:        #93a9af;
+  --border:       rgba(165,201,202,0.15);
+  --border-light: rgba(165,201,202,0.08);
+  --accent-light: #263239;
+}
+ 
+[data-bs-theme="dark"] body,
+[data-bs-theme="dark"] .content { background: var(--bg); color: var(--text); }
+ 
+[data-bs-theme="dark"] .topbar { background: #212b30 !important; }
+ 
+[data-bs-theme="dark"] .kpi-card,
+[data-bs-theme="dark"] .table-card,
+[data-bs-theme="dark"] .resumen-card,
+[data-bs-theme="dark"] .operario-card,
+[data-bs-theme="dark"] .kanban-col,
+[data-bs-theme="dark"] .prod-modal,
+[data-bs-theme="dark"] .prod-modal-grande {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+ 
+[data-bs-theme="dark"] thead th,
+[data-bs-theme="dark"] .operario-card-head,
+[data-bs-theme="dark"] .kanban-col-header,
+[data-bs-theme="dark"] .prod-modal-header,
+[data-bs-theme="dark"] .prod-modal-footer,
+[data-bs-theme="dark"] .table-toolbar {
+  background: var(--accent-light) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+ 
+[data-bs-theme="dark"] tbody tr:hover { background: rgba(165,201,202,0.06) !important; }
+ 
+[data-bs-theme="dark"] .search-wrap input,
+[data-bs-theme="dark"] .filter-select,
+[data-bs-theme="dark"] input,
+[data-bs-theme="dark"] select,
+[data-bs-theme="dark"] textarea {
+  background: #182024 !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+ 
+[data-bs-theme="dark"] .kpi-val,
+[data-bs-theme="dark"] .page-title-wrap h1,
+[data-bs-theme="dark"] .table-toolbar h3,
+[data-bs-theme="dark"] .prenda-name,
+[data-bs-theme="dark"] td { color: var(--text) !important; }
+ 
+[data-bs-theme="dark"] .kanban-card { background: #182024 !important; border-color: var(--border) !important; }
+ 
+[data-bs-theme="dark"] .gantt-track {
+  background: linear-gradient(90deg, var(--border-light) 1px, transparent 1px) 0 0 / 12.5% 100% !important;
+}
+[data-bs-theme="dark"] .gantt-row { border-color: var(--border-light) !important; }
+ 
+[data-bs-theme="dark"] .prod-modal-backdrop { background: rgba(0,0,0,0.65) !important; }

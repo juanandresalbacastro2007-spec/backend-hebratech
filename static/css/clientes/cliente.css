@@ -938,3 +938,61 @@ body {
 .etapa-badge.etapa-3 {
   background-color: #2196f3 !important;
 }
+[data-bs-theme="dark"] {
+  --primary:       #A5C9CA;
+  --primary-dark:  #E7F6F2;
+  --primary-deep:  #12181b;
+  --accent:        #395B64;
+  --bg-light:      #182024;
+  --bg-card:       #212b30;
+  --bg-surface:    #182024;
+  --bg-mid:        #263239;
+  --white:         #212b30;
+  --border:        rgba(165,201,202,0.15);
+  --border-solid:  rgba(165,201,202,0.3);
+  --inactive:      #7f9aa3;
+}
+ 
+[data-bs-theme="dark"] body { background-color: var(--bg-light); color: var(--primary-dark); }
+ 
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .card-body,
+[data-bs-theme="dark"] .summary-card,
+[data-bs-theme="dark"] .kanban-card,
+[data-bs-theme="dark"] .table tbody td,
+[data-bs-theme="dark"] .list-group-item,
+[data-bs-theme="dark"] .dropdown-menu,
+[data-bs-theme="dark"] .ot-body,
+[data-bs-theme="dark"] .ot-stage-dot,
+[data-bs-theme="dark"] .ot-toggle-btn,
+[data-bs-theme="dark"] .whatsapp-text {
+  background-color: var(--bg-card) !important;
+  color: var(--primary-dark) !important;
+}
+ 
+[data-bs-theme="dark"] .card-header,
+[data-bs-theme="dark"] .kanban-col,
+[data-bs-theme="dark"] .table thead th,
+[data-bs-theme="dark"] .ot-header,
+[data-bs-theme="dark"] .ot-delivery-info {
+  background-color: var(--bg-mid) !important;
+  color: var(--primary-dark) !important;
+}
+ 
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  background-color: var(--bg-surface) !important;
+  color: var(--primary-dark) !important;
+  border-color: var(--border-solid) !important;
+}
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+  background-color: var(--bg-card) !important;
+}
+ 
+[data-bs-theme="dark"] .table-hover tbody tr:hover td { background: var(--bg-mid) !important; }
+[data-bs-theme="dark"] .dropdown-item:hover { background: var(--bg-mid) !important; }
+ 
+[data-bs-theme="dark"] .ht-toast,
+[data-bs-theme="dark"] .ot-toggle-btn { background: var(--bg-card) !important; }
+[data-bs-theme="dark"] .ht-toast-close { background: var(--bg-mid) !important; color: var(--inactive) !important; }

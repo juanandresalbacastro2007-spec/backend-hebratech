@@ -188,3 +188,28 @@ body {
     margin-top: 0.5rem;
   }
 }
+[data-bs-theme="dark"] {
+  --primary:       #A5C9CA;
+  --primary-dark:  #E7F6F2;
+  --primary-deep:  #12181b;
+  --accent:        #395B64;
+  --bg-light:      #182024;
+  --border-solid:  rgba(165,201,202,0.3);
+}
+[data-bs-theme="dark"] body { background-color: var(--bg-light); color: var(--primary-dark); }
+[data-bs-theme="dark"] .edit-order-card {
+  background: #212b30 !important;
+  border-color: var(--border-solid) !important;
+}
+[data-bs-theme="dark"] .edit-order-card .form-control,
+[data-bs-theme="dark"] .edit-order-card .form-select {
+  background-color: #182024 !important;
+  color: var(--primary-dark) !important;
+  border-color: var(--border-solid) !important;
+}
+[data-bs-theme="dark"] .subtotal-box {
+  background-color: rgba(165,201,202,0.08) !important;
+}
+[data-bs-theme="dark"] .edit-order-card .btn-outline-secondary:hover {
+  background-color: rgba(165,201,202,0.1) !important;
+}
