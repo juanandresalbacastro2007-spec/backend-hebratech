@@ -23,36 +23,131 @@
   --ff-body:    'Roboto', sans-serif;
 
   --section-py: 100px;
+
+  --bg-body:     var(--bg-light);
+  --text-body:   var(--primary-dark);
+  --bg-card:     var(--white);
+  --text-card:   var(--primary-dark);
+  --bg-navbar:   rgba(231, 246, 242, 0.88);
+  --border-nav:  var(--border-solid);
+  --hero-bg:     linear-gradient(135deg, var(--primary-deep) 0%, #1a3344 40%, #243d45 100%);
+  --hero-text:   #fff;
+  --footer-bg:   var(--primary-dark);
+  --footer-text: rgba(255,255,255,0.7);
 }
 
+/* ── TEMA OSCURO ── */
+[data-bs-theme="dark"] {
+  --primary:       #A5C9CA;
+  --primary-dark:  #E7F6F2;
+  --primary-deep:  #0a1a22;
+  --accent:        #A5C9CA;
+  --bg-light:      #0d1e26;
+  --white:         #122330;
+  --border:        rgba(165, 201, 202, 0.15);
+  --border-solid:  #1e3540;
+
+  --bg-body:       #0d1e26;
+  --text-body:     #E7F6F2;
+  --bg-card:       #1a2e38;
+  --text-card:     #E7F6F2;
+  --bg-navbar:     rgba(13, 30, 38, 0.92);
+  --border-nav:    #1e3540;
+  --hero-bg:       linear-gradient(135deg, #0a1a22 0%, #0f2633 40%, #1a3a44 100%);
+  --hero-text:     #E7F6F2;
+  --footer-bg:     #0a141c;
+  --footer-text:   rgba(165, 201, 202, 0.6);
+}
+
+/* ── CORRECCIONES ESPECÍFICAS PARA MODO OSCURO ── */
+[data-bs-theme="dark"] {
+  .bg-hb-fortaleza,
+  .bg-hb-actitud,
+  .team-section {
+    background-color: var(--bg-body) !important;
+  }
+
+  .feat-card.fc-dark,
+  .feat-card.fc-accent {
+    background: var(--bg-card) !important;
+    border-color: var(--border-solid) !important;
+  }
+
+  .feat-card.fc-dark .fc-icon,
+  .feat-card.fc-accent .fc-icon {
+    color: var(--hero-text) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+  .feat-card.fc-dark .fc-tag,
+  .feat-card.fc-accent .fc-tag {
+    color: var(--hero-text) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--hero-text) !important;
+  }
+
+  .team-card:hover .team-name,
+  .team-card:hover .team-role {
+    color: var(--bg-body) !important;
+  }
+}
+
+/* ── RESET ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { scroll-behavior: smooth; }
 
 body {
   font-family: var(--ff-body);
-  background-color: var(--bg-light);
-  color: var(--primary-dark);
+  background-color: var(--bg-body);
+  color: var(--text-body);
   overflow-x: hidden;
   line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* ── BOTÓN DE TEMA ── */
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-solid);
+  background: var(--bg-card);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  background: var(--primary);
+  color: var(--bg-light);
+  transform: translateY(-1px) rotate(15deg);
+}
+[data-bs-theme="dark"] .theme-toggle {
+  border-color: var(--border-solid);
+  color: var(--accent);
+  background: var(--bg-card);
+}
+[data-bs-theme="dark"] .theme-toggle:hover {
+  background: var(--accent);
+  color: var(--primary-dark);
+}
 
-/* ──────────────────────────────────────────
-   1. NAVBAR
-────────────────────────────────────────── */
+/* ── NAVBAR ── */
 .ht-navbar {
-  background: rgba(231, 246, 242, 0.88);
+  background: var(--bg-navbar);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-solid);
+  border-bottom: 1px solid var(--border-nav);
   padding: 14px 0;
   position: sticky;
   top: 0;
   z-index: 1050;
   transition: box-shadow 0.3s;
 }
-
 .ht-navbar.scrolled {
   box-shadow: 0 4px 24px rgba(57, 91, 100, 0.12);
 }
@@ -85,7 +180,7 @@ body {
   font-family: var(--ff-body);
   font-size: 0.88rem;
   font-weight: 500;
-  color: var(--primary-dark);
+  color: var(--text-body);
   text-decoration: none;
   padding: 8px 14px;
   border-radius: 8px;
@@ -129,31 +224,26 @@ body {
   padding: 4px 8px;
 }
 
-/*boton hamurguesa mejorado*/
+/* ── RESPONSIVE NAV ── */
 @media (max-width: 991.98px) {
-s
   #mainNav {
     padding: 1rem 0;
   }
-
   #mainNav .navbar-nav {
     align-items: center;
     gap: 0 !important;
     width: 100%;
   }
-
   #mainNav .nav-item {
     width: 100%;
     text-align: center;
   }
-
   #mainNav .ht-nav-link {
     font-size: 1.15rem;
     padding: 0.75rem 1rem;
     display: block;
     width: 100%;
   }
-
   #mainNav .btn-ht-login {
     display: flex;
     justify-content: center;
@@ -162,15 +252,11 @@ s
     font-size: 1.1rem;
     padding: 0.75rem 1.5rem;
   }
-
 }
 
-
-/* ──────────────────────────────────────────
-   2. BODY
-────────────────────────────────────────── */
+/* ── HERO ── */
 .ht-hero {
-  background: linear-gradient(135deg, var(--primary-deep) 0%, #1a3344 40%, #243d45 100%);
+  background: var(--hero-bg);
   min-height: 70vh;
   display: flex;
   align-items: center;
@@ -178,7 +264,6 @@ s
   position: relative;
   overflow: hidden;
 }
-
 .hero-grid-overlay {
   position: absolute;
   inset: 0;
@@ -188,7 +273,6 @@ s
   background-size: 48px 48px;
   pointer-events: none;
 }
-
 .orb {
   position: absolute;
   border-radius: 50%;
@@ -211,31 +295,21 @@ s
   from { transform: translate(0, 0); }
   to   { transform: translate(30px, 20px); }
 }
-
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(1.3); }
-}
-
 .hero-title {
   font-family: var(--ff-display);
   font-size: clamp(2.4rem, 4.5vw, 4rem);
   font-weight: 700;
-  color: #fff;
+  color: var(--hero-text);
   line-height: 1.1;
   letter-spacing: -0.5px;
   margin-bottom: 20px;
   animation: fadeInUp 0.7s ease 0.1s both;
 }
-.title-accent {
-  color: var(--accent);
-}
-
+.title-accent { color: var(--accent); }
 .hero-sub {
   font-family: var(--ff-body);
   font-size: 1.05rem;
@@ -245,7 +319,6 @@ s
   margin-bottom: 36px;
   animation: fadeInUp 0.7s ease 0.2s both;
 }
-
 .hero-actions {
   display: flex;
   gap: 14px;
@@ -254,14 +327,11 @@ s
   animation: fadeInUp 0.7s ease 0.3s both;
 }
 
-/* Hero image */
 .hero-img-wrap {
   position: relative;
   border-radius: 20px;
   overflow: hidden;
-  box-shadow:
-    0 40px 80px rgba(0,0,0,0.45),
-    0 0 0 1px rgba(165,201,202,0.12);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(165,201,202,0.12);
   animation: fadeInUp 0.9s ease 0.4s both;
 }
 .hero-img {
@@ -280,12 +350,7 @@ s
 .hero-img-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(30, 53, 64, 0.35) 0%,
-    transparent 60%,
-    rgba(165, 201, 202, 0.08) 100%
-  );
+  background: linear-gradient(135deg, rgba(30,53,64,0.35) 0%, transparent 60%, rgba(165,201,202,0.08) 100%);
   pointer-events: none;
 }
 
@@ -310,7 +375,6 @@ s
   transform: translateY(-3px) scale(1.03);
   box-shadow: 0 14px 32px rgba(165,201,202,0.4);
 }
-
 .btn-hero-ghost {
   display: inline-flex;
   align-items: center;
@@ -329,56 +393,34 @@ s
 .btn-hero-ghost:hover {
   background: rgba(165,201,202,0.1);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--hero-text);
   transform: translateY(-2px);
 }
 
-/* CARDS */
-:root {
-    --hb-actitud: #2C3333;
-    --hb-fortaleza: #395B64;
-    --hb-mentalidad: #A5C9CA;
-    --hb-atencion: #E7F6F2;
-}
-
-h2, h6 {
-    font-family: 'Fredoka', sans-serif;
-    letter-spacing: -0.5px;
-}
-
-.bg-hb-actitud { background-color: var(--hb-actitud) !important; }
-.bg-hb-fortaleza { background-color: var(--hb-fortaleza) !important; }
-
-.text-hb-mentalidad { color: var(--hb-mentalidad) !important; }
-.text-hb-atencion { color: var(--hb-atencion) !important; }
+/* ── CARDS DE SOLUCIONES ── */
+.bg-hb-actitud { background-color: var(--primary-dark) !important; }
+.bg-hb-fortaleza { background-color: var(--primary) !important; }
+.text-hb-mentalidad { color: var(--accent) !important; }
+.text-hb-atencion { color: var(--hero-text) !important; }
 
 .hover-effect {
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    border: 1px solid transparent;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  border: 1px solid transparent;
 }
-
 .hover-effect:hover {
-    border-color: var(--hb-mentalidad) !important;
-    transform: translateY(-5px);
-    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+  border-color: var(--accent) !important;
+  transform: translateY(-5px);
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
 }
+.tracking-wider { letter-spacing: 0.1em; }
 
-.tracking-wider {
-    letter-spacing: 0.1em;
-}
-
-
-@keyframes growWidth {
-  from { width: 0 !important; }
-}
-
+/* ── FEATURES ── */
 .ht-features {
   padding: var(--section-py) 0;
-  background: var(--bg-light);
+  background: var(--bg-body);
 }
 
 .section-head { margin-bottom: 60px; }
-
 .section-eyebrow {
   display: inline-block;
   font-family: var(--ff-label);
@@ -388,20 +430,18 @@ h2, h6 {
   text-transform: uppercase;
   margin-bottom: 14px;
 }
-
 .section-title {
   font-family: var(--ff-display);
   font-size: clamp(2rem, 3.5vw, 2.8rem);
   font-weight: 700;
-  color: var(--primary-dark);
+  color: var(--text-body);
   line-height: 1.15;
   margin-bottom: 14px;
 }
-
 .section-sub {
   font-family: var(--ff-body);
   font-size: 1rem;
-  color: var(--primary);
+  color: var(--text-body);
   max-width: 520px;
   margin: 0 auto;
   line-height: 1.75;
@@ -409,7 +449,7 @@ h2, h6 {
 }
 
 .feat-card {
-  background: var(--white);
+  background: var(--bg-card);
   border: 1.5px solid var(--border-solid);
   border-radius: 20px;
   padding: 34px 28px;
@@ -430,25 +470,36 @@ h2, h6 {
   box-shadow: 0 24px 50px rgba(57,91,100,0.12);
   border-color: var(--primary);
 }
-
 .feat-card.fc-dark {
   background: var(--primary);
   border-color: var(--primary);
 }
 .feat-card.fc-dark h5,
-.feat-card.fc-dark p { color: var(--bg-light); }
-.feat-card.fc-dark .fc-icon { background: rgba(231,246,242,0.15); color: var(--accent); }
-.feat-card.fc-dark .fc-tag { background: rgba(231,246,242,0.15); color: var(--accent); }
-
+.feat-card.fc-dark p,
+.feat-card.fc-accent h5,
+.feat-card.fc-accent p {
+  color: var(--hero-text) !important;
+}
+.feat-card.fc-dark .fc-icon {
+  background: rgba(231,246,242,0.15);
+  color: var(--accent);
+}
+.feat-card.fc-dark .fc-tag {
+  background: rgba(231,246,242,0.15);
+  color: var(--accent);
+}
 .feat-card.fc-accent {
   background: linear-gradient(135deg, var(--primary) 0%, #2a4f5c 100%);
   border-color: var(--primary);
 }
-.feat-card.fc-accent h5,
-.feat-card.fc-accent p { color: var(--bg-light); }
-.feat-card.fc-accent .fc-icon { background: rgba(231,246,242,0.15); color: var(--accent); }
-.feat-card.fc-accent .fc-tag { background: rgba(231,246,242,0.15); color: var(--accent); }
-
+.feat-card.fc-accent .fc-icon {
+  background: rgba(231,246,242,0.15);
+  color: var(--accent);
+}
+.feat-card.fc-accent .fc-tag {
+  background: rgba(231,246,242,0.15);
+  color: var(--accent);
+}
 .fc-icon {
   width: 56px; height: 56px;
   background: var(--bg-light);
@@ -460,18 +511,17 @@ h2, h6 {
   flex-shrink: 0;
 }
 .feat-card:hover .fc-icon { transform: scale(1.1) rotate(-5deg); }
-
 .feat-card h5 {
   font-family: var(--ff-display);
   font-size: 1.15rem;
   font-weight: 600;
-  color: var(--primary-dark);
+  color: var(--text-card);
   margin: 0;
 }
 .feat-card p {
   font-family: var(--ff-body);
   font-size: 0.9rem;
-  color: var(--primary);
+  color: var(--text-body);
   opacity: 0.8;
   line-height: 1.65;
   flex: 1;
@@ -494,6 +544,7 @@ h2, h6 {
   border-radius: 50px;
 }
 
+/* ── DASHBOARD PREVIEW ── */
 .ht-preview {
   padding: var(--section-py) 0;
   background: var(--primary-deep);
@@ -510,7 +561,6 @@ h2, h6 {
   background-size: 40px 40px;
   pointer-events: none;
 }
-
 .full-dash-wrap {
   background: var(--dash-bg);
   border: 1px solid var(--dash-border);
@@ -519,7 +569,6 @@ h2, h6 {
   box-shadow: 0 40px 100px rgba(0,0,0,0.5);
   margin-top: 40px;
 }
-
 .full-dash-topbar {
   background: var(--dash-surface);
   padding: 12px 20px;
@@ -527,13 +576,11 @@ h2, h6 {
   align-items: center;
   border-bottom: 1px solid var(--dash-border);
 }
-
 .dash-dots { display: flex; gap: 7px; }
 .dot { width: 12px; height: 12px; border-radius: 50%; display: block; }
 .dot-r { background: #ff6060; }
 .dot-y { background: #ffba35; }
 .dot-g { background: #40d040; }
-
 .live-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -541,12 +588,15 @@ h2, h6 {
   box-shadow: 0 0 8px rgba(90,158,111,0.8);
   animation: pulse 2s infinite;
 }
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(1.3); }
+}
 
 .full-dash-body {
   display: flex;
   min-height: 380px;
 }
-
 .full-dash-sidebar {
   width: 58px;
   background: var(--dash-surface);
@@ -586,7 +636,6 @@ h2, h6 {
   flex-direction: column;
   gap: 18px;
 }
-
 .fd-greeting {
   display: flex;
   align-items: flex-start;
@@ -606,7 +655,6 @@ h2, h6 {
   color: rgba(165,201,202,0.6);
   margin: 0;
 }
-
 .fd-btn-primary, .fd-btn-outline {
   font-family: var(--ff-body);
   font-size: 0.75rem;
@@ -667,6 +715,9 @@ h2, h6 {
   border-radius: 3px;
   animation: growWidth 1.5s ease both;
 }
+@keyframes growWidth {
+  from { width: 0 !important; }
+}
 
 .fd-bottom-row {
   display: grid;
@@ -704,11 +755,11 @@ h2, h6 {
 .fd-task-item:last-child { border-bottom: none; }
 .fd-task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
+/* ── HOW IT WORKS ── */
 .ht-how {
   padding: var(--section-py) 0;
-  background: var(--white);
+  background: var(--bg-body);
 }
-
 .how-timeline {
   position: relative;
 }
@@ -722,7 +773,6 @@ h2, h6 {
   background: linear-gradient(90deg, transparent, var(--border-solid), transparent);
   z-index: 0;
 }
-
 .how-step {
   text-align: center;
   padding: 40px 32px;
@@ -732,11 +782,10 @@ h2, h6 {
 }
 .how-step:hover { transform: translateY(-6px); }
 .how-step-mid {
-  background: var(--bg-light);
+  background: var(--bg-card);
   border-radius: 20px;
   border: 1.5px solid var(--border-solid);
 }
-
 .how-num {
   font-family: var(--ff-label);
   font-size: 0.72rem;
@@ -760,19 +809,68 @@ h2, h6 {
   font-family: var(--ff-display);
   font-size: 1.15rem;
   font-weight: 600;
-  color: var(--primary-dark);
+  color: var(--text-body);
   margin-bottom: 10px;
 }
 .how-step p {
   font-family: var(--ff-body);
   font-size: 0.9rem;
-  color: var(--primary);
+  color: var(--text-body);
   opacity: 0.8;
   line-height: 1.65;
   max-width: 260px;
   margin: 0 auto;
 }
 
+/* ── MISIÓN Y VISIÓN ── */
+.mv-interactive-card {
+  /* Se eliminó el background forzado para que use la clase bg-hb-fortaleza */
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
+              box-shadow 0.4s ease,
+              border-color 0.4s ease,
+              background-color 0.3s ease;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-color: var(--border-solid);
+}
+.mv-interactive-card .mv-hidden-content {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: max-height 0.4s cubic-bezier(0.165, 0.84, 0.44, 1),
+              opacity 0.3s ease,
+              transform 0.3s ease;
+}
+.mv-interactive-card:hover {
+  transform: scale(1.03);
+  border-color: var(--accent) !important;
+  box-shadow: 0 1rem 2rem rgba(0,0,0,0.2) !important;
+  background-color: var(--primary) !important;
+}
+[data-bs-theme="dark"] .mv-interactive-card:hover {
+  background-color: var(--accent) !important;
+}
+.mv-interactive-card:hover .mv-hidden-content {
+  max-height: 300px;
+  opacity: 0.95;
+  transform: translateY(0);
+}
+.mv-interactive-card:hover .mv-initial-content svg,
+.mv-interactive-card:hover .mv-initial-content i {
+  transform: scale(1.08);
+  transition: transform 0.3s ease;
+}
+.mv-interactive-card .mv-hidden-content p {
+  color: var(--hero-text) !important;
+}
+[data-bs-theme="dark"] .mv-interactive-card .mv-hidden-content p {
+  color: var(--hero-text) !important;
+}
+
+/* ── CTA ── */
 .ht-cta {
   background: linear-gradient(135deg, var(--primary-deep) 0%, var(--primary) 60%, #4a8a97 100%);
   padding: var(--section-py) 0;
@@ -780,74 +878,6 @@ h2, h6 {
   position: relative;
   overflow: hidden;
 }
-
-/* --- MISIÓN Y VISIÓN --- */
-
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap');
-
-:root {
-    --hb-actitud: #2C3333;
-    --hb-fortaleza: #395B64;
-    --hb-mentalidad: #A5C9CA;
-    --hb-atencion: #E7F6F2;
-}
-
-h2, h3 {
-    font-family: 'Fredoka', sans-serif;
-    letter-spacing: -0.5px;
-}
-
-.bg-hb-actitud { background-color: var(--hb-actitud) !important; }
-.bg-hb-fortaleza { background-color: var(--hb-fortaleza) !important; }
-.text-hb-mentalidad { color: var(--hb-mentalidad) !important; }
-.text-hb-atencion { color: var(--hb-atencion) !important; }
-
-.tracking-wider {
-    letter-spacing: 0.1em;
-}
-
-/* --- ESTILOS INTERACTIVOS PARA MISIÓN Y VISIÓN --- */
-/* --- ESTILOS INTERACTIVOS PARA MISIÓN Y VISIÓN OPTIMIZADOS --- */
-.mv-interactive-card {
-    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), 
-                box-shadow 0.4s ease, 
-                border-color 0.4s ease, 
-                background-color 0.3s ease;
-    cursor: pointer;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.mv-interactive-card .mv-hidden-content {
-    max-height: 0;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: max-height 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), 
-                opacity 0.3s ease, 
-                transform 0.3s ease;
-}
-
-.mv-interactive-card:hover {
-    transform: scale(1.03);
-    border-color: var(--hb-mentalidad) !important;
-    box-shadow: 0 1rem 2rem rgba(0,0,0,0.2) !important;
-    background-color: #2e4950 !important; 
-}
-
-.mv-interactive-card:hover .mv-hidden-content {
-    max-height: 200px; /* Reducido para acoplarse al tamaño de texto compacto */
-    opacity: 0.95;
-    transform: translateY(0);
-}
-
-.mv-interactive-card:hover .mv-initial-content svg,
-.mv-interactive-card:hover .mv-initial-content i {
-    transform: scale(1.08);
-    transition: transform 0.3s ease;
-}
-
 .cta-orb {
   position: absolute;
   border-radius: 50%;
@@ -864,7 +894,6 @@ h2, h3 {
   background: rgba(44,51,51,0.3);
   bottom: -60px; left: -40px;
 }
-
 .cta-eyebrow {
   font-family: var(--ff-label);
   font-size: 0.65rem;
@@ -898,73 +927,103 @@ h2, h3 {
 }
 .btn-cta { min-width: 190px; justify-content: center; }
 
-/* DESARROLADORES */
-.team-section { 
-  background: var(--hb-actitud); 
-  padding: 6rem 0; 
-}
-
+/* ── TEAM ── */
 .team-section {
-  font-family: 'Roboto', sans-serif;
-}
-.section-title{
-    font-family: 'Fredoka', serif !important;
+  background: var(--primary-dark);
+  padding: 6rem 0;
 }
 
+/* Estilos base para las tarjetas de equipo */
 .team-card {
-  background: #395B64;
-  border: 1px solid rgba(165,201,202,.15);
   border-radius: 16px;
-  padding: 2rem 1rem; /* Ajustado para mejor proporción de los textos */
+  padding: 2rem 1rem;
   text-align: center;
   transition: all .3s ease;
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center; 
+  justify-content: center;
   align-items: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-/* Solución al bug de transparencia de la tarjeta 4 en hover */
+/* Modo claro: fondo primario en armonía con el estilo visual de HebraTech */
+:not([data-bs-theme="dark"]) .team-card {
+  background: var(--primary) !important;
+  border: 1px solid var(--border) !important;
+}
+
+:not([data-bs-theme="dark"]) .team-card .team-name {
+  color: #ffffff !important;
+}
+
+:not([data-bs-theme="dark"]) .team-card .team-role {
+  color: var(--accent) !important;
+}
+
+/* Modo oscuro: fondo oscuro, borde acorde */
+[data-bs-theme="dark"] .team-card {
+  background: #1a2e38 !important;
+  border: 1px solid var(--border-solid) !important;
+}
+
+/* Hover común */
 .team-card:hover {
-  background: #416a74; 
-  border-color: rgba(165, 201, 202, .4);
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0,0,0,.2);
 }
 
+:not([data-bs-theme="dark"]) .team-card:hover {
+  background: var(--primary-deep) !important;
+  border-color: var(--accent) !important;
+}
+
+[data-bs-theme="dark"] .team-card:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* Ajuste de color de texto en hover para modo claro */
+:not([data-bs-theme="dark"]) .team-card:hover .team-name {
+  color: #ffffff !important;
+}
+
+:not([data-bs-theme="dark"]) .team-card:hover .team-role {
+  color: var(--accent) !important;
+}
+
+/* En modo oscuro, el hover sobre acento oscurece el texto */
+[data-bs-theme="dark"] .team-card:hover .team-name,
+[data-bs-theme="dark"] .team-card:hover .team-role {
+  color: var(--bg-body) !important;
+}
+
+/* Resto de estilos de la tarjeta (avatar, nombre, rol, sociales) */
 .team-avatar {
-  width: 90px;      
+  width: 90px;
   height: 90px;
   border-radius: 50%;
   margin-bottom: 1.2rem;
-  border: 3px solid #ffffff; /* Borde blanco limpio como la captura */
-  overflow: hidden; 
+  border: 3px solid var(--accent);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--primary-dark); 
+  background: var(--primary-dark);
 }
-
 .team-avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover; 
+  object-fit: cover;
 }
-
 .team-name {
   font-family: 'Fredoka', serif !important;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #ffffff; 
+  color: var(--text-body);
   letter-spacing: 0.2px;
   margin-top: 0.5rem;
 }
-
-.team-card {
-  position: relative;
-}
-
 .team-role {
   font-family: 'Roboto', sans-serif;
   font-size: 0.72rem;
@@ -974,13 +1033,11 @@ h2, h3 {
   margin-top: 0.15rem;
   letter-spacing: .2px;
 }
-
 .team-socials {
   display: flex;
   gap: 0.55rem;
   margin-top: 0.85rem;
 }
-
 .team-social-icon {
   width: 30px;
   height: 30px;
@@ -994,73 +1051,174 @@ h2, h3 {
   transition: all .25s ease;
   box-shadow: 0 2px 6px rgba(0,0,0,.2);
 }
-
 .team-social-icon.icon-linkedin {
   background: #0A66C2 !important;
   color: #ffffff !important;
 }
-
 .team-social-icon.icon-mail {
   background: var(--accent) !important;
   color: var(--primary-dark) !important;
 }
-
 .team-social-icon i {
   color: inherit !important;
 }
-
 .team-social-icon:hover {
   transform: translateY(-3px) scale(1.05);
   box-shadow: 0 4px 10px rgba(0,0,0,.3);
 }
 
+/* Estilos base para las tarjetas de equipo */
+.team-card {
+  border-radius: 16px;
+  padding: 2rem 1rem;
+  text-align: center;
+  transition: all .3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
 
+/* Modo claro: fondo gris suave, borde gris */
+:not([data-bs-theme="dark"]) .team-card {
+  background: #f0f4f8 !important;
+  border: 1px solid #d4d9e0 !important;
+}
 
+/* Modo oscuro: fondo oscuro, borde acorde */
+[data-bs-theme="dark"] .team-card {
+  background: #1a2e38 !important;
+  border: 1px solid var(--border-solid) !important;
+}
 
-/* ──────────────────────────────────────────
-   8. FOOTER
-────────────────────────────────────────── */
+/* Hover común: fondo cambia a primario en claro, a acento en oscuro */
+.team-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,.2);
+}
+:not([data-bs-theme="dark"]) .team-card:hover {
+  background: var(--primary) !important;
+  border-color: var(--accent) !important;
+}
+[data-bs-theme="dark"] .team-card:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
 
-/* Efecto suave para los botones SVG de redes sociales */
+/* Ajuste de color de texto en hover para modo claro */
+:not([data-bs-theme="dark"]) .team-card:hover .team-name,
+:not([data-bs-theme="dark"]) .team-card:hover .team-role {
+  color: var(--hero-text) !important;
+}
+/* En modo oscuro, el hover sobre acento oscurece el texto (ya definido en correcciones) */
+[data-bs-theme="dark"] .team-card:hover .team-name,
+[data-bs-theme="dark"] .team-card:hover .team-role {
+  color: var(--bg-body) !important;
+}
+
+/* Resto de estilos de la tarjeta (avatar, nombre, rol, sociales) */
+.team-avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin-bottom: 1.2rem;
+  border: 3px solid var(--accent);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-dark);
+}
+.team-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.team-name {
+  font-family: 'Fredoka', serif !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-body);
+  letter-spacing: 0.2px;
+  margin-top: 0.5rem;
+}
+.team-role {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--accent);
+  opacity: .85;
+  margin-top: 0.15rem;
+  letter-spacing: .2px;
+}
+.team-socials {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+.team-social-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.9) !important;
+  color: #24292f !important;
+  font-size: 0.85rem;
+  transition: all .25s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+.team-social-icon.icon-linkedin {
+  background: #0A66C2 !important;
+  color: #ffffff !important;
+}
+.team-social-icon.icon-mail {
+  background: var(--accent) !important;
+  color: var(--primary-dark) !important;
+}
+.team-social-icon i {
+  color: inherit !important;
+}
+.team-social-icon:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 4px 10px rgba(0,0,0,.3);
+}
+
+/* ── FOOTER ── */
+footer {
+  background: var(--footer-bg);
+  color: var(--footer-text);
+}
 footer .social-btn {
-    transition: transform 0.3s ease, filter 0.3s ease;
-    display: inline-block;
+  transition: transform 0.3s ease, filter 0.3s ease;
+  display: inline-block;
 }
-
 footer .social-btn:hover {
-    transform: scale(1.15);
-    filter: brightness(1.1); 
+  transform: scale(1.15);
+  filter: brightness(1.1);
 }
-
 .hover-link {
-    transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
-
 .hover-link:hover {
-    color: #A5C9CA !important;
-    padding-left: 6px; 
+  color: var(--accent) !important;
+  padding-left: 6px;
 }
 
+/* ── UTILITIES ── */
 .img-producto {
-    height: 350px;
-    object-fit: cover;
-    border-radius: 10px;
+  height: 350px;
+  object-fit: cover;
+  border-radius: 10px;
 }
-
 @media (max-width: 768px) {
-    .img-producto {
-        height: 250px;
-    }
+  .img-producto { height: 250px; }
 }
-
 @media (max-width: 576px) {
-    .img-producto {
-        height: 180px;
-    }
-    .card-title {
-        font-size: 18px;
-    }
-    .card-text {
-        font-size: 14px;
-    }
+  .img-producto { height: 180px; }
+  .card-title { font-size: 18px; }
+  .card-text { font-size: 14px; }
 }

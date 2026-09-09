@@ -7,6 +7,10 @@
 
 {% block content %}
 
+  <button class="theme-toggle theme-toggle-fixed" id="themeToggle" type="button" aria-label="Cambiar tema" title="Cambiar tema">
+    <i class="fas fa-moon"></i>
+  </button>
+
   <!-- LOGIN VIEW -->
   <div id="login-view">
     <h1 class="mb-4">¡Bienvenido/a de nuevo!</h1>
@@ -142,5 +146,30 @@
       if (!input) return;
       input.type = input.type === 'password' ? 'text' : 'password';
     }
+
+    // ── Modo oscuro ──
+    (function () {
+      const root = document.documentElement;
+      const toggleBtn = document.getElementById('themeToggle');
+      const icon = toggleBtn ? toggleBtn.querySelector('i') : null;
+
+      function applyTheme(theme) {
+        root.setAttribute('data-bs-theme', theme);
+        if (icon) {
+          icon.classList.toggle('fa-moon', theme === 'light');
+          icon.classList.toggle('fa-sun', theme === 'dark');
+        }
+      }
+
+      applyTheme(localStorage.getItem('ht-theme') || 'light');
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', function () {
+          const next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+          localStorage.setItem('ht-theme', next);
+          applyTheme(next);
+        });
+      }
+    })();
   </script>
 {% endblock %}

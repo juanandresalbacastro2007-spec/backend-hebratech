@@ -33,7 +33,7 @@
 
 {% block contenido %}
 
-<!-- 1. NOTIFICACIONES FLASH DEL SISTEMA (Django Messages) -->
+<!-- Mensajes Flash -->
 {% if messages %}
   <div class="messages-wrapper mb-3">
     {% for message in messages %}
@@ -101,10 +101,10 @@
             title="{{ asig.descripcion }}">
             {{ asig.descripcion }}
           </td>
-          <td>{{ asig.fechaInicio }}</td>
+          <td>{{ asig.fechaInicio|date:"d/m/Y" }}</td>
           <td>
             {% if asig.fechaLimite %}
-              {{ asig.fechaLimite }}
+              {{ asig.fechaLimite|date:"d/m/Y" }}
             {% else %}
               <span class="text-muted">—</span>
             {% endif %}
@@ -119,8 +119,10 @@
             <span class="badge-ht badge-warning"><i class="bi bi-arrow-up-circle me-1"></i>Alta</span>
             {% elif asig.prioridad == 'Media' %}
             <span class="badge-ht badge-info"><i class="bi bi-dash-circle me-1"></i>Media</span>
-            {% else %}
+            {% elif asig.prioridad == 'Baja' %}
             <span class="badge-ht" style="background:#eee;color:#555;"><i class="bi bi-arrow-down-circle me-1"></i>Baja</span>
+            {% else %}
+            <span class="badge-ht badge-pending">{{ asig.prioridad|default:"Normal" }}</span>
             {% endif %}
           </td>
           <td>
@@ -132,8 +134,10 @@
             <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>Cancelada</span>
             {% elif asig.estado == 'Retrasada' %}
             <span class="badge-ht badge-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Retrasada</span>
-            {% else %}
+            {% elif asig.estado == 'Pendiente' %}
             <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>Pendiente</span>
+            {% else %}
+            <span class="badge-ht badge-pending">{{ asig.estado }}</span>
             {% endif %}
           </td>
           <td class="text-center">
@@ -147,7 +151,7 @@
               <i class="bi bi-trash-fill"></i>
             </button>
 
-            <!-- 2. MODAL CONFIRMAR ELIMINACIÓN -->
+            <!-- Modal Confirmar Eliminación -->
             <div class="modal fade" id="modalEliminarTarea{{ asig.idAsignacion }}" tabindex="-1" aria-hidden="true">
               <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content" style="border-radius:14px; overflow:hidden;">
@@ -177,10 +181,9 @@
           </td>
         </tr>
 
-        <!-- 4. ESTADO VACÍO MEJORADO CON CONTEXTO DE BÚSQUEDA -->
         {% empty %}
         <tr>
-          <td colspan="12" class="text-center text-muted py-5">
+          <td colspan="13" class="text-center text-muted py-5">
             <i class="bi bi-clipboard2-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
             {% if buscar_filtro %}
               <p class="mb-1 fw-medium">No se encontraron asignaciones que coincidan con "<strong>{{ buscar_filtro }}</strong>".</p>
@@ -205,7 +208,7 @@
   </div>
 </div>
 
-<!-- 3. MODALES EDITAR (fuera de la tabla para HTML válido) -->
+<!-- MODALES EDITAR (sin estilos inline de color) -->
 {% for asig in asignaciones %}
 <div class="modal fade" id="modalEditarTarea{{ asig.idAsignacion }}" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -217,7 +220,7 @@
               class="bi bi-pencil me-2 text-primary"></i>Editar Asignación #{{ asig.idAsignacion }}</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body text-start" style="color: #333;">
+        <div class="modal-body text-start">
           
           <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-3">
             <i class="bi bi-info-circle-fill me-2 fs-6 flex-shrink-0"></i>
@@ -244,7 +247,6 @@
             <div class="invalid-feedback small">Ingresa una descripción para la asignación.</div>
           </div>
 
-          <!-- INPUT FECHA INICIO BLOQUEADO A HOY O POSTERIOR -->
           <div class="mb-3">
             <label class="form-label fw-medium small">Fecha de Inicio</label>
             <input type="date" 
@@ -257,7 +259,6 @@
             <div class="invalid-feedback small">Selecciona una fecha válida (hoy o posterior).</div>
           </div>
 
-          <!-- INPUT FECHA LÍMITE BLOQUEADO A HOY O POSTERIOR -->
           <div class="mb-3">
             <label class="form-label fw-medium small">Fecha Límite</label>
             <input type="date" 
@@ -332,10 +333,8 @@
 {% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Auto-envío en búsqueda
     const buscarInput = document.getElementById('buscarInput');
     const searchForm = document.getElementById('searchForm');
-
     if (buscarInput && searchForm) {
       buscarInput.addEventListener('input', function () {
         if (this.value.trim() === "") {
@@ -344,19 +343,14 @@
       });
     }
 
-    // Validaciones Bootstrap 5 y sincronización de fechas
     const todayStr = new Date().toISOString().split('T')[0];
     const forms = document.querySelectorAll('.needs-validation');
-
     Array.prototype.slice.call(forms).forEach(function (form) {
       const fechaInicioInput = form.querySelector('.fecha-inicio-input');
       const fechaLimiteInput = form.querySelector('.fecha-limite-input');
-
-      // Aplicar dinámicamente el min a hoy
       if (fechaInicioInput) fechaInicioInput.min = todayStr;
       if (fechaLimiteInput) fechaLimiteInput.min = todayStr;
 
-      // Sincronizar el mínimo de la fecha límite para que coincida con la fecha de inicio seleccionada
       if (fechaInicioInput && fechaLimiteInput) {
         function sincronizarMin() {
           if (fechaInicioInput.value) {
@@ -369,7 +363,6 @@
 
       form.addEventListener('submit', function (event) {
         let valido = form.checkValidity();
-
         if (fechaInicioInput && fechaLimiteInput &&
             fechaLimiteInput.value && fechaInicioInput.value &&
             fechaLimiteInput.value < fechaInicioInput.value) {
@@ -378,7 +371,6 @@
         } else if (fechaLimiteInput) {
           fechaLimiteInput.setCustomValidity('');
         }
-
         if (!valido) {
           event.preventDefault();
           event.stopPropagation();
