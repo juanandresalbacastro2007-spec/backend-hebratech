@@ -19,8 +19,8 @@
       </div>
     </ul>
   </div>
-  <div id="topClock" class="top-clock px-3 py-2 rounded bg-white border shadow-sm text-muted fw-semibold font-family-200 d-flex align-items-center gap-2">
-    <i class="bi bi-clock text-primary"></i>
+  <div id="topClock" class="top-clock px-3 py-2 rounded d-flex align-items-center gap-2">
+    <i class="bi bi-clock"></i>
     <span id="clockText">--:--:--</span>
   </div>
 </div>
@@ -57,7 +57,7 @@
     <a href="{% url 'admin_usuarios' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Usuarios</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(57,91,100,0.12); color:#395B64;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-people-fill fs-6"></i>
         </div>
       </div>
@@ -69,7 +69,7 @@
     <a href="{% url 'admin_usuarios' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Clientes</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.25); color:#2C3333;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-building fs-6"></i>
         </div>
       </div>
@@ -81,7 +81,7 @@
     <a href="{% url 'admin_usuarios' %}?rol=operario" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Operarios</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(57,91,100,0.12); color:#395B64;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-person-gear fs-6"></i>
         </div>
       </div>
@@ -93,7 +93,7 @@
     <a href="{% url 'admin_ordenes' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Órdenes Total</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.25); color:#2C3333;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-bag-fill fs-6"></i>
         </div>
       </div>
@@ -105,7 +105,7 @@
     <a href="{% url 'admin_ordenes' %}?estado=Pendiente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Órdenes Pend.</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(255,193,7,0.15); color:#d39e00;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c47f00;">
           <i class="bi bi-hourglass-split fs-6"></i>
         </div>
       </div>
@@ -117,7 +117,7 @@
     <a href="{% url 'admin_tareas' %}?estado=Pendiente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Tareas Pend.</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(220,53,69,0.1); color:#dc3545;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c62839;">
           <i class="bi bi-clipboard2-x fs-6"></i>
         </div>
       </div>
@@ -132,7 +132,7 @@
     <a href="{% url 'admin_incidencias' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Incidencias Abiertas</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(220,53,69,0.1); color:#dc3545;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c62839;">
           <i class="bi bi-exclamation-triangle-fill fs-6"></i>
         </div>
       </div>
@@ -144,7 +144,7 @@
     <a href="{% url 'admin_ordenes' %}?prioridad=Urgente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Órdenes Urgentes</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(255,193,7,0.15); color:#d39e00;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c47f00;">
           <i class="bi bi-fire fs-6"></i>
         </div>
       </div>
@@ -156,7 +156,7 @@
     <a href="{% url 'produccion_portal' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Producción Activa</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(57,91,100,0.12); color:#395B64;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-gear-fill fs-6"></i>
         </div>
       </div>
@@ -168,7 +168,7 @@
     <a href="{% url 'produccion_portal' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Catálogo Productos</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.25); color:#2C3333;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-bag-check-fill fs-6"></i>
         </div>
       </div>
@@ -181,7 +181,7 @@
   <div class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between">
     <div class="d-flex align-items-center justify-content-between mb-2">
       <span class="kpi-label text-muted small fw-medium">Proveedores</span>
-      <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(57,91,100,0.12); color:#395B64;">
+      <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
         <i class="bi bi-truck fs-6"></i>
       </div>
     </div>
