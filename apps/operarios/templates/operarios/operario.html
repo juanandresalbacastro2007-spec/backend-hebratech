@@ -95,24 +95,33 @@
             </span>
             <i class="bi bi-chevron-down ht-chevron"></i>
           </button>
-          <ul class="dropdown-menu dropdown-menu-end ht-dropdown-panel py-2" style="min-width:200px;">
-            <li class="px-3 py-2 border-bottom" style="border-color:var(--border)!important;">
+         <ul class="dropdown-menu dropdown-menu-end ht-dropdown-panel py-2" 
+              style="min-width:200px; background: transparent !important; box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important; border: 1px solid var(--border-md) !important;">
+    
+            <!-- Este li ya tiene su propio fondo (gris claro) -->
+            <li class="px-3 py-2 border-bottom" 
+                style="border-color:var(--border)!important; background: var(--surface2) !important; border-radius: 8px 8px 0 0;">
               <div style="font-family:'Fredoka',sans-serif;font-size:1rem;color:var(--primary);">
                 {% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% endif %}
               </div>
               <small style="color:var(--text-muted);">{{ operario.especialidad|default:"Operario de Planta" }}</small>
             </li>
+            
             <li>
               <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2"
-                 href="{% url 'operarios:perfil' %}">
+                href="{% url 'operarios:perfil' %}"
+                style="background: transparent !important; color: var(--text) !important;">
                 <i class="bi bi-person-gear text-muted"></i>
                 <span>Editar Perfil</span>
               </a>
             </li>
+            
             <li><hr class="dropdown-divider my-1" style="border-color:var(--border);"></li>
+            
             <li>
               <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 text-danger"
-                 href="{% url 'logout' %}">
+                href="{% url 'logout' %}"
+                style="background: transparent !important;">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Cerrar Sesión</span>
               </a>

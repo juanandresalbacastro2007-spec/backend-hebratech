@@ -9,7 +9,7 @@
 :root {
   /* Paleta oficial HebraTech */
   --primary:      #395B64;
-  --primary-dark: #2C3333;
+  --primary-dark: #2c2d33;
   --accent:       #A5C9CA;
   --bg-light:     #E7F6F2;
 
@@ -21,7 +21,7 @@
   --border-md:    rgba(165,201,202,.6);
 
   /* Texto */
-  --text:         #2C3333;
+  
   --text-muted:   #7a8c8d;
 
   /* Semánticos */
@@ -106,11 +106,13 @@ html, body {
   line-height: 1.1;
 }
 
+
+
 .brand-icon {
   width: 36px;
   height: 36px;
   border-radius: 9px;
-  background: var(--surface2);
+  background: #E7F6F2;
   border: 1px solid var(--border);
   overflow: hidden;
   display: flex;
@@ -168,7 +170,7 @@ html, body {
 .ht-nav-btn:hover {
   background: rgba(165, 201, 202, 0.25);
   border-color: var(--primary);
-  color: var(--primary-dark);
+  color: var(--text-);
 }
 
 .ht-nav-btn-label { 
@@ -200,7 +202,7 @@ html, body {
 .ht-profile-btn {
   background: var(--surface2);
   border: 1px solid var(--border-md);
-  color: var(--text);
+  color: var(--blue);
   border-radius: 50px;              /* Hace que siempre mantenga la curva de píldora exacta */
   padding: 4px 14px 4px 4px;        /* Padding contenido para no crecer en altura */
   display: flex;
@@ -235,7 +237,7 @@ html, body {
 /* Flecha pequeña para no recargar */
 .ht-chevron {
   font-size: 0.75rem;
-  color: var(--text-muted, #777);
+  color: var(--text-muted, #f8f4f4);
 }
 
 .dropdown.show .ht-chevron {
@@ -824,7 +826,7 @@ html, body {
 
 .ht-modal-eyebrow {
   font-size: .76rem;
-  color: var(--hi2);
+  color: var(--blue);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -873,7 +875,7 @@ html, body {
   gap: 5px;
 }
 
-.ht-detail-value { font-size: .9rem; font-weight: 500; color: var(--text); }
+.ht-detail-value { font-size: .9rem; font-weight: 500; color: var(--blue); }
 
 .ht-detail-desc {
   background: var(--surface2);
@@ -1106,7 +1108,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(57,91,100,.2);
+  background: rgba(100, 57, 57, 0.2);
   border: 1px solid rgba(57,91,100,.4);
   border-radius: var(--radius-xs);
   padding: 9px 12px;
@@ -1415,6 +1417,8 @@ html, body {
   .ht-kanban-col { display: none; }
   .ht-kanban-col.active-mobile-col { display: flex; }
 }
+
+
 [data-bs-theme="dark"] {
   --bg:        #182024;
   --surface:   #212b30;
@@ -1422,38 +1426,74 @@ html, body {
   --border:    rgba(165,201,202,0.15);
   --border-md: rgba(165,201,202,0.3);
   --text:      #E7F6F2;
+  --blue:      #0b49f5; 
   --text-muted:#93a9af;
 }
  
 [data-bs-theme="dark"] html,
 [data-bs-theme="dark"] body { background: var(--bg); color: var(--text); }
  
-[data-bs-theme="dark"] .ht-navbar-top,
+
 [data-bs-theme="dark"] .ht-search-input,
 [data-bs-theme="dark"] .ht-filter-select,
 [data-bs-theme="dark"] .ht-stat,
 [data-bs-theme="dark"] .ht-kanban-col,
 [data-bs-theme="dark"] .ht-modal-content,
 [data-bs-theme="dark"] .ht-card-panel,
-[data-bs-theme="dark"] .ht-toast {
-  background: var(--surface) !important;
-  border-color: var(--border-md) !important;
+[data-bs-theme="dark"] .ht-toast
+[data-bs-theme="dark"] .dropdown-menu,
+[data-bs-theme="dark"] .ht-dropdown-panel {
+  background: transparent !important;
+  background-color: transparent !important;
+  backdrop-filter: blur(8px) !important;  /* Opcional: efecto vidrio */
+  border-color: rgba(165,201,202,0.15) !important;
+}
+
+/* Los items del dropdown: sin fondo */
+[data-bs-theme="dark"] .dropdown-item {
+  background: transparent !important;
   color: var(--text) !important;
 }
- 
+
+[data-bs-theme="dark"] .dropdown-item:hover {
+  background: rgba(165,201,202,0.08) !important;
+}
+
+/* El li del perfil (donde está "Carlos Méndez / Confección") */
+[data-bs-theme="dark"] .dropdown-menu .px-3.py-2 {
+  background: var(--surface2) !important;
+  border-radius: 8px 8px 0 0;
+}
+
+
+[data-bs-theme="dark"] .top-clock {
+  background: var(--border) !important;
+}
+
+[data-bs-theme="dark"] .nombre{
+  background: var(--border) !important;
+}
+
+[data-bs-theme="dark"] .brand-title {
+  color: var(--blue) !important;
+}
+
+
 [data-bs-theme="dark"] .ht-card,
 [data-bs-theme="dark"] .ht-detail-item,
 [data-bs-theme="dark"] .ht-input,
 [data-bs-theme="dark"] .ht-panel-header,
 [data-bs-theme="dark"] .ht-panel-footer,
-[data-bs-theme="dark"] .ht-detail-desc,
-[data-bs-theme="dark"] .brand-icon {
+[data-bs-theme="dark"] .ht-detail-desc 
+{
   background: var(--surface2) !important;
   color: var(--text) !important;
   border-color: var(--border) !important;
 }
+
+
  
-[data-bs-theme="dark"] .ht-brand .brand-title { color: #ffffff !important; }
+[data-bs-theme="dark"] .ht-brand  { color: #ffffff !important; }
 [data-bs-theme="dark"] .ht-brand .brand-sub   { color: var(--text-muted) !important; }
  
 [data-bs-theme="dark"] .ht-btn-secondary:hover,
