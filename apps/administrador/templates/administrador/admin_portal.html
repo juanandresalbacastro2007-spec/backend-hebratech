@@ -6,6 +6,19 @@
 
 {% block topbar_extra %}
 <div class="ms-auto d-flex align-items-center gap-3">
+  <!-- Botones de acciones rápidas -->
+  <div class="d-flex gap-2">
+    <a href="{% url 'admin_ordenes' %}" class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-bag-plus"></i> Nueva orden
+    </a>
+    <a href="{% url 'admin_tarea_asignar' %}" class="btn btn-sm btn-outline-success">
+      <i class="bi bi-clipboard2-plus"></i> Asignar tarea
+    </a>
+    <a href="{% url 'admin_usuario_crear' %}" class="btn btn-sm btn-outline-info">
+      <i class="bi bi-person-plus"></i> Nuevo usuario
+    </a>
+  </div>
+
   <div class="dropdown">
     <button class="btn-notif-ht" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Notificaciones">
       <i class="bi bi-bell-fill"></i>
@@ -19,8 +32,8 @@
       </div>
     </ul>
   </div>
-  <div id="topClock" class="top-clock px-3 py-2 rounded bg-white border shadow-sm text-muted fw-semibold font-family-200 d-flex align-items-center gap-2">
-    <i class="bi bi-clock text-primary"></i>
+  <div id="topClock" class="top-clock px-3 py-2 rounded d-flex align-items-center gap-2">
+    <i class="bi bi-clock"></i>
     <span id="clockText">--:--:--</span>
   </div>
 </div>
@@ -30,7 +43,7 @@
 
 <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
-<!-- Mensajes Flash de Django -->
+<!-- Mensajes Flash -->
 {% if messages %}
   <div class="messages-wrapper mb-3">
     {% for message in messages %}
@@ -57,7 +70,7 @@
     <a href="{% url 'admin_usuarios' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Usuarios</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(57,91,100,0.12); color:#395B64;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-people-fill fs-6"></i>
         </div>
       </div>
@@ -69,7 +82,7 @@
     <a href="{% url 'admin_usuarios' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Clientes</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.25); color:#2C3333;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-building fs-6"></i>
         </div>
       </div>
@@ -81,7 +94,7 @@
     <a href="{% url 'admin_usuarios' %}?rol=operario" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Operarios</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(57,91,100,0.12); color:#395B64;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-person-gear fs-6"></i>
         </div>
       </div>
@@ -93,7 +106,7 @@
     <a href="{% url 'admin_ordenes' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Órdenes Total</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.25); color:#2C3333;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-bag-fill fs-6"></i>
         </div>
       </div>
@@ -105,7 +118,7 @@
     <a href="{% url 'admin_ordenes' %}?estado=Pendiente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Órdenes Pend.</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(255,193,7,0.15); color:#d39e00;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c47f00;">
           <i class="bi bi-hourglass-split fs-6"></i>
         </div>
       </div>
@@ -117,7 +130,7 @@
     <a href="{% url 'admin_tareas' %}?estado=Pendiente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Tareas Pend.</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(220,53,69,0.1); color:#dc3545;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c62839;">
           <i class="bi bi-clipboard2-x fs-6"></i>
         </div>
       </div>
@@ -126,13 +139,13 @@
   </div>
 </div>
 
-<!-- KPIs exclusivos que venían del "vista general" de Producción -->
+<!-- KPIs adicionales -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-4 col-xl-2">
     <a href="{% url 'admin_incidencias' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Incidencias Abiertas</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(220,53,69,0.1); color:#dc3545;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c62839;">
           <i class="bi bi-exclamation-triangle-fill fs-6"></i>
         </div>
       </div>
@@ -144,7 +157,7 @@
     <a href="{% url 'admin_ordenes' %}?prioridad=Urgente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Órdenes Urgentes</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(255,193,7,0.15); color:#d39e00;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c47f00;">
           <i class="bi bi-fire fs-6"></i>
         </div>
       </div>
@@ -156,7 +169,7 @@
     <a href="{% url 'produccion_portal' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Producción Activa</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(57,91,100,0.12); color:#395B64;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-gear-fill fs-6"></i>
         </div>
       </div>
@@ -168,7 +181,7 @@
     <a href="{% url 'produccion_portal' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <span class="kpi-label text-muted small fw-medium">Catálogo Productos</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.25); color:#2C3333;">
+        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
           <i class="bi bi-bag-check-fill fs-6"></i>
         </div>
       </div>
@@ -181,7 +194,7 @@
   <div class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between">
     <div class="d-flex align-items-center justify-content-between mb-2">
       <span class="kpi-label text-muted small fw-medium">Proveedores</span>
-      <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(57,91,100,0.12); color:#395B64;">
+      <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
         <i class="bi bi-truck fs-6"></i>
       </div>
     </div>
@@ -224,12 +237,14 @@
               </td>
               <td class="text-end fw-bold">{{ orden.cantidad|default:"—" }}</td>
               <td class="text-center">
-                {% if orden.estado == 'Entregado' or orden.estado == 'Completada' %}
-                  <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>{{ orden.estado }}</span>
-                {% elif orden.estado == 'Procesando' or orden.estado == 'Enviado' or orden.estado == 'En Progreso' %}
+                {% if orden.estado == 'Entregado' %}
+                  <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>Entregado</span>
+                {% elif orden.estado == 'Procesando' or orden.estado == 'Enviado' %}
                   <span class="badge-ht badge-info"><i class="bi bi-arrow-repeat me-1"></i>{{ orden.estado }}</span>
-                {% elif orden.estado == 'Cancelado' or orden.estado == 'Cancelada' %}
-                  <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>{{ orden.estado }}</span>
+                {% elif orden.estado == 'Cancelado' %}
+                  <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>Cancelado</span>
+                {% elif orden.estado == 'Retrasado' %}
+                  <span class="badge-ht badge-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Retrasado</span>
                 {% else %}
                   <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>{{ orden.estado|default:"Pendiente" }}</span>
                 {% endif %}
@@ -288,6 +303,8 @@
                   <span class="badge-ht badge-danger">Urgente</span>
                 {% elif asig.prioridad == 'Alta' %}
                   <span class="badge-ht badge-warning">Alta</span>
+                {% elif asig.prioridad == 'Baja' %}
+                  <span class="badge-ht" style="background:#eee;color:#555;">Baja</span>
                 {% else %}
                   <span class="badge-ht badge-info">{{ asig.prioridad|default:"Media" }}</span>
                 {% endif %}
@@ -297,6 +314,10 @@
                   <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>Completada</span>
                 {% elif asig.estado == 'En Progreso' %}
                   <span class="badge-ht badge-info"><i class="bi bi-arrow-repeat me-1"></i>En Progreso</span>
+                {% elif asig.estado == 'Cancelada' %}
+                  <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>Cancelada</span>
+                {% elif asig.estado == 'Retrasada' %}
+                  <span class="badge-ht badge-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Retrasada</span>
                 {% else %}
                   <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>{{ asig.estado|default:"Pendiente" }}</span>
                 {% endif %}
@@ -317,7 +338,7 @@
   </div>
 </div>
 
-<!-- Actividad Reciente del Sistema (venía de Producción · Vista General) -->
+<!-- Actividad Reciente del Sistema -->
 <div class="row g-3">
   <div class="col-12">
     <div class="section-card">
@@ -354,11 +375,10 @@
 {% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Reloj digital en tiempo real para el topbar
+    // Reloj
     function updateClock() {
       const clockElement = document.getElementById('clockText');
       if (!clockElement) return;
-
       const now = new Date();
       const options = {
         hour: '2-digit',
@@ -368,11 +388,10 @@
       };
       clockElement.textContent = now.toLocaleTimeString('es-CO', options);
     }
-
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Alertas del sistema
+    // Notificaciones
     const alertasSistema = {{ alertas|default:"[]"|safe }};
     renderNotifDropdown(alertasSistema);
     alertasSistema.forEach((a, i) => {
@@ -380,13 +399,9 @@
     });
   });
 
-  // Mapeo auxiliar para asegurar URLs válidas
   function resolverUrlModulo(modulo) {
     if (!modulo) return '#';
-    // Si la cadena ya viene como URL completa o empieza con '/'
     if (modulo.startsWith('/')) return modulo;
-    
-    // Mapeo de nombres de módulos/rutas a URLs reales
     const mapaRutas = {
       'admin_ordenes': '/administrador/ordenes/',
       'ordenes': '/administrador/ordenes/',
@@ -395,25 +410,20 @@
       'admin_incidencias': '/administrador/incidencias/',
       'admin_inventario': '/administrador/inventario/'
     };
-
     return mapaRutas[modulo] || `/administrador/${modulo}/`;
   }
 
-  // Notificaciones (dropdown de la campana)
   function renderNotifDropdown(alertas) {
     const badge = document.getElementById('notifBadge');
     const cont = document.getElementById('notifListContainer');
     if (!badge || !cont) return;
-
     if (!alertas.length) {
       badge.style.display = 'none';
       cont.innerHTML = `<li class="px-2 py-3 text-center text-muted small">Sin notificaciones nuevas</li>`;
       return;
     }
-
     badge.style.display = 'flex';
     badge.textContent = alertas.length;
-
     cont.innerHTML = alertas.map(a => {
       const urlDestino = resolverUrlModulo(a.modulo);
       return `
@@ -429,21 +439,17 @@
     }).join('');
   }
 
-  // Toasts flotantes
   function mostrarToast(notif, delay = 0) {
     setTimeout(() => {
       const id = 'toast-' + Date.now() + Math.random().toString(36).slice(2);
       const duracion = 6000;
       const urlDestino = resolverUrlModulo(notif.modulo);
-
       const accionHtml = notif.modulo
         ? `<button class="ht-toast-action" onclick="window.location.href='${urlDestino}'">Ver →</button>`
         : '';
-
       const titulo = notif.tipo === 'danger' ? 'Atención requerida'
         : notif.tipo === 'warning' ? 'Aviso'
         : 'Información';
-
       const el = document.createElement('div');
       el.className = 'ht-toast';
       el.id = id;
@@ -457,11 +463,8 @@
         <button class="ht-toast-close" onclick="cerrarToast('${id}')"><i class="bi bi-x"></i></button>
         <div class="ht-toast-progress" id="prog-${id}" style="width:100%;"></div>
       `;
-
       document.getElementById('toastContainer')?.appendChild(el);
-
       requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
-
       const prog = document.getElementById('prog-' + id);
       if (prog) {
         prog.style.transition = `width ${duracion}ms linear`;

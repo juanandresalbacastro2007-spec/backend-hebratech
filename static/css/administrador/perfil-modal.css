@@ -293,3 +293,133 @@
   transform: none;
   box-shadow: none;
 }
+
+/* ==============================================
+   MODO OSCURO — Modal Editar Perfil
+   ============================================== */
+
+[data-bs-theme="dark"] .perfil-modal-content {
+  background-color: #1e2a30;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+[data-bs-theme="dark"] .perfil-modal-header {
+  background: linear-gradient(135deg, #0f171c 0%, #1a2b33 100%);
+  border-bottom: 1px solid rgba(165, 201, 202, 0.15);
+}
+
+[data-bs-theme="dark"] .perfil-modal-title {
+  color: #e7f6f2;
+}
+
+[data-bs-theme="dark"] .perfil-modal-sub {
+  color: #a5c9ca;
+}
+
+[data-bs-theme="dark"] .perfil-modal-body {
+  background-color: #1e2a30;
+}
+
+[data-bs-theme="dark"] .perfil-field label {
+  color: #cbd8dc;
+}
+
+[data-bs-theme="dark"] .perfil-field label i {
+  color: #a5c9ca;
+}
+
+[data-bs-theme="dark"] .perfil-field .form-control {
+  background-color: #2a3a42;
+  border-color: #395b64;
+  color: #e7f6f2;
+}
+
+[data-bs-theme="dark"] .perfil-field .form-control:focus {
+  border-color: #a5c9ca;
+  box-shadow: 0 0 0 3px rgba(165, 201, 202, 0.25);
+  background-color: #2a3a42;
+  color: #e7f6f2;
+}
+
+[data-bs-theme="dark"] .perfil-field .form-control::placeholder {
+  color: #8aa6ad;
+}
+
+[data-bs-theme="dark"] .perfil-input-icon .toggle-password {
+  color: #a5c9ca;
+}
+
+[data-bs-theme="dark"] .perfil-input-icon .toggle-password:hover {
+  color: #e7f6f2;
+}
+
+[data-bs-theme="dark"] .perfil-divider {
+  border-color: #395b64;
+}
+
+[data-bs-theme="dark"] .perfil-section-label {
+  color: #a5c9ca;
+}
+
+[data-bs-theme="dark"] .perfil-section-label span {
+  color: #8aa6ad;
+}
+
+/* Alertas en modo oscuro */
+[data-bs-theme="dark"] .perfil-alert.show-error {
+  background: #3d1e1e;
+  color: #f8b4b4;
+  border-color: #7a3b3b;
+}
+
+[data-bs-theme="dark"] .perfil-alert.show-success {
+  background: #1a3a30;
+  color: #b8e6d6;
+  border-color: #2a6b5a;
+}
+
+/* Botones */
+[data-bs-theme="dark"] .btn-perfil-cancelar {
+  background: #2a3a42;
+  color: #cbd8dc;
+  border-color: #395b64;
+}
+
+[data-bs-theme="dark"] .btn-perfil-cancelar:hover {
+  background: #395b64;
+  color: #e7f6f2;
+  border-color: #a5c9ca;
+}
+
+[data-bs-theme="dark"] .btn-perfil-guardar {
+  background: linear-gradient(135deg, #395b64, #1f3b44);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-bs-theme="dark"] .btn-perfil-guardar:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+/* Avatar y botón de cámara */
+[data-bs-theme="dark"] .perfil-avatar-grande {
+  border-color: #a5c9ca;
+  background: rgba(57, 91, 100, 0.3);
+}
+
+[data-bs-theme="dark"] .perfil-avatar-edit-btn {
+  background: #395b64;
+  border-color: #1e2a30;
+  color: #e7f6f2;
+}
+
+[data-bs-theme="dark"] .perfil-avatar-edit-btn:hover {
+  background: #a5c9ca;
+  color: #1e2a30;
+}
+
+/* Ajuste para el icono de edición en el sidebar (ya existente en admin.css,
+   pero lo reforzamos para que no se vea opaco en modo oscuro) */
+[data-bs-theme="dark"] .perfil-edit-hint {
+  color: #a5c9ca;
+}
+

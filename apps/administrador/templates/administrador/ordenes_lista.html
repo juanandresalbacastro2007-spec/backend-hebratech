@@ -33,8 +33,6 @@
       {% endif %}
     </div>
 
-    <!-- ✅ Las etiquetas visibles ahora coinciden 1:1 con el stepper que ve
-         el cliente en su portal (mismo VALUE guardado, solo cambia el texto) -->
     <select name="estado" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
       <option value="">Todos los estados</option>
       <option value="Pendiente" {% if estado_filtro == 'Pendiente' %}selected{% endif %}>Pendiente</option>
@@ -42,6 +40,7 @@
       <option value="Enviado" {% if estado_filtro == 'Enviado' %}selected{% endif %}>Enviado</option>
       <option value="Entregado" {% if estado_filtro == 'Entregado' %}selected{% endif %}>Entregado</option>
       <option value="Cancelado" {% if estado_filtro == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+      <option value="Retrasado" {% if estado_filtro == 'Retrasado' %}selected{% endif %}>Retrasado</option>
     </select>
 
     <button type="submit" class="d-none"></button>
@@ -50,9 +49,6 @@
 {% endblock %}
 
 {% block contenido %}
-
-
-
 
 <div class="section-card">
   <div class="section-card-header">
@@ -64,7 +60,7 @@
         <tr>
           <th># Orden</th>
           <th>Cliente</th>
-          <th>producto</th>
+          <th>Producto</th>
           <th>Fecha</th>
           <th>Cantidad</th>
           <th>Subtotal</th>
@@ -80,33 +76,43 @@
           <td><strong>#{{ orden.idOrden }}</strong></td>
           <td>{{ orden.idCliente.empresa|default:orden.idCliente.nombre|default:"—" }}</td>
           <td>{{ orden.nombreProducto|default:"—" }}</td>
-          <td>{{ orden.fechaCreacion }}</td>
+          <td>{{ orden.fechaCreacion|date:"d/m/Y"|default:"—" }}</td>
           <td>{{ orden.cantidad|default:"—" }}</td>
           <td>
             {% if orden.cantidad and orden.precioUnitario %}
-            ${% widthratio orden.cantidad 1 orden.precioUnitario %}
+            ${{ orden.cantidad|floatformat:0|add:orden.precioUnitario|floatformat:0 }}
             <small class="text-muted d-block">({{ orden.cantidad|floatformat:0 }} × ${{ orden.precioUnitario|floatformat:0 }})</small>
             {% else %}—{% endif %}
           </td>
-          <td>{{ orden.fechaEntregaEstimada|default:"—" }}</td>
+          <td>{{ orden.fechaEntregaEstimada|date:"d/m/Y"|default:"—" }}</td>
           <td>
             {% if orden.prioridad == 'Urgente' %}
             <span class="badge-ht badge-danger"><i class="bi bi-lightning-charge-fill me-1"></i>Urgente</span>
+            {% elif orden.prioridad == 'Alta' %}
+            <span class="badge-ht badge-warning"><i class="bi bi-arrow-up-circle me-1"></i>Alta</span>
+            {% elif orden.prioridad == 'Media' %}
+            <span class="badge-ht badge-info"><i class="bi bi-dash-circle me-1"></i>Media</span>
+            {% elif orden.prioridad == 'Baja' %}
+            <span class="badge-ht" style="background:#eee;color:#555;"><i class="bi bi-arrow-down-circle me-1"></i>Baja</span>
             {% else %}
-            <span class="badge-ht" style="background:#eee;color:#555;">Normal</span>
+            <span class="badge-ht badge-pending">Normal</span>
             {% endif %}
           </td>
           <td>
             {% if orden.estado == 'Entregado' %}
-            <span class="badge-ht badge-success"><i class="bi bi-check-lg me-1"></i>{{ orden.estado }}</span>
+            <span class="badge-ht badge-success"><i class="bi bi-check-lg me-1"></i>Entregado</span>
             {% elif orden.estado == 'Procesando' %}
             <span class="badge-ht badge-info"><i class="bi bi-gear-wide-connected me-1"></i>En producción</span>
             {% elif orden.estado == 'Enviado' %}
-            <span class="badge-ht badge-info"><i class="bi bi-truck me-1"></i>{{ orden.estado }}</span>
+            <span class="badge-ht badge-info"><i class="bi bi-truck me-1"></i>Enviado</span>
             {% elif orden.estado == 'Cancelado' %}
-            <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>{{ orden.estado }}</span>
+            <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>Cancelado</span>
+            {% elif orden.estado == 'Retrasado' %}
+            <span class="badge-ht badge-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Retrasado</span>
+            {% elif orden.estado == 'Pendiente' %}
+            <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>Pendiente</span>
             {% else %}
-            <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>{{ orden.estado }}</span>
+            <span class="badge-ht badge-pending">{{ orden.estado }}</span>
             {% endif %}
           </td>
           <td class="text-center">
@@ -116,7 +122,7 @@
           </td>
         </tr>
 
-        <!-- MODAL CON AVISOS Y VALIDACIONES -->
+        <!-- MODAL EDITAR (sin estilos inline de color) -->
         <div class="modal fade" id="modalEditarOrden{{ orden.idOrden }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
@@ -126,9 +132,8 @@
                   <h5 class="modal-title" style="font-family: 'Fredoka', sans-serif;"><i class="bi bi-pencil me-2 text-primary"></i>Editar Detalles de Orden #{{ orden.idOrden }}</h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body text-start style-fields" style="color: #333;">
+                <div class="modal-body text-start style-fields">
                   
-                  <!-- AVISO INFORMATIVO DENTRO DEL FORMULARIO -->
                   <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-3">
                     <i class="bi bi-info-circle-fill me-2 fs-6"></i>
                     <span>Modifica los parámetros de la orden. Los cambios afectarán la planificación de entregas.</span>
@@ -147,7 +152,6 @@
                     <div class="invalid-feedback small">Ingresa un valor monetario válido.</div>
                   </div>
 
-                  <!-- ✅ INPUT CON FECHA MÍNIMA BLOQUEADA A HOY -->
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Fecha de Entrega Estimada</label>
                     <input type="date" 
@@ -176,6 +180,7 @@
                       <option value="Enviado" {% if orden.estado == 'Enviado' %}selected{% endif %}>Enviado</option>
                       <option value="Entregado" {% if orden.estado == 'Entregado' %}selected{% endif %}>Entregado</option>
                       <option value="Cancelado" {% if orden.estado == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+                      <option value="Retrasado" {% if orden.estado == 'Retrasado' %}selected{% endif %}>Retrasado</option>
                     </select>
                     <div class="form-text small">Estas etiquetas son exactamente las que ve el cliente en el seguimiento de su orden.</div>
                   </div>
@@ -189,7 +194,6 @@
           </div>
         </div>
 
-        <!-- ESTADO VACÍO CON NOTIFICACIÓN DE BÚSQUEDA -->
         {% empty %}
         <tr>
           <td colspan="10" class="text-center text-muted py-5">
@@ -215,11 +219,6 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-
-    // Restringe el selector de calendario a "hoy en adelante" solo mientras
-    // el usuario lo está usando activamente. Si al salir del campo no cambió
-    // el valor, se quita el "min" para no invalidar una fecha vieja que la
-    // orden ya traía guardada (y que no se está tocando).
     document.querySelectorAll('.fecha-entrega-input').forEach(input => {
       input.addEventListener('focus', function () {
         this.min = this.dataset.hoy;
@@ -234,11 +233,6 @@
     const forms = document.querySelectorAll('.needs-validation');
     Array.from(forms).forEach(form => {
       form.addEventListener('submit', event => {
-
-        // Solo exigir "fecha >= hoy" si el usuario cambió la fecha respecto
-        // a la que ya tenía la orden. Así una orden ya vencida se puede
-        // seguir editando (estado, cantidad, etc.) sin que la fecha vieja
-        // bloquee el guardado.
         const fechaInput = form.querySelector('.fecha-entrega-input');
         if (fechaInput) {
           const original = fechaInput.dataset.fechaOriginal || '';

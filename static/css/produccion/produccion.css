@@ -1653,6 +1653,15 @@ textarea {
   --border:       rgba(165,201,202,0.15);
   --border-light: rgba(165,201,202,0.08);
   --accent-light: #263239;
+  /* Estas variables las redefine también admin.css en su propio :root[data-bs-theme="dark"].
+     Como este archivo se carga DESPUÉS de admin.css, su :root sin condicionar (línea 9)
+     pisaba esos valores oscuros y dejaba textos oscuros sobre fondo oscuro (topbar-title,
+     topbar-sub, etc). Se repiten aquí para que ambos archivos queden sincronizados sin
+     importar el orden de carga. */
+  --primary:      #A5C9CA;
+  --primary-dark: #E7F6F2;
+  --primary-deep: #12181b;
+  --topbar-bg:    #212b30;
 }
  
 [data-bs-theme="dark"] body,
