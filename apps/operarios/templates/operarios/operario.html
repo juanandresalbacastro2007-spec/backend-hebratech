@@ -605,37 +605,50 @@
     </div>
   </div>
 
-  <!-- MODAL: HISTORIAL DE TAREAS COMPLETADAS -->
+  <!-- ═══════════════════════════════════════════════════
+       MODAL: HISTORIAL DE TAREAS COMPLETADAS
+  ════════════════════════════════════════════════════ -->
   <div class="modal fade" id="modalHistorialTareas" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content ht-modal-content">
         <div class="modal-header ht-modal-header">
           <div class="ht-modal-title-wrap">
             <span class="ht-modal-eyebrow">Archivo</span>
-            <h5 class="modal-title ht-modal-title"><i class="bi bi-archive me-2"></i>Historial de tareas completadas</h5>
+            <h5 class="modal-title ht-modal-title">Historial de tareas completadas</h5>
           </div>
           <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
-          <div class="ht-search-wrap mb-3" style="max-width:280px;">
-            <i class="bi bi-search ht-search-icon"></i>
-            <input type="text" id="searchHistorialModal" class="ht-search-input" placeholder="Buscar en historial…">
+
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div class="ht-search-wrap">
+              <i class="bi bi-search ht-search-icon"></i>
+              <input type="text" id="searchHistorialModal" class="ht-search-input" placeholder="Buscar en historial…">
+            </div>
           </div>
+
           <div class="table-responsive">
-            <table class="ht-table">
-              <thead>
+            <table class="table table-hover align-middle" style="font-size:.86rem;">
+              <thead style="background:var(--surface2);">
                 <tr>
-                  <th>Tarea</th>
-                  <th>Proceso</th>
-                  <th>Cantidad</th>
-                  <th>Fecha finalización</th>
-                  <th>Horas reales</th>
-                  <th class="text-end">Ver</th>
+                  <th style="color:var(--primary);">Tarea</th>
+                  <th style="color:var(--primary);">Proceso</th>
+                  <th style="color:var(--primary);">Cantidad</th>
+                  <th style="color:var(--primary);">Fecha finalización</th>
+                  <th style="color:var(--primary);">Horas reales</th>
+                  <th class="text-end" style="color:var(--primary);">Ver</th>
                 </tr>
               </thead>
-              <tbody id="tableHistorialBody"></tbody>
+              <tbody id="tableHistorialBody">
+                <tr>
+                  <td colspan="6" class="text-center py-4" style="color:var(--text-muted);">
+                    Cargando historial…
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
+
         </div>
         <div class="modal-footer ht-modal-footer">
           <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
