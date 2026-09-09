@@ -6,7 +6,7 @@ from django.utils import timezone
 from django_fsm import can_proceed
 
 from apps.administrador.models import Orden
-from .models import Produccion
+from .models import OrdenProduccion
 
 # Cuánto tiempo mínimo debe quedar una orden en "Procesando" (En Progreso en
 # Produccion) antes de poder pasar a "Enviado", aunque el 100% de las tareas

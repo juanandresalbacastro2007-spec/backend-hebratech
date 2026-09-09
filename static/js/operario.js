@@ -121,10 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const prioClass  = `ht-badge-prio-${t.prioridad}`;
         const compClass  = `ht-badge-complex-${(t.complejidad || 'media').toLowerCase()}`;
 
-        const chipCantidad = (t.tipoPrenda && t.cantidadPrendas)
-            ? `<span class="ht-card-hours"><i class="bi bi-boxes"></i>${t.cantidadPrendas} ${t.tipoPrenda}</span>`
-            : '';
-
         // Bloque de cronómetro (solo para "En Progreso")
         const timerBlock = t.estado === 'En Progreso'
             ? `<div class="ht-timer-block" id="timerBlock-${t.idAsignacion}">
@@ -268,11 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function configurarModalesAccion() {
-        document.getElementById('btnConfirmStartTask').addEventListener('click', async () => {
-            if (!activeStartTaskId) return;
-            await cambiarEstado(activeStartTaskId, 'En Progreso');
-            bootstrap.Modal.getInstance(document.getElementById('modalIniciarTarea')).hide();
-        });
+        const btnStart = document.getElementById('btnConfirmStartTask');
+        if (btnStart) {
+            btnStart.addEventListener('click', async () => {
+                if (!activeStartTaskId) return;
+                await cambiarEstado(activeStartTaskId, 'En Progreso');
+                bootstrap.Modal.getInstance(document.getElementById('modalIniciarTarea')).hide();
+            });
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -293,33 +292,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Mostrar/ocultar Observaciones según el switch de inconvenientes
-    document.getElementById('finishHasIncidence')?.addEventListener('change', function () {
-        const grupo = document.getElementById('finishNotesGroup');
-        grupo.style.display = this.checked ? '' : 'none';
-        if (!this.checked) document.getElementById('finishNotes').classList.remove('is-invalid');
-    });
+    const finishSwitch = document.getElementById('finishHasIncidence');
+    if (finishSwitch) {
+        finishSwitch.addEventListener('change', function () {
+            const grupo = document.getElementById('finishNotesGroup');
+            grupo.style.display = this.checked ? '' : 'none';
+            if (!this.checked) document.getElementById('finishNotes').classList.remove('is-invalid');
+        });
+    }
 
     // Listener del botón de confirmar finalización
-    document.getElementById('btnConfirmFinishTask').addEventListener('click', async () => {
-        if (!activeFinishTaskId) return;
-        const hasIncidence  = document.getElementById('finishHasIncidence').checked;
-        const notesEl       = document.getElementById('finishNotes');
-        const observaciones = notesEl.value.trim();
+    const btnFinish = document.getElementById('btnConfirmFinishTask');
+    if (btnFinish) {
+        btnFinish.addEventListener('click', async () => {
+            if (!activeFinishTaskId) return;
+            const hasIncidence  = document.getElementById('finishHasIncidence').checked;
+            const notesEl       = document.getElementById('finishNotes');
+            const observaciones = notesEl.value.trim();
 
-        // Si marcó que hubo inconvenientes, la descripción es obligatoria
-        if (hasIncidence && observaciones.length < 5) {
-            notesEl.classList.add('is-invalid');
-            mostrarToast('Describe el inconveniente antes de continuar', 'err');
-            return;
-        }
+            if (hasIncidence && observaciones.length < 5) {
+                notesEl.classList.add('is-invalid');
+                mostrarToast('Describe el inconveniente antes de continuar', 'err');
+                return;
+            }
 
-        await cambiarEstado(activeFinishTaskId, 'Completada');
-        bootstrap.Modal.getInstance(document.getElementById('modalFinalizarTarea')).hide();
-        if (hasIncidence) {
-            const tarea = cacheTareas[activeFinishTaskId];
-            if (tarea) abrirModalIncidencia(null, tarea, observaciones);
-        }
-    });
+            await cambiarEstado(activeFinishTaskId, 'Completada');
+            bootstrap.Modal.getInstance(document.getElementById('modalFinalizarTarea')).hide();
+            if (hasIncidence) {
+                const tarea = cacheTareas[activeFinishTaskId];
+                if (tarea) abrirModalIncidencia(null, tarea, observaciones);
+            }
+        });
+    }
 
     // ─── Cambiar estado en backend ───────────────────────────────
     async function cambiarEstado(idAsignacion, nuevoEstado) {
@@ -382,7 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function abrirDetalleTarea(t) {
         document.getElementById('dtlTaskTitle').textContent = t.nombreTarea;
 
-        // Calcular días estimados y fecha de fin
         const diasEst = Math.ceil((t.horasEstimadas || 0) / 10);
         let fechaFinStr = '—';
         if (t.fechaInicio) {
@@ -431,7 +434,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Botón de acción contextual
         const btnAccion = document.getElementById('dtlBtnAction');
         if (t.estado === 'Pendiente') {
             btnAccion.innerHTML = '<i class="bi bi-play-fill me-1"></i>Iniciar tarea';
@@ -535,7 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDetalleIncidencia')).show();
 
-        // Marcar como leída (si no lo estaba) y refrescar el badge/lista
         if (rep.respuesta && !rep.respuestaLeida) {
             try {
                 await fetch(ENDPOINTS.marcarRespuestaLeida(idIncidencia), {
@@ -555,7 +556,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = document.getElementById('tableIncidenciasBody');
         if (!tbody) return;
 
-        // Llenar cache completo
         reportes.forEach(r => { cacheIncidencias[r.idIncidencia] = r; });
 
         if (reportes.length === 0) {
@@ -633,7 +633,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const refName    = document.getElementById('reportTareaName');
 
         if (incidencia) {
-            // MODO EDICIÓN
             eyebrow.textContent  = `Edición #${String(incidencia.idIncidencia).padStart(4, '0')}`;
             titulo.textContent   = 'Editar Incidencia';
             btnLabel.textContent = 'Guardar cambios';
@@ -642,7 +641,6 @@ document.addEventListener('DOMContentLoaded', () => {
             descEl.value         = incidencia.descripcion || '';
             refEl.style.display  = 'none';
         } else {
-            // MODO NUEVA
             eyebrow.textContent  = 'Nueva Incidencia';
             titulo.textContent   = 'Generar Reporte';
             btnLabel.textContent = 'Enviar reporte';
@@ -677,62 +675,62 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        document.getElementById('btnSaveReport').addEventListener('click', async () => {
-            const editId      = document.getElementById('reportEditId').value;
-            const tipo        = document.getElementById('reportTipo').value.trim();
-            const descripcion = document.getElementById('reportDesc').value.trim();
-            const severidad   = document.getElementById('reportSeveridad')?.value || 'Media';
+        const btnSave = document.getElementById('btnSaveReport');
+        if (btnSave) {
+            btnSave.addEventListener('click', async () => {
+                const editId      = document.getElementById('reportEditId').value;
+                const tipo        = document.getElementById('reportTipo').value.trim();
+                const descripcion = document.getElementById('reportDesc').value.trim();
+                const severidad   = document.getElementById('reportSeveridad')?.value || 'Media';
 
-            // Validación
-            let valido = true;
-            document.getElementById('err-tipo').textContent = '';
-            document.getElementById('err-desc').textContent = '';
+                let valido = true;
+                document.getElementById('err-tipo').textContent = '';
+                document.getElementById('err-desc').textContent = '';
 
-            if (!tipo) {
-                document.getElementById('err-tipo').textContent = 'Selecciona un tipo de incidencia.';
-                valido = false;
-            }
-            if (descripcion.length < 10) {
-                document.getElementById('err-desc').textContent = 'La descripción debe tener al menos 10 caracteres.';
-                valido = false;
-            }
-            if (!valido) return;
-
-            const endpoint = editId
-                ? ENDPOINTS.editarReporte(editId)
-                : ENDPOINTS.guardarReporte;
-
-            try {
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken(),
-                    },
-                    body: JSON.stringify({ tipoIncidencia: tipo, descripcion, severidad }),
-                });
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || 'Error al guardar');
+                if (!tipo) {
+                    document.getElementById('err-tipo').textContent = 'Selecciona un tipo de incidencia.';
+                    valido = false;
                 }
-                mostrarToast(
-                    editId ? '✓ Incidencia actualizada' : '✓ Incidencia registrada — descargando PDF…',
-                    'ok'
-                );
-                bootstrap.Modal.getInstance(document.getElementById('reportModal')).hide();
-                await cargarHistorialReportes();
-
-                // Solo al crear (no al editar) se descarga el PDF automáticamente,
-                // igual que en la versión anterior del módulo.
-                if (!editId) {
-                    const data = await res.json();
-                    if (data.idIncidencia) descargarPDF(data.idIncidencia);
+                if (descripcion.length < 10) {
+                    document.getElementById('err-desc').textContent = 'La descripción debe tener al menos 10 caracteres.';
+                    valido = false;
                 }
-            } catch (err) {
-                console.error(err);
-                mostrarToast(`❌ ${err.message}`, 'err');
-            }
-        });
+                if (!valido) return;
+
+                const endpoint = editId
+                    ? ENDPOINTS.editarReporte(editId)
+                    : ENDPOINTS.guardarReporte;
+
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken(),
+                        },
+                        body: JSON.stringify({ tipoIncidencia: tipo, descripcion, severidad }),
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.error || 'Error al guardar');
+                    }
+                    mostrarToast(
+                        editId ? '✓ Incidencia actualizada' : '✓ Incidencia registrada — descargando PDF…',
+                        'ok'
+                    );
+                    bootstrap.Modal.getInstance(document.getElementById('reportModal')).hide();
+                    await cargarHistorialReportes();
+
+                    if (!editId) {
+                        const data = await res.json();
+                        if (data.idIncidencia) descargarPDF(data.idIncidencia);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    mostrarToast(`❌ ${err.message}`, 'err');
+                }
+            });
+        }
     }
 
     // ─── Modal eliminar ──────────────────────────────────────────
@@ -779,11 +777,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════════════════════════
 
     function configurarBotonesExteriores() {
-        // Generar incidencia rápida
         document.getElementById('btnGenerateReport')
             ?.addEventListener('click', () => abrirModalIncidencia());
 
-        // Ver incidencias generadas (botón de texto en el topbar)
         document.getElementById('btnVerIncidenciasGeneradas')
             ?.addEventListener('click', () => {
                 document.activeElement?.blur();
@@ -794,18 +790,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 150);
             });
 
-        // Abrir modal gestión desde menú de usuario
-        document.getElementById('btnOpenAllIncidences')
-            ?.addEventListener('click', () => {
-                document.activeElement?.blur();
-                setTimeout(() => {
-                    bootstrap.Modal.getOrCreateInstance(
-                        document.getElementById('modalGestionIncidencias')
-                    ).show();
-                }, 150);
-            });
-
-        // Nueva incidencia desde dentro del modal gestión
         document.getElementById('btnCreateIncidenceFromModule')
             ?.addEventListener('click', () => {
                 bootstrap.Modal.getInstance(
@@ -826,13 +810,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ?.addEventListener('change', aplicarFiltros);
         document.getElementById('filterProcess')
             ?.addEventListener('change', aplicarFiltros);
-        document.getElementById('btnResetFilters')
-            ?.addEventListener('click', () => {
-                document.getElementById('searchInput').value   = '';
-                document.getElementById('filterPrio').value    = '';
-                document.getElementById('filterProcess').value = '';
-                aplicarFiltros();
-            });
     }
 
     function aplicarFiltros() {
@@ -856,7 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 10. HISTORIAL DE TAREAS COMPLETADAS (estilo "archivo" de Trello)
+    // 10. HISTORIAL DE TAREAS COMPLETADAS
     // ═══════════════════════════════════════════════════════════
 
     function actualizarBadgeHistorial(tareas) {
@@ -939,24 +916,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const counts = { 'Pendiente': 0, 'En Progreso': 0, 'Completada': 0 };
         tareas.forEach(t => { if (counts[t.estado] !== undefined) counts[t.estado]++; });
 
-        // La columna 'Completada' del tablero ya no aloja tarjetas (se archivan),
-        // así que su badge siempre muestra 0 para no confundir con el historial.
         const countCompletadaEl = document.getElementById('count-Completada');
         if (countCompletadaEl) countCompletadaEl.textContent = 0;
 
-        // Columnas activas
         ['Pendiente', 'En Progreso'].forEach(e => {
             const el = document.getElementById(`count-${e}`);
             if (el) el.textContent = counts[e];
         });
-
-        // Barra de stats
-        const sp = document.getElementById('statPendiente');
-        const sq = document.getElementById('statProceso');
-        const sd = document.getElementById('statFinalizado');
-        if (sp) sp.textContent = counts['Pendiente'];
-        if (sq) sq.textContent = counts['En Progreso'];
-        if (sd) sd.textContent = counts['Completada'];
 
         // KPI chips navbar
         const kp = document.getElementById('kpiCountPending');
@@ -1013,7 +979,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Activar primera pestaña
         tabs[0]?.click();
     }
 

@@ -1501,3 +1501,12 @@ html, body {
 [data-bs-theme="dark"] .ht-profile-btn:hover { background: rgba(165,201,202,0.08) !important; }
  
 [data-bs-theme="dark"] .ht-controls-bar { background: var(--bg) !important; border-color: var(--border) !important; }
+
+[data-bs-theme="dark"] .top-clock {
+  background: var(--surface) !important;
+  border-color: var(--border-md) !important;
+  color: var(--text) !important;
+}
+[data-bs-theme="dark"] .top-clock i {
+  color: var(--text) !important;
+}

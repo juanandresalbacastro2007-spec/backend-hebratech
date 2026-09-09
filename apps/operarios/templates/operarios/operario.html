@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,46 +14,36 @@
 <body>
 
   <!-- ═══════════════════════════════════════════════════
-    NAVBAR SUPERIOR
+    NAVBAR SUPERIOR (sin botón de tema, solo reloj)
   ════════════════════════════════════════════════════ -->
   <nav class="ht-navbar-top">
     <div class="ht-navbar-inner">
-
-      <!-- Logo -->
-        <a href="{% url 'operarios:tablero' %}" class="ht-brand">
-          <div class="brand-icon">
-            <img src="{% static 'img/logo.png' %}" alt="HebraTech">
-          </div>
-          <div class="d-flex flex-column">
-            <span class="brand-title">HebraTech</span>
-            <span class="brand-sub">Operario</span>
-          </div>
-        </a>
-
-        <div class="ms-auto d-flex align-items-end gap-3 p-3 ">
-          <div id="topClock" class="top-clock px-3 py-2 rounded bg-white border shadow-sm text-muted fw-semibold font-family-200 d-flex align-items-center gap-2">
-            <i class="bi bi-clock text-primary"></i>
-            <span id="clockText">--:--:--</span>
-          </div>
+      <a href="{% url 'operarios:tablero' %}" class="ht-brand">
+        <div class="brand-icon">
+          <img src="{% static 'img/logo.png' %}" alt="HebraTech">
         </div>
-        
+        <div class="d-flex flex-column">
+          <span class="brand-title">HebraTech</span>
+          <span class="brand-sub">Operario</span>
+        </div>
+      </a>
 
-      <!-- Acciones -->
+      <div class="ms-auto d-flex align-items-center gap-3">
+        <div id="topClock" class="top-clock px-3 py-2 rounded bg-white border shadow-sm fw-semibold d-flex align-items-center gap-2">
+          <i class="bi bi-clock text-primary"></i>
+          <span id="clockText">--:--:--</span>
+        </div>
+      </div>
+
       <div class="ht-nav-actions">
-
-        <!-- Botón generar incidencia -->
         <button class="ht-nav-btn" id="btnGenerateReport">
           <i class="bi bi-plus-lg"></i>
           <span class="d-none d-sm-inline">Generar Incidencia</span>
         </button>
-
-        <!-- Ver incidencias generadas (texto, sin campana) -->
         <button class="ht-nav-btn" type="button" id="btnVerIncidenciasGeneradas" title="Ver incidencias generadas">
           <i class="bi bi-journal-text"></i>
           <span class="d-none d-md-inline">Ver incidencias generadas</span>
         </button>
-
-        <!-- Campana de NOTIFICACIONES (respuestas del admin) -->
         <div class="dropdown">
           <button class="ht-nav-btn position-relative" type="button"
                   data-bs-toggle="dropdown" data-bs-auto-close="outside"
@@ -74,10 +64,7 @@
             </div>
           </div>
         </div>
-
         <div class="ht-nav-divider"></div>
-
-        <!-- Perfil de usuario -->
         <div class="dropdown">
           <button class="ht-profile-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             {% if operario.idUsuario.fotoPerfil %}
@@ -94,18 +81,15 @@
             </span>
             <i class="bi bi-chevron-down ht-chevron"></i>
           </button>
-         <ul class="dropdown-menu dropdown-menu-end ht-dropdown-panel py-2" 
+          <ul class="dropdown-menu dropdown-menu-end ht-dropdown-panel py-2"
               style="min-width:200px; background: transparent !important; box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important; border: 1px solid var(--border-md) !important;">
-    
-            <!-- Este li ya tiene su propio fondo (gris claro) -->
-            <li class="px-3 py-2 border-bottom" 
+            <li class="px-3 py-2 border-bottom"
                 style="border-color:var(--border)!important; background: var(--surface2) !important; border-radius: 8px 8px 0 0;">
               <div style="font-family:'Fredoka',sans-serif;font-size:1rem;color:var(--primary);">
                 {% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% endif %}
               </div>
               <small style="color:var(--text-muted);">{{ operario.especialidad|default:"Operario de Planta" }}</small>
             </li>
-            
             <li>
               <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2"
                 href="{% url 'operarios:perfil' %}"
@@ -114,9 +98,7 @@
                 <span>Editar Perfil</span>
               </a>
             </li>
-            
             <li><hr class="dropdown-divider my-1" style="border-color:var(--border);"></li>
-            
             <li>
               <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 text-danger"
                 href="{% url 'logout' %}"
@@ -127,7 +109,6 @@
             </li>
           </ul>
         </div>
-
       </div>
     </div>
   </nav>
@@ -137,9 +118,6 @@
   ════════════════════════════════════════════════════ -->
   <div class="ht-controls-bar">
     <div class="ht-controls-inner">
-      <!-- Controles derechos -->
-       
-      <!-- KPIs interactivos (solo desktop) -->
       <div class="ht-kpis-row d-none d-lg-flex">
         <button class="ht-kpi-chip ht-kpi-chip--pending" id="kpiPending" title="Ir a Pendientes">
           <span class="ht-kpi-dot"></span>
@@ -188,7 +166,6 @@
           <option value="Terminado">Terminado</option>
           <option value="Planchado">Planchado</option>
         </select>
-        
       </div>
     </div>
   </div>
@@ -197,8 +174,6 @@
        MAIN — TABLERO KANBAN
   ════════════════════════════════════════════════════ -->
   <main class="ht-main">
-
-    <!-- Encabezado de página -->
     <div class="ht-page-header">
       <div>
         <h1 class="ht-page-title"><i class="bi bi-kanban"></i> Tablero Operativo</h1>
@@ -210,10 +185,8 @@
       </div>
     </div>
 
-    <!-- Toast container -->
     <div class="ht-toast-wrap" id="toastWrap" aria-live="polite"></div>
 
-    <!-- Pestañas móvil -->
     <div class="ht-mobile-tabs d-md-none">
       <button class="ht-mobile-tab active" data-tab="Pendiente">
         <i class="bi bi-clock-history me-1"></i>Pendientes
@@ -229,10 +202,7 @@
       </button>
     </div>
 
-    <!-- Board Kanban -->
     <div class="ht-kanban-board" id="kanbanBoard">
-
-      <!-- Columna: Pendiente -->
       <div class="ht-kanban-col" id="col-Pendiente" data-estado="Pendiente">
         <div class="ht-col-header ht-col-header--pending">
           <div class="ht-col-dot"></div>
@@ -248,7 +218,6 @@
         </div>
       </div>
 
-      <!-- Columna: En Progreso -->
       <div class="ht-kanban-col" id="col-En Progreso" data-estado="En Progreso">
         <div class="ht-col-header ht-col-header--progress">
           <div class="ht-col-dot"></div>
@@ -264,7 +233,6 @@
         </div>
       </div>
 
-      <!-- Columna: Completada -->
       <div class="ht-kanban-col ht-kanban-col--completada" id="col-Completada" data-estado="Completada">
         <div class="ht-col-header ht-col-header--done"
              id="headerCompletada" style="cursor:pointer;" title="Colapsar/expandir">
@@ -277,19 +245,18 @@
           <div class="ht-col-empty" id="empty-Completada">
             <i class="bi bi-trophy"></i>
             <strong>¡Al día!</strong>
-            <span>Las tareas que completes se archivan automáticamente.</span>
+            <span>Las tareas que completas se archivan automáticamente.</span>
             <button type="button" class="btn btn-link btn-sm p-0 mt-1" id="linkVerHistorialDesdeColumna">Ver historial →</button>
           </div>
         </div>
       </div>
-
     </div>
   </main>
 
-
   <!-- ═══════════════════════════════════════════════════
-       MODAL: DETALLE DE TAREA
+       MODALES (tarea, incidencia, historial, etc.)
   ════════════════════════════════════════════════════ -->
+  <!-- Modal: Detalle de Tarea -->
   <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content ht-modal-content">
@@ -313,10 +280,7 @@
     </div>
   </div>
 
-
-  <!-- ═══════════════════════════════════════════════════
-       MODAL: CONFIRMAR INICIO DE TAREA
-  ════════════════════════════════════════════════════ -->
+  <!-- Modal: Iniciar Tarea -->
   <div class="modal fade" id="modalIniciarTarea" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content ht-modal-content">
@@ -360,10 +324,7 @@
     </div>
   </div>
 
-
-  <!-- ═══════════════════════════════════════════════════
-       MODAL: FINALIZAR TAREA
-  ════════════════════════════════════════════════════ -->
+  <!-- Modal: Finalizar Tarea -->
   <div class="modal fade" id="modalFinalizarTarea" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content ht-modal-content">
@@ -375,42 +336,28 @@
           <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
-
           <div class="ht-form-group">
-            <label class="ht-label" for="finishQtyGood">
-              Unidades conformes <span class="ht-required">*</span>
-            </label>
+            <label class="ht-label" for="finishQtyGood">Unidades conformes <span class="ht-required">*</span></label>
             <input type="number" id="finishQtyGood" class="ht-input" min="0" placeholder="Ej: 120">
           </div>
-
           <div class="ht-form-group">
             <label class="ht-label" for="finishQtyBad">Unidades defectuosas / merma</label>
             <input type="number" id="finishQtyBad" class="ht-input" min="0" value="0">
           </div>
-
           <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" id="finishHasIncidence">
             <label class="form-check-label" for="finishHasIncidence" style="color:var(--warn);font-weight:600;">
               ¿Hubo inconvenientes durante la ejecución?
             </label>
           </div>
-
           <div class="ht-form-group" id="finishNotesGroup" style="display:none;">
-            <label class="ht-label" for="finishNotes">
-              Describe el inconveniente <span class="ht-required">*</span>
-            </label>
-            <textarea id="finishNotes" class="ht-input ht-textarea" rows="2"
-                      placeholder="Notas sobre el lote o novedades…"></textarea>
-            <div class="ht-field-hint" style="color:var(--text-muted);font-size:.75rem;margin-top:2px;">
-              Esto se registrará como una incidencia visible para el administrador.
-            </div>
+            <label class="ht-label" for="finishNotes">Describe el inconveniente <span class="ht-required">*</span></label>
+            <textarea id="finishNotes" class="ht-input ht-textarea" rows="2" placeholder="Notas sobre el lote o novedades…"></textarea>
           </div>
-
         </div>
         <div class="modal-footer ht-modal-footer">
           <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="ht-btn-primary" id="btnConfirmFinishTask"
-                  style="background:var(--ok);">
+          <button type="button" class="ht-btn-primary" id="btnConfirmFinishTask" style="background:var(--ok);">
             <i class="bi bi-check-circle-fill me-1"></i>Finalizar y registrar
           </button>
         </div>
@@ -418,10 +365,7 @@
     </div>
   </div>
 
-
-  <!-- ═══════════════════════════════════════════════════
-       MODAL: CREAR / EDITAR INCIDENCIA
-  ════════════════════════════════════════════════════ -->
+  <!-- Modal: Crear/Editar Incidencia -->
   <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content ht-modal-content">
@@ -433,13 +377,9 @@
           <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
-
           <input type="hidden" id="reportEditId" value="">
-
           <div class="ht-form-group">
-            <label class="ht-label" for="reportTipo">
-              Tipo de incidencia <span class="ht-required">*</span>
-            </label>
+            <label class="ht-label" for="reportTipo">Tipo de incidencia <span class="ht-required">*</span></label>
             <select class="ht-input" id="reportTipo" style="cursor:pointer;">
               <option value="" disabled selected>Selecciona una categoría…</option>
               <option value="Falla Mecánica / Maquinaria">Falla Mecánica / Maquinaria</option>
@@ -451,7 +391,6 @@
             </select>
             <div class="ht-field-error" id="err-tipo"></div>
           </div>
-
           <div class="ht-form-group">
             <label class="ht-label" for="reportSeveridad">Severidad</label>
             <select class="ht-input" id="reportSeveridad" style="cursor:pointer;">
@@ -461,28 +400,20 @@
               <option value="Crítica">🔴 Crítica — Parada total de máquina</option>
             </select>
           </div>
-
           <div class="ht-form-group">
-            <label class="ht-label" for="reportDesc">
-              Descripción detallada <span class="ht-required">*</span>
-            </label>
-            <textarea class="ht-input ht-textarea" id="reportDesc" rows="4"
-                      maxlength="2000"
-                      placeholder="Describe qué sucedió, máquina involucrada y estado actual…"></textarea>
+            <label class="ht-label" for="reportDesc">Descripción detallada <span class="ht-required">*</span></label>
+            <textarea class="ht-input ht-textarea" id="reportDesc" rows="4" maxlength="2000" placeholder="Describe qué sucedió, máquina involucrada y estado actual…"></textarea>
             <div class="ht-field-hint"><span id="descCount">0</span>/2000</div>
             <div class="ht-field-error" id="err-desc"></div>
           </div>
-
           <div class="ht-report-info" id="reportTareaRef" style="display:none;">
             <i class="bi bi-link-45deg"></i>
             <span>Vinculada a: <strong id="reportTareaName">—</strong></span>
           </div>
-
         </div>
         <div class="modal-footer ht-modal-footer">
           <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="ht-btn-primary" id="btnSaveReport"
-                  style="background:#d97706;">
+          <button type="button" class="ht-btn-primary" id="btnSaveReport" style="background:#d97706;">
             <i class="bi bi-send me-1"></i>
             <span id="btnSaveReportLabel">Enviar reporte</span>
           </button>
@@ -491,10 +422,7 @@
     </div>
   </div>
 
-
-  <!-- ═══════════════════════════════════════════════════
-       MODAL: GESTIÓN DE INCIDENCIAS (tabla completa)
-  ════════════════════════════════════════════════════ -->
+  <!-- Modal: Gestión de Incidencias -->
   <div class="modal fade" id="modalGestionIncidencias" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content ht-modal-content">
@@ -506,18 +434,15 @@
           <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
-
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div class="ht-search-wrap">
               <i class="bi bi-search ht-search-icon"></i>
-              <input type="text" id="searchIncidenceModal" class="ht-search-input"
-                     placeholder="Filtrar incidencias…">
+              <input type="text" id="searchIncidenceModal" class="ht-search-input" placeholder="Filtrar incidencias…">
             </div>
             <button class="ht-btn-secondary" id="btnCreateIncidenceFromModule">
               <i class="bi bi-plus-lg me-1"></i>Nueva Incidencia
             </button>
           </div>
-
           <div class="table-responsive">
             <table class="table table-hover align-middle" style="font-size:.86rem;">
               <thead style="background:var(--surface2);">
@@ -532,14 +457,11 @@
               </thead>
               <tbody id="tableIncidenciasBody">
                 <tr>
-                  <td colspan="6" class="text-center py-4" style="color:var(--text-muted);">
-                    Cargando incidencias…
-                  </td>
+                  <td colspan="6" class="text-center py-4" style="color:var(--text-muted);">Cargando incidencias…</td>
                 </tr>
               </tbody>
             </table>
           </div>
-
         </div>
         <div class="modal-footer ht-modal-footer">
           <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -548,10 +470,7 @@
     </div>
   </div>
 
-
-  <!-- ═══════════════════════════════════════════════════
-       MODAL: CONFIRMAR ELIMINACIÓN
-  ════════════════════════════════════════════════════ -->
+  <!-- Modal: Eliminar incidencia -->
   <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
       <div class="modal-content ht-modal-content">
@@ -563,9 +482,7 @@
           <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
-          <p class="mb-0" style="font-size:.9rem;color:var(--text-muted);">
-            ¿Estás seguro de que quieres eliminar este reporte? Esta acción no se puede deshacer.
-          </p>
+          <p class="mb-0" style="font-size:.9rem;color:var(--text-muted);">¿Estás seguro de que quieres eliminar este reporte? Esta acción no se puede deshacer.</p>
         </div>
         <div class="modal-footer ht-modal-footer">
           <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -577,7 +494,7 @@
     </div>
   </div>
 
-  <!-- MODAL: DETALLE DE INCIDENCIA (con respuesta del admin) -->
+  <!-- Modal: Detalle de Incidencia -->
   <div class="modal fade" id="modalDetalleIncidencia" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content ht-modal-content">
@@ -593,12 +510,10 @@
             <span id="detalleIncEstado"></span>
             <small style="color:var(--text-muted);"><i class="bi bi-calendar-event me-1"></i><span id="detalleIncFecha"></span></small>
           </div>
-
           <div class="ht-form-group">
             <label class="ht-label">Tu descripción</label>
             <p id="detalleIncDescripcion" class="mb-0" style="white-space:pre-wrap;"></p>
           </div>
-
           <div id="detalleIncRespuestaWrap" class="mt-3 p-3 rounded-3"
                style="background:rgba(57,91,100,0.08);border:1px dashed var(--primary);display:none;">
             <div class="fw-bold text-uppercase mb-1" style="font-size:.75rem;color:var(--primary-dark);">
@@ -614,9 +529,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════
-       MODAL: HISTORIAL DE TAREAS COMPLETADAS
-  ════════════════════════════════════════════════════ -->
+  <!-- Modal: Historial de tareas completadas -->
   <div class="modal fade" id="modalHistorialTareas" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content ht-modal-content">
@@ -628,14 +541,12 @@
           <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body ht-modal-body">
-
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div class="ht-search-wrap">
               <i class="bi bi-search ht-search-icon"></i>
               <input type="text" id="searchHistorialModal" class="ht-search-input" placeholder="Buscar en historial…">
             </div>
           </div>
-
           <div class="table-responsive">
             <table class="table table-hover align-middle" style="font-size:.86rem;">
               <thead style="background:var(--surface2);">
@@ -650,14 +561,11 @@
               </thead>
               <tbody id="tableHistorialBody">
                 <tr>
-                  <td colspan="6" class="text-center py-4" style="color:var(--text-muted);">
-                    Cargando historial…
-                  </td>
+                  <td colspan="6" class="text-center py-4" style="color:var(--text-muted);">Cargando historial…</td>
                 </tr>
               </tbody>
             </table>
           </div>
-
         </div>
         <div class="modal-footer ht-modal-footer">
           <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -666,28 +574,54 @@
     </div>
   </div>
 
+  <!-- ═══ BOTÓN FLOTANTE DE TEMA ═══ -->
+  <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
+    <button id="themeToggleOperario" class="btn btn-light rounded-circle shadow-lg border-0"
+            style="width: 48px; height: 48px; font-size: 1.3rem; background: var(--surface, #fff); color: var(--primary, #395B64); transition: all 0.3s;">
+      <i class="bi bi-moon-fill" id="themeIconOperario"></i>
+    </button>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'js/operario.js' %}"></script>
+
   <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Reloj digital en tiempo real para el topbar
-    function updateClock() {
-      const clockElement = document.getElementById('clockText');
-      if (!clockElement) return;
+    document.addEventListener("DOMContentLoaded", function () {
+      // Reloj
+      function updateClock() {
+        const clockElement = document.getElementById('clockText');
+        if (!clockElement) return;
+        const now = new Date();
+        const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+        clockElement.textContent = now.toLocaleTimeString('es-CO', options);
+      }
+      updateClock();
+      setInterval(updateClock, 1000);
 
-      const now = new Date();
-      const options = { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit', 
-        hour12: true 
-      };
-      clockElement.textContent = now.toLocaleTimeString('es-CO', options);
-    }
+      // ── Modo oscuro / claro ──
+      const root = document.documentElement;
+      const btn = document.getElementById('themeToggleOperario');
+      const icon = document.getElementById('themeIconOperario');
 
-    updateClock();
-    setInterval(updateClock, 1000);
-  });
-</script>
+      function applyTheme(theme) {
+        root.setAttribute('data-bs-theme', theme);
+        if (icon) {
+          icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+        }
+        localStorage.setItem('ht-theme-operario', theme);
+      }
+
+      const stored = localStorage.getItem('ht-theme-operario') || 'light';
+      applyTheme(stored);
+
+      if (btn) {
+        btn.addEventListener('click', function () {
+          const current = root.getAttribute('data-bs-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          applyTheme(next);
+        });
+      }
+    });
+  </script>
 </body>
 </html>
