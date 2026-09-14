@@ -1,0 +1,61 @@
+{% extends "administrador/admin_base.html" %}
+{% load humanize %}
+
+{% block titulo %}Cotizaciones{% endblock %}
+{% block topbar_titulo %}Cotizaciones{% endblock %}
+{% block topbar_sub %}Cotizaciones solicitadas por los clientes{% endblock %}
+
+{% block contenido %}
+<div class="card shadow-sm">
+  <div class="card-header">
+    <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Cotizaciones</h6>
+  </div>
+  <div class="card-body p-0">
+    {% if cotizaciones %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Subtotal estimado</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cot in cotizaciones %}
+          <tr>
+            <td><strong>#{{ cot.idCotizacion }}</strong></td>
+            <td>{{ cot.idCliente.nombre|default:"—" }}</td>
+            <td>{{ cot.idProducto.nombre|default:"—" }}</td>
+            <td>{{ cot.cantidad }}</td>
+            <td>${{ cot.subtotalEstimado|floatformat:0|intcomma }}</td>
+            <td>{{ cot.fechaCreacion|date:"d/m/Y H:i" }}</td>
+            <td>
+              {% if cot.estado == 'Aprobada' %}
+                <span class="badge" style="background-color:#d4edda;color:#155724;">Aprobada</span>
+              {% elif cot.estado == 'Rechazada' %}
+                <span class="badge" style="background-color:#f8d7da;color:#721c24;">Rechazada</span>
+              {% elif cot.estado == 'Revisada' %}
+                <span class="badge" style="background-color:#cfe2ff;color:#084298;">Revisada</span>
+              {% else %}
+                <span class="badge" style="background-color:#F5D6A8;color:#7A5200;">Pendiente</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
+      <p class="mb-0">No hay cotizaciones registradas.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
