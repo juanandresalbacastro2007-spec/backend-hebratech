@@ -372,30 +372,10 @@ body {
 .btn-hero-primary:hover {
   background: #c0dfe0;
   color: var(--primary-dark);
-  transform: translateY(-3px) scale(1.03);
+ 
   box-shadow: 0 14px 32px rgba(165,201,202,0.4);
 }
-.btn-hero-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  color: var(--accent);
-  border: 1.5px solid rgba(165,201,202,0.4);
-  font-family: var(--ff-display);
-  font-size: 1rem;
-  font-weight: 600;
-  padding: 13px 26px;
-  border-radius: 12px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-.btn-hero-ghost:hover {
-  background: rgba(165,201,202,0.1);
-  border-color: var(--accent);
-  color: var(--hero-text);
-  transform: translateY(-2px);
-}
+
 
 /* ── CARDS DE SOLUCIONES ── */
 .bg-hb-actitud { background-color: var(--primary-dark) !important; }
@@ -914,7 +894,7 @@ body {
 .cta-sub {
   font-family: var(--ff-body);
   font-size: 1rem;
-  color: rgba(165,201,202,0.85);
+  color: var(--primary-dark);
   max-width: 480px;
   margin: 0 auto 36px;
   line-height: 1.7;
