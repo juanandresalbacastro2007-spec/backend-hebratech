@@ -26,7 +26,7 @@ from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
-
+from apps.clientes.models import Cotizacion
 from django_fsm import can_proceed
 
 from .models import (
@@ -95,6 +95,7 @@ def admin_portal(request):
     ordenes_pendientes = Orden.objects.filter(estado='Pendiente').count()
     tareas_pendientes = AsignacionTarea.objects.filter(estado='Pendiente').count()
     usuarios_pendientes = Usuario.objects.filter(estado='pendiente').count()
+    total_cotizaciones = Cotizacion.objects.count()
 
     ultimas_ordenes = Orden.objects.order_by('-fechaCreacion')[:5]
     ultimas_asignaciones = AsignacionTarea.objects.order_by('-fechaAsignacion')[:5]
@@ -205,6 +206,7 @@ def admin_portal(request):
         'total_clientes': total_clientes,
         'total_operarios': total_operarios,
         'total_ordenes': total_ordenes,
+        'total_cotizaciones': total_cotizaciones,
         'ordenes_pendientes': ordenes_pendientes,
         'tareas_pendientes': tareas_pendientes,
         'usuarios_pendientes': usuarios_pendientes,
@@ -219,6 +221,23 @@ def admin_portal(request):
         'alertas': json.dumps(alertas),
     })
 
+
+# --cotizar --#
+@admin_required
+def cotizaciones_lista(request):
+    cotizaciones = Cotizacion.objects.select_related(
+        'idCliente', 'idProducto'
+    ).order_by('-fechaCreacion')
+
+    contexto = {
+        'cotizaciones': cotizaciones,
+    }
+
+    return render(
+        request,
+        'administrador/cotizaciones_lista.html',
+        contexto
+    )
 
 # ── Usuarios ─────────────────────────────────────────────────
 @admin_required

@@ -188,6 +188,17 @@
       <div class="kpi-value fs-4 fw-bold text-dark">{{ productos_catalogo|default:0 }}</div>
     </a>
   </div>
+<div class="col-6 col-md-4 col-xl-2">
+  <a href="{% url 'admin_cotizaciones' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <span class="kpi-label text-muted small fw-medium">Ver cotizaciones</span>
+      <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
+        <i class="bi bi-bag-check-fill fs-6"></i>
+      </div>
+    </div>
+    <div class="kpi-value fs-4 fw-bold text-dark">{{ total_cotizaciones }}</div>
+  </a>
+</div>
 
 {% if total_proveedores is not None %}
 <div class="col-6 col-md-4 col-xl-2">
@@ -202,7 +213,6 @@
   </div>
 </div>
 {% endif %}
-</div>
 
 
 <!-- Listados Recientes -->

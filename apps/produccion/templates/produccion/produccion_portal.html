@@ -167,7 +167,7 @@
       <div class="table-toolbar">
         <h3>Órdenes de Producción</h3>
         <div class="toolbar-right">
-          <button class="btn btn-primary" onclick="abrirModalNuevaOrden()">➕ Nueva Orden</button>
+          
           <div class="search-wrap">
             <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -336,9 +336,9 @@
             <label>Estado</label>
             <select id="c-estado">
               <option value="Pendiente">Pendiente</option>
-              <option value="En Proceso">En Proceso</option>
-              <option value="Completado">Completado</option>
-              <option value="Cancelado">Cancelado</option>
+              <option value="En Proceso">Produccion</option>
+              <option value="Completado">Enviado</option>
+              <option value="Cancelado">Entregado</option>
             </select>
           </div>
           <div class="form-group">
@@ -357,14 +357,6 @@
   <!-- MODAL: Nueva/Editar Orden Producción -->
   <div class="prod-modal-backdrop" id="modal-orden">
     <div class="prod-modal">
-      <div class="prod-modal-header">
-        <h3 id="modal-orden-title">🗒 Nueva Orden de Producción</h3>
-        <button class="prod-modal-close" onclick="cerrarModalOrden()">×</button>
-      </div>
-      <div class="prod-modal-body">
-        <input type="hidden" id="orden-id" />
-        <input type="hidden" id="orden-cliente-id" />
-
         <div class="form-row">
           <div class="form-group full">
             <label>Orden de Cliente (opcional)</label>

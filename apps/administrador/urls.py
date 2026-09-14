@@ -5,6 +5,7 @@ urlpatterns = [
     # General / Portal
     path('', views.admin_portal, name='admin_portal'),
     path('editar-perfil/', views.editar_perfil, name='editar_perfil'),
+    path('cotizaciones/', views.cotizaciones_lista, name='admin_cotizaciones'),
 
     # Usuarios
     path('usuarios/', views.usuarios_lista, name='admin_usuarios'),
