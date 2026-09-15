@@ -37,6 +37,8 @@ from .models import (
 from apps.core.decorators import login_required_rol
 
 
+from apps.proveedores.models import Proveedor  
+
 # ── Decorador de protección por rol (centralizado en apps.core) ────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
 
@@ -980,7 +982,8 @@ def inventario_lista(request):
 
     # Optimizado: Carga en conjunto 'producto' y 'cliente'
     inventario_list = Inventario.objects.all().select_related('producto', 'cliente')
-    materiales_list = Material.objects.all()
+    materiales_list = Material.objects.all().select_related('proveedor')
+    proveedores_list = Proveedor.objects.filter(estado='activo').order_by('nombreEmpresa')
     productos_list = Producto.objects.all()
     
     # 🔹 1. Consultar todos los clientes registrados
@@ -998,7 +1001,8 @@ def inventario_lista(request):
         materiales_list = materiales_list.filter(
             Q(nombreMaterial__icontains=buscar) |
             Q(descripcion__icontains=buscar) |
-            Q(idMaterial__icontains=buscar)
+            Q(idMaterial__icontains=buscar)|
+            Q(proveedor__nombreEmpresa__icontains=buscar) 
         )
 
     context = {
@@ -1011,6 +1015,8 @@ def inventario_lista(request):
         'clientes_list': clientes_list,  # 🔹 2. Enviar los clientes a la plantilla HTML
         'buscar_filtro': buscar,
         'ubicaciones_predefinidas': UBICACIONES_PREDEFINIDAS,
+        'clientes_list': clientes_list,
+        'proveedores_list': proveedores_list,    # <-- NUEVO
     }
     return render(request, 'administrador/inventario_lista.html', context)
 
@@ -1024,19 +1030,32 @@ def crear_material(request):
         stock_actual = request.POST.get('stockActual') or 0
         stock_minimo = request.POST.get('stockMinimo') or 0
         unidad = request.POST.get('unidadBase')
-        costo = request.POST.get('costoUnitario') or 0
+        costo = _parse_decimal_es(request.POST.get('costoUnitario'))
+        if costo is None:
+            messages.error(request, "El costo unitario no es un número válido.")
+            return redirect('admin_inventario')
+
+        # NUEVO: proveedor obligatorio
+        proveedor_id = request.POST.get('proveedor')
+        if not proveedor_id:
+            messages.error(request, "Debes seleccionar el proveedor del material.")
+            return redirect('admin_inventario')
+        proveedor_obj = get_object_or_404(Proveedor, pk=proveedor_id)
 
         Material.objects.create(
             nombreMaterial=nombre,
+            proveedor=proveedor_obj,          # <-- NUEVO
             descripcion=descripcion,
             stockActual=stock_actual,
             stockMinimo=stock_minimo,
             unidadBase=unidad,
             costoUnitario=costo
         )
-        messages.success(request, f"Material '{nombre}' creado con éxito.")
+        messages.success(
+            request,
+            f"Material '{nombre}' creado con éxito (proveedor: {proveedor_obj.nombreEmpresa})."
+        )
     return redirect('admin_inventario')
-
 
 @admin_required
 def editar_material(request, pk):
@@ -1047,7 +1066,14 @@ def editar_material(request, pk):
         material.stockActual = request.POST.get('stockActual')
         material.stockMinimo = request.POST.get('stockMinimo')
         material.unidadBase = request.POST.get('unidadBase')
-        material.costoUnitario = request.POST.get('costoUnitario')
+        costo = _parse_decimal_es(request.POST.get('costoUnitario'))
+        if costo is None:
+            messages.error(request, "El costo unitario no es un número válido.")
+            return redirect('admin_inventario')
+        material.costoUnitario = costo
+
+        proveedor_id = request.POST.get('proveedor')
+        material.proveedor = get_object_or_404(Proveedor, pk=proveedor_id) if proveedor_id else None
 
         material.save()
         messages.success(request, f"Material '{material.nombreMaterial}' actualizado correctamente.")
@@ -1071,6 +1097,25 @@ def _resolver_ubicacion(request):
         ubicacion = (request.POST.get('ubicacion_personalizada') or '').strip() or None
     return ubicacion or None
 
+
+from decimal import Decimal, InvalidOperation
+
+def _parse_decimal_es(valor):
+    if valor is None:
+        return None
+    valor = str(valor).strip()
+    if not valor:
+        return None
+    if ',' in valor and '.' in valor:
+        valor = valor.replace('.', '').replace(',', '.')
+    elif ',' in valor:
+        valor = valor.replace(',', '.')
+    elif valor.count('.') > 1:
+        valor = valor.replace('.', '')
+    try:
+        return Decimal(valor)
+    except InvalidOperation:
+        return None
 
 # ── CRUD: INVENTARIO (PRODUCTOS) ─────────────────────────────
 

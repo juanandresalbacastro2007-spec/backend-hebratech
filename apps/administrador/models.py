@@ -346,29 +346,29 @@ class Factura(models.Model):
 
 class Inventario(models.Model):
     idInventario = models.AutoField(primary_key=True)
+
     producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
-        db_column='idProducto',
-        related_name='inventarios'
+        db_column='idProducto'
     )
-    # 🔹 Se quitan null=True y blank=True para hacerlo obligatorio.
-    # 🔹 Se cambia a CASCADE o PROTECT (SET_NULL falla si el campo no permite nulos).
     cliente = models.ForeignKey(
-        'Cliente', 
-        on_delete=models.CASCADE, 
-        db_column='cliente_id',
+        Cliente,
+        on_delete=models.SET_NULL,
+        db_column='idCliente',
+        null=True, blank=True,
         related_name='inventarios'
     )
+
     cantidadDisponible = models.IntegerField(default=0)
     minimoDefinido = models.IntegerField(default=0)
-    nivelStock = models.IntegerField(default=0)
-    unidades = models.CharField(max_length=50, default='Unidades')
-    ubicacion = models.CharField(max_length=150)
+    nivelStock = models.IntegerField(null=True, blank=True, default=0)
+    unidades = models.CharField(max_length=30, default='Unidades')
+    ubicacion = models.CharField(max_length=100, null=True, blank=True)
     fechaActualizacion = models.DateField(auto_now=True)
     cantidadIngresada = models.IntegerField(default=0)
     cantidadEgresada = models.IntegerField(default=0)
-    fechaIngreso = models.DateField()
+    fechaIngreso = models.DateField(null=True, blank=True)
     fechaSalida = models.DateField(null=True, blank=True)
 
     class Meta:
@@ -380,19 +380,27 @@ class Inventario(models.Model):
 
 
 class Material(models.Model):
-    idMaterial = models.AutoField(primary_key=True, db_column='idMaterial')
-    nombreMaterial = models.CharField(max_length=100, db_column='nombreMaterial')
-    descripcion = models.TextField(blank=True, null=True, db_column='descripcion')
-    stockActual = models.DecimalField(max_digits=10, decimal_places=2, db_column='stockActual')
-    stockMinimo = models.DecimalField(max_digits=10, decimal_places=2, db_column='stockMinimo')
-    unidadBase = models.CharField(max_length=50, db_column='unidadBase')
-    costoUnitario = models.DecimalField(max_digits=10, decimal_places=2, db_column='costoUnitario')
-    fechaActualizacion = models.DateField(auto_now=True, db_column='fechaActualizacion')
+    idMaterial = models.AutoField(primary_key=True)
+    nombreMaterial = models.CharField(max_length=150)
+
+    proveedor = models.ForeignKey(
+        'proveedores.Proveedor',        # <-- referencia cruzada a la otra app
+        on_delete=models.SET_NULL,
+        db_column='idProveedor',
+        null=True, blank=True,
+        related_name='materiales'
+    )
+
+    descripcion = models.TextField(null=True, blank=True)
+    stockActual = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    stockMinimo = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    unidadBase = models.CharField(max_length=20, default='unidad')
+    costoUnitario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    fechaActualizacion = models.DateField(auto_now=True)
 
     class Meta:
         db_table = 'materiales'
-        verbose_name = 'Material'
-        verbose_name_plural = 'Materiales'
+        managed = False
 
     def __str__(self):
         return self.nombreMaterial

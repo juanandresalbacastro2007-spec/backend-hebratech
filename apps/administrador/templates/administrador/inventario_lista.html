@@ -5,7 +5,7 @@
 {% block topbar_sub %}Listado detallado de existencias, bodegas y materias primas{% endblock %}
 
 {% block topbar_extra %}
-{% load humanize %}
+{% load humanize l10n %}
 <div class="ms-auto d-flex gap-2 align-items-center">
   <form method="GET" action="{% url 'admin_inventario' %}" id="searchForm" class="d-flex align-items-center">
     <div class="input-group input-group-sm" style="max-width: 280px;">
@@ -244,6 +244,18 @@
             <h5 class="modal-title">Editar Inventario #{{ item.idInventario }}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
+          <div class="mb-3">
+            <label class="form-label">Cliente / Empresa</label>
+            <select name="cliente" class="form-select">
+              <option value="">-- Sin asignar --</option>
+              {% for cli in clientes_list %}
+                <option value="{{ cli.idCliente }}"
+                  {% if item.cliente and cli.idCliente == item.cliente.idCliente %}selected{% endif %}>
+                  {% if cli.empresa %}{{ cli.empresa }}{% if cli.nombre %} ({{ cli.nombre }}){% endif %}{% else %}{{ cli.nombre|default:"Cliente #"|add:cli.idCliente|stringformat:"s" }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
           <div class="modal-body">
             <div class="mb-3">
               <label class="form-label">Producto</label>
@@ -365,6 +377,7 @@
         <tr>
           <th class="text-center">ID</th>
           <th>Material</th>
+          <th class="text-center">Proveedor</th>
           <th>Descripción</th>
           <th class="text-center">Stock Actual</th>
           <th class="text-center">Stock Mínimo</th>
@@ -379,6 +392,18 @@
         <tr>
           <td class="text-center"><strong>#{{ mat.idMaterial }}</strong></td>
           <td><strong class="text-dark">{{ mat.nombreMaterial }}</strong></td>
+          <td class="text-center">
+            {% if mat.proveedor %}
+              <span class="fw-medium text-dark">
+                <i class="bi bi-truck me-1 text-muted"></i>{{ mat.proveedor.nombreEmpresa }}
+              </span>
+              {% if mat.proveedor.nombreContacto %}
+                <br><small class="text-muted">{{ mat.proveedor.nombreContacto }}</small>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-light text-muted border">Sin asignar</span>
+            {% endif %}
+          </td>
           <td style="max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ mat.descripcion }}">
             <small class="text-muted">{{ mat.descripcion|default:"—" }}</small>
           </td>
@@ -428,7 +453,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="9" class="text-center text-muted py-5">
+          <td colspan="10" class="text-center text-muted py-5">
             <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
             <p class="mb-0 fw-medium">No hay materias primas registradas en el sistema.</p>
           </td>
@@ -451,6 +476,30 @@
             <h5 class="modal-title">Editar Material #{{ mat.idMaterial }}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
+            <div class="mb-3">
+              <label class="form-label">Proveedor</label>
+              <select name="proveedor" class="form-select">
+                <option value="">-- Sin proveedor asignado --</option>
+                {% for prov in proveedores_list %}
+                  <option value="{{ prov.idProveedor }}"
+                    {% if mat.proveedor and prov.idProveedor == mat.proveedor.idProveedor %}selected{% endif %}>
+                    {{ prov.nombreEmpresa }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <td class="text-center">
+              {% if mat.proveedor %}
+                <span class="fw-medium text-dark">
+                  <i class="bi bi-truck me-1 text-muted"></i>{{ mat.proveedor.nombreEmpresa }}
+                </span>
+                {% if mat.proveedor.nombreContacto %}
+                  <br><small class="text-muted">{{ mat.proveedor.nombreContacto }}</small>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-light text-muted border">Sin asignar</span>
+              {% endif %}
+            </td>
           <div class="modal-body">
             <div class="mb-3">
               <label class="form-label">Nombre del Material</label>
@@ -497,7 +546,7 @@
                 <input type="hidden"
                        name="costoUnitario"
                        id="costoUnitarioEdit{{ mat.idMaterial }}"
-                       value="{{ mat.costoUnitario|default:'' }}">
+                       value="{{ mat.costoUnitario|unlocalize|default:'' }}">
               </div>
             </div>
           </div>
@@ -639,7 +688,8 @@
 
           <div class="mb-3">
             <label class="form-label">Cantidad Ingresada</label>
-            <input type="number" name="cantidadIngresada" class="form-control" value="0" min="0" step="1">
+            <input type="number" name="cantidadIngresada" class="form-control" 
+             value="0" min="0" step="1" oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
             <div class="invalid-feedback">La cantidad ingresada no puede ser negativa.</div>
           </div>
 
@@ -680,6 +730,20 @@
             <label class="form-label">Nombre del Material</label>
             <input type="text" name="nombreMaterial" class="form-control" placeholder="Ej: Hilo de Nylon" required>
             <div class="invalid-feedback">Ingresa el nombre del material.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Proveedor <span class="text-danger">*</span></label>
+            <select name="proveedor" class="form-select" required>
+              <option value="" selected disabled>-- Selecciona un proveedor --</option>
+              {% for prov in proveedores_list %}
+                <option value="{{ prov.idProveedor }}">
+                  {{ prov.nombreEmpresa }}{% if prov.nombreContacto %} ({{ prov.nombreContacto }}){% endif %}
+                </option>
+              {% empty %}
+                <option value="" disabled>No hay proveedores activos registrados</option>
+              {% endfor %}
+            </select>
+            <div class="invalid-feedback">Selecciona el proveedor de este material.</div>
           </div>
           <div class="mb-3">
             <label class="form-label">Descripción</label>
