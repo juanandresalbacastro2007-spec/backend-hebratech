@@ -638,7 +638,16 @@ def tareas_lista(request):
     if estado_filtro:
         asignaciones = asignaciones.filter(estado=estado_filtro)
 
-    ordenes = Orden.objects.exclude(estado__in=ESTADOS_ORDEN_FINALIZADOS) \
+    # ── Órdenes disponibles para el selector "Orden relacionada" ──
+    # Incluye las órdenes activas (no finalizadas) MÁS las órdenes
+    # que ya están vinculadas a alguna de las asignaciones mostradas,
+    # aunque esas órdenes ya estén en estado Cancelado/Entregado.
+    # Esto evita que el modal de editar muestre el campo "vacío"
+    # cuando la orden vinculada terminó finalizándose después.
+    ordenes_activas = Orden.objects.exclude(estado__in=ESTADOS_ORDEN_FINALIZADOS)
+    ordenes_vinculadas = Orden.objects.filter(asignaciones__in=asignaciones)
+    ordenes = (ordenes_activas | ordenes_vinculadas) \
+        .distinct() \
         .select_related('idCliente') \
         .order_by('-fechaCreacion')
 
