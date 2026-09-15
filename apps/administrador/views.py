@@ -930,8 +930,6 @@ def exportar_ordenes_pdf(request):
     if pisa_status.err:
         return HttpResponse('Hubo un error al generar el PDF', status=500)
     return response
-
-
 # ── Inventario y Materiales ──────────────────────────────────
 @admin_required
 def inventario_lista(request):
@@ -939,15 +937,21 @@ def inventario_lista(request):
 
     buscar = request.GET.get('buscar', '').strip()
 
-    inventario_list = Inventario.objects.all().select_related('producto')
+    # Optimizado: Carga en conjunto 'producto' y 'cliente'
+    inventario_list = Inventario.objects.all().select_related('producto', 'cliente')
     materiales_list = Material.objects.all()
     productos_list = Producto.objects.all()
+    
+    # 🔹 1. Consultar todos los clientes registrados
+    clientes_list = Cliente.objects.all().order_by('nombre')
 
     if buscar:
         inventario_list = inventario_list.filter(
             Q(producto__nombre__icontains=buscar) |
             Q(idInventario__icontains=buscar) |
-            Q(ubicacion__icontains=buscar)
+            Q(ubicacion__icontains=buscar) |
+            Q(cliente__empresa__icontains=buscar) |  # Permite buscar por nombre de empresa
+            Q(cliente__nombre__icontains=buscar)     # Permite buscar por nombre del contacto
         )
 
         materiales_list = materiales_list.filter(
@@ -963,11 +967,11 @@ def inventario_lista(request):
         'materiales_list': materiales_list,
         'total_materiales': materiales_list.count(),
         'productos_list': productos_list,
+        'clientes_list': clientes_list,  # 🔹 2. Enviar los clientes a la plantilla HTML
         'buscar_filtro': buscar,
         'ubicaciones_predefinidas': UBICACIONES_PREDEFINIDAS,
     }
     return render(request, 'administrador/inventario_lista.html', context)
-
 
 # ── CRUD: MATERIALES ─────────────────────────────────────────
 
@@ -1028,6 +1032,7 @@ def _resolver_ubicacion(request):
 
 
 # ── CRUD: INVENTARIO (PRODUCTOS) ─────────────────────────────
+
 @admin_required
 def crear_inventario(request):
     if request.method == 'POST':
@@ -1036,6 +1041,14 @@ def crear_inventario(request):
         if not nombre_producto:
             messages.error(request, "Debes ingresar el nombre del producto.")
             return redirect('admin_inventario')
+
+        # 🔹 Procesar asignación OBLIGATORIA de cliente
+        cliente_id = request.POST.get('cliente')
+        if not cliente_id:
+            messages.error(request, "Debes seleccionar un cliente o empresa de manera obligatoria.")
+            return redirect('admin_inventario')
+
+        cliente_obj = get_object_or_404(Cliente, pk=cliente_id)
 
         producto, creado = Producto.objects.get_or_create(
             nombre=nombre_producto,
@@ -1094,6 +1107,7 @@ def crear_inventario(request):
         try:
             Inventario.objects.create(
                 producto=producto,
+                cliente=cliente_obj,  # 🔹 Garantizado que no sea None
                 cantidadDisponible=cant_disponible,
                 minimoDefinido=min_definido,
                 nivelStock=nivel_stock,
@@ -1104,7 +1118,7 @@ def crear_inventario(request):
                 fechaIngreso=fecha_ingreso,
                 fechaSalida=fecha_salida if fecha_salida else None
             )
-            messages.success(request, f"Registro de inventario para '{producto.nombre}' creado exitosamente.")
+            messages.success(request, f"Registro de inventario para '{producto.nombre}' asignado a '{cliente_obj.nombre}' creado exitosamente.")
         except IntegrityError:
             messages.error(
                 request,
@@ -1112,7 +1126,6 @@ def crear_inventario(request):
             )
 
     return redirect('admin_inventario')
-
 
 @admin_required
 def editar_inventario(request, pk):
@@ -1128,6 +1141,13 @@ def editar_inventario(request, pk):
                 f"El producto '{nuevo_producto.nombre}' ya tiene un registro de inventario."
             )
             return redirect('admin_inventario')
+
+        # Procesar actualización de cliente / empresa
+        cliente_id = request.POST.get('cliente')
+        if cliente_id:
+            item.cliente = get_object_or_404(Cliente, pk=cliente_id)
+        else:
+            item.cliente = None  # Permite desasociar cliente dejando el valor nulo
 
         try:
             cant_disponible = int(request.POST.get('cantidadDisponible') or 0)

@@ -65,87 +65,98 @@
       </button>
     </div>
   </div>
-
-  <div class="table-responsive">
-    <table class="ht-table">
-      <thead>
-        <tr>
-          <th class="text-center">ID</th>
-          <th>Producto</th>
-          <th class="text-center">Disponible</th>
-          <th class="text-center">Mínimo</th>
-          <th class="text-center">Nivel Stock</th>
-          <th class="text-center">Unidades</th>
-          <th>Ubicación</th>
-          <th class="text-end">Ingresado</th>
-          <th class="text-end">Egresado</th>
-          <th class="text-center">Fecha Ingreso</th>
-          <th class="text-center">Fecha Salida</th>
-          <th class="text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in inventario_list %}
-        <tr>
-          <td class="text-center"><strong>#{{ item.idInventario }}</strong></td>
-          <td><span class="fw-medium">{{ item.producto.nombre|default:item.producto_id }}</span></td>
-          <td class="text-center">
-            {% if item.cantidadDisponible <= item.minimoDefinido %}
-              <span class="badge-ht badge-danger" title="Stock por debajo o igual al mínimo">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ item.cantidadDisponible }}
-              </span>
-            {% else %}
-              <span class="badge-ht badge-success">
-                <i class="bi bi-check-circle-fill me-1"></i>{{ item.cantidadDisponible }}
-              </span>
-            {% endif %}
-          </td>
-          <td class="text-center">{{ item.minimoDefinido }}</td>
-          <td class="text-center">
-            <span class="badge-ht
-              {% if item.nivelStock == 3 %}badge-success
-              {% elif item.nivelStock == 2 %}badge-info
-              {% elif item.nivelStock == 1 %}badge-warning
-              {% elif item.nivelStock == 0 %}badge-danger
-              {% else %}badge-info{% endif %}">
-              {% if item.nivelStock == 3 %}Alto
-              {% elif item.nivelStock == 2 %}Normal
-              {% elif item.nivelStock == 1 %}Bajo
-              {% elif item.nivelStock == 0 %}Crítico
-              {% else %}Sin definir{% endif %}
+<div class="table-responsive">
+  <table class="ht-table">
+    <thead>
+      <tr>
+        <th class="text-center">ID</th>
+        <th class="text-center">Producto</th>
+        <th class="text-center">Cliente / Empresa</th>
+        <th class="text-center">Disponible</th>
+        <th class="text-center">Mínimo</th>
+        <th class="text-center">Nivel Stock</th>
+        <th class="text-center">Unidades</th>
+        <th>Ubicación</th>
+        <th class="text-end">Ingresado</th>
+        <th class="text-end">Egresado</th>
+        <th class="text-center">Fecha Ingreso</th>
+        <th class="text-center">Fecha Salida</th>
+        <th class="text-center">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in inventario_list %}
+      <tr>
+        <td class="text-center"><strong>#{{ item.idInventario }}</strong></td>
+        <td><span class="fw-medium">{{ item.producto.nombre|default:item.producto_id }}</span></td>
+        
+        <!-- CELDA DE CLIENTE / EMPRESA -->
+        <td class="text-center">
+          {% if item.cliente %}
+            <span class="fw-medium text-dark">
+              {{ item.cliente.empresa|default:item.cliente.nombre }}
             </span>
-          </td>
-          <td class="text-center">{{ item.unidades }}</td>
-          <td>
-            <i class="bi bi-geo-alt me-1 text-muted"></i>
-            <span>{{ item.ubicacion|default:"Bodega Principal" }}</span>
-          </td>
-          <td class="text-end text-success fw-medium">+{{ item.cantidadIngresada }}</td>
-          <td class="text-end text-danger fw-medium">-{{ item.cantidadEgresada }}</td>
-          <td class="text-center">{{ item.fechaIngreso|date:"d/m/Y" }}</td>
-          <td class="text-center">{{ item.fechaSalida|date:"d/m/Y"|default:"—" }}</td>
-          <td class="text-center">
-            <div class="btn-group btn-group-sm">
-              <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarInventario{{ item.idInventario }}" title="Editar">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarInventario{{ item.idInventario }}" title="Eliminar">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="12" class="text-center text-muted py-5">
-            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
-            <p class="mb-0 fw-medium">No hay registros de inventario disponibles.</p>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+          {% else %}
+            <span class="badge bg-light text-muted border">Sin asignar</span>
+          {% endif %}
+        </td>
+
+        <td class="text-center">
+          {% if item.cantidadDisponible <= item.minimoDefinido %}
+            <span class="badge-ht badge-danger" title="Stock por debajo o igual al mínimo">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ item.cantidadDisponible }}
+            </span>
+          {% else %}
+            <span class="badge-ht badge-success">
+              <i class="bi bi-check-circle-fill me-1"></i>{{ item.cantidadDisponible }}
+            </span>
+          {% endif %}
+        </td>
+        <td class="text-center">{{ item.minimoDefinido }}</td>
+        <td class="text-center">
+          <span class="badge-ht
+            {% if item.nivelStock == 3 %}badge-success
+            {% elif item.nivelStock == 2 %}badge-info
+            {% elif item.nivelStock == 1 %}badge-warning
+            {% elif item.nivelStock == 0 %}badge-danger
+            {% else %}badge-info{% endif %}">
+            {% if item.nivelStock == 3 %}Alto
+            {% elif item.nivelStock == 2 %}Normal
+            {% elif item.nivelStock == 1 %}Bajo
+            {% elif item.nivelStock == 0 %}Crítico
+            {% else %}Sin definir{% endif %}
+          </span>
+        </td>
+        <td class="text-center">{{ item.unidades }}</td>
+        <td>
+          <i class="bi bi-geo-alt me-1 text-muted"></i>
+          <span>{{ item.ubicacion|default:"Bodega Principal" }}</span>
+        </td>
+        <td class="text-end text-success fw-medium">+{{ item.cantidadIngresada }}</td>
+        <td class="text-end text-danger fw-medium">-{{ item.cantidadEgresada }}</td>
+        <td class="text-center">{{ item.fechaIngreso|date:"d/m/Y" }}</td>
+        <td class="text-center">{{ item.fechaSalida|date:"d/m/Y"|default:"—" }}</td>
+        <td class="text-center">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarInventario{{ item.idInventario }}" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarInventario{{ item.idInventario }}" title="Eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="13" class="text-center text-muted py-5">
+          <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+          <p class="mb-0 fw-medium">No hay registros de inventario disponibles.</p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
 <!-- Modal Registrar Egresos Masivos -->
@@ -428,7 +439,7 @@
   </div>
 </div>
 
-<!-- Modales de Materiales (Edit y Delete) fuera de la tabla -->
+<!-- Modales de Materiales (Editar y Eliminar) -->
 {% for mat in materiales_list %}
   <!-- Modal Editar Material -->
   <div class="modal fade" id="modalEditarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
@@ -550,6 +561,26 @@
             <div class="invalid-feedback">Ingresa el nombre del producto.</div>
           </div>
 
+          <!-- Selector de Cliente / Empresa (OBLIGATORIO) -->
+          <div class="mb-3">
+            <label class="form-label">Cliente / Empresa <span class="text-danger">*</span></label>
+            <select name="cliente" class="form-select" required>
+              <option value="" selected disabled>-- Selecciona un cliente registrado --</option>
+              {% for cli in clientes_list %}
+                <option value="{{ cli.idCliente }}">
+                  {% if cli.empresa %}
+                    {{ cli.empresa }} ({{ cli.nombre }})
+                  {% else %}
+                    {{ cli.nombre }}
+                  {% endif %}
+                </option>
+              {% empty %}
+                <option value="" disabled>No hay clientes registrados en el sistema</option>
+              {% endfor %}
+            </select>
+            <div class="invalid-feedback">Por favor selecciona un cliente para este registro.</div>
+          </div>
+
           <div class="row">
             <div class="col-6 mb-3">
               <label class="form-label">Mínimo Definido</label>
@@ -588,6 +619,7 @@
               </select>
             </div>
           </div>
+
           <div class="mb-3">
             <label class="form-label">Ubicación</label>
             <select name="ubicacion" class="form-select ubicacion-select" data-target="ubicacionOtroWrapCrear">
@@ -704,7 +736,6 @@
     </div>
   </div>
 </div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 

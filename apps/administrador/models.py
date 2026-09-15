@@ -344,13 +344,20 @@ class Factura(models.Model):
     def __str__(self):
         return f'Factura {self.numeroFactura}'
 
-
 class Inventario(models.Model):
     idInventario = models.AutoField(primary_key=True)
     producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
         db_column='idProducto',
+        related_name='inventarios'
+    )
+    # 🔹 Se quitan null=True y blank=True para hacerlo obligatorio.
+    # 🔹 Se cambia a CASCADE o PROTECT (SET_NULL falla si el campo no permite nulos).
+    cliente = models.ForeignKey(
+        'Cliente', 
+        on_delete=models.CASCADE, 
+        db_column='cliente_id',
         related_name='inventarios'
     )
     cantidadDisponible = models.IntegerField(default=0)
