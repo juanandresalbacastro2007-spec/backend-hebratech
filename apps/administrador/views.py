@@ -26,7 +26,7 @@ from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
-
+from apps.clientes.models import Cotizacion
 from django_fsm import can_proceed
 
 from .models import (
@@ -50,6 +50,11 @@ TRANSICIONES_ORDEN = {
     ('Pendiente', 'Cancelado'):   'cancelar',
     ('Procesando', 'Cancelado'):  'cancelar',
 }
+
+
+# ── Estados de Orden que se consideran finalizados (no se ofrecen
+#    al asignar/editar tareas, ni cuentan como "activas") ──────────
+ESTADOS_ORDEN_FINALIZADOS = ['Cancelado', 'Entregado']
 
 
 # ── Ubicaciones predefinidas del inventario ─────────────────
@@ -90,6 +95,7 @@ def admin_portal(request):
     ordenes_pendientes = Orden.objects.filter(estado='Pendiente').count()
     tareas_pendientes = AsignacionTarea.objects.filter(estado='Pendiente').count()
     usuarios_pendientes = Usuario.objects.filter(estado='pendiente').count()
+    total_cotizaciones = Cotizacion.objects.count()
 
     ultimas_ordenes = Orden.objects.order_by('-fechaCreacion')[:5]
     ultimas_asignaciones = AsignacionTarea.objects.order_by('-fechaAsignacion')[:5]
@@ -165,7 +171,7 @@ def admin_portal(request):
 
     ordenes_retrasadas = Orden.objects.filter(
         fechaEntregaEstimada__lt=hoy
-    ).exclude(estado__in=['Entregado', 'Cancelado']).count()
+    ).exclude(estado__in=ESTADOS_ORDEN_FINALIZADOS).count()
     if ordenes_retrasadas:
         alertas.append({
             'tipo': 'danger', 'icono': '⏰',
@@ -200,6 +206,7 @@ def admin_portal(request):
         'total_clientes': total_clientes,
         'total_operarios': total_operarios,
         'total_ordenes': total_ordenes,
+        'total_cotizaciones': total_cotizaciones,
         'ordenes_pendientes': ordenes_pendientes,
         'tareas_pendientes': tareas_pendientes,
         'usuarios_pendientes': usuarios_pendientes,
@@ -214,6 +221,23 @@ def admin_portal(request):
         'alertas': json.dumps(alertas),
     })
 
+
+# --cotizar --#
+@admin_required
+def cotizaciones_lista(request):
+    cotizaciones = Cotizacion.objects.select_related(
+        'idCliente', 'idProducto'
+    ).order_by('-fechaCreacion')
+
+    contexto = {
+        'cotizaciones': cotizaciones,
+    }
+
+    return render(
+        request,
+        'administrador/cotizaciones_lista.html',
+        contexto
+    )
 
 # ── Usuarios ─────────────────────────────────────────────────
 @admin_required
@@ -441,7 +465,7 @@ def tarea_asignar(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     operarios = Operario.objects.filter(estado='activo').select_related('idUsuario')
     tareas = Tarea.objects.all()
-    ordenes = Orden.objects.exclude(estado__in=['Cancelado', 'Entregado']) \
+    ordenes = Orden.objects.exclude(estado__in=ESTADOS_ORDEN_FINALIZADOS) \
         .select_related('idCliente') \
         .order_by('-fechaCreacion')
 
@@ -519,6 +543,14 @@ def tarea_asignar(request):
                     orden = Orden.objects.get(idOrden=id_orden)
                 except Orden.DoesNotExist:
                     messages.error(request, 'La orden seleccionada no existe.')
+                    return redirect('admin_tarea_asignar')
+
+                if orden.estado in ESTADOS_ORDEN_FINALIZADOS:
+                    messages.error(
+                        request,
+                        f'La orden #{orden.idOrden} ya está en estado "{orden.estado}" y no admite '
+                        'nuevas tareas asociadas.'
+                    )
                     return redirect('admin_tarea_asignar')
 
             cantidad_int = int(cantidad) if cantidad and cantidad.strip() else None
@@ -606,7 +638,16 @@ def tareas_lista(request):
     if estado_filtro:
         asignaciones = asignaciones.filter(estado=estado_filtro)
 
-    ordenes = Orden.objects.exclude(estado__in=['Cancelado', 'Entregado']) \
+    # ── Órdenes disponibles para el selector "Orden relacionada" ──
+    # Incluye las órdenes activas (no finalizadas) MÁS las órdenes
+    # que ya están vinculadas a alguna de las asignaciones mostradas,
+    # aunque esas órdenes ya estén en estado Cancelado/Entregado.
+    # Esto evita que el modal de editar muestre el campo "vacío"
+    # cuando la orden vinculada terminó finalizándose después.
+    ordenes_activas = Orden.objects.exclude(estado__in=ESTADOS_ORDEN_FINALIZADOS)
+    ordenes_vinculadas = Orden.objects.filter(asignaciones__in=asignaciones)
+    ordenes = (ordenes_activas | ordenes_vinculadas) \
+        .distinct() \
         .select_related('idCliente') \
         .order_by('-fechaCreacion')
 
