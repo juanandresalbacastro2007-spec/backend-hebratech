@@ -263,6 +263,15 @@ def ordenes_produccion(request):
 
     # POST: Crear nueva orden
     data = json.loads(request.body)
+
+    hoy = timezone.now().date()
+    fecha_inicio = data.get('fechaInicio')
+    fecha_entrega = data.get('fechaEntrega')
+    if fecha_inicio and str(fecha_inicio) < str(hoy):
+        return JsonResponse({'error': 'La fecha de inicio no puede ser anterior a hoy.'}, status=400)
+    if fecha_entrega and str(fecha_entrega) < str(hoy):
+        return JsonResponse({'error': 'La fecha de entrega no puede ser anterior a hoy.'}, status=400)
+
     # Generar número automático
     ultimo = OrdenProduccion.objects.order_by('-idOrdenProduccion').first()
     if ultimo:
@@ -301,6 +310,17 @@ def orden_produccion_detalle(request, id):
 
     if request.method == 'PUT':
         data = json.loads(request.body)
+
+        hoy = timezone.now().date()
+        for campo_fecha in ('fechaInicio', 'fechaEntrega'):
+            if campo_fecha in data and data[campo_fecha] and str(data[campo_fecha]) < str(hoy):
+                return JsonResponse(
+                    {'error': f'La {"fecha de inicio" if campo_fecha == "fechaInicio" else "fecha de entrega"} no puede ser anterior a hoy.'},
+                    status=400,
+                )
+
+        fecha_inicio_anterior = o.fechaInicio
+
         for campo in ['idOrden', 'idProducto', 'cliente', 'cantidad', 'fechaInicio',
                       'fechaEntrega', 'fechaFinReal', 'prioridad', 'estado', 'observaciones']:
             if campo in data:
@@ -311,6 +331,15 @@ def orden_produccion_detalle(request, id):
                 else:
                     setattr(o, campo, data[campo])
         o.save()
+
+        # Si se movió la fecha de inicio de la orden, se corren también las
+        # tareas de los operarios que aún no terminaron, el mismo número de días.
+        if 'fechaInicio' in data and o.fechaInicio and fecha_inicio_anterior:
+            delta_dias = (o.fechaInicio - fecha_inicio_anterior).days
+            if delta_dias:
+                from .services import desplazar_tareas_por_cambio_fecha
+                desplazar_tareas_por_cambio_fecha(o.idOrdenProduccion, delta_dias)
+
         return JsonResponse(orden_produccion_to_dict(o))
 
     o.delete()
@@ -350,6 +379,8 @@ def orden_cliente_detalle(request, id):
     if 'estado' in data:
         o.estado = data['estado']
     if 'fechaEntrega' in data:
+        if data['fechaEntrega'] and str(data['fechaEntrega']) < str(timezone.now().date()):
+            return JsonResponse({'error': 'La fecha de entrega no puede ser anterior a hoy.'}, status=400)
         o.fechaEntregaEstimada = data['fechaEntrega']
     o.save()
     return JsonResponse({

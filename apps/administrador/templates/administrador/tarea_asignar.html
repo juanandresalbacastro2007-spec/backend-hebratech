@@ -80,6 +80,25 @@
               <div class="form-text small">Vincula esta tarea con la orden del cliente que la originó.</div>
             </div>
 
+            <!-- Orden de producción activa -->
+            <div class="col-md-6">
+              <label for="selectOrdenProduccion" class="form-label fw-medium small">
+                Orden de Producción activa <span class="text-muted">(opcional)</span>
+              </label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-gear-fill"></i></span>
+                <select name="orden_produccion" id="selectOrdenProduccion" class="form-select">
+                  <option value="">Sin orden de producción</option>
+                  {% for op in ordenes_produccion %}
+                  <option value="{{ op.idOrdenProduccion }}">
+                    {{ op.numero }} — {{ op.cliente }} — {{ op.idProducto.nombre|default:"Sin producto" }} ({{ op.estado }})
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-text small">Conecta la tarea con el lote de producción: al completarse, la barra de avance de esa orden se actualiza sola.</div>
+            </div>
+
             <!-- Operarios asignados -->
             <div class="col-md-6">
               <label class="form-label fw-medium small">
@@ -171,28 +190,15 @@
               </div>
             </div>
 
-            <!-- Tipo de prenda -->
-            <div class="col-md-4">
-              <label for="tipoPrenda" class="form-label fw-medium small">Tipo de prenda</label>
-              <select name="tipoPrenda" id="tipoPrenda" class="form-select form-select-sm">
-                <option value="">Seleccionar tipo...</option>
-                <option value="Camisas">Camisas (5 min/u)</option>
-                <option value="Pantalones">Pantalones (10 min/u)</option>
-                <option value="Vestidos">Vestidos (12 min/u)</option>
-                <option value="Chaquetas">Chaquetas (12 min/u)</option>
-                <option value="Bermudas">Bermudas (15 min/u)</option>
-              </select>
-            </div>
-
             <!-- Cantidad de prendas -->
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label for="cantidadPrendas" class="form-label fw-medium small">Cantidad de prendas</label>
               <input type="number" name="cantidadPrendas" id="cantidadPrendas" class="form-control form-control-sm"
                 min="1" step="1" placeholder="Ej. 300">
             </div>
 
             <!-- Horas estimadas -->
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label for="horasEstimadas" class="form-label fw-medium small">Horas estimadas</label>
               <div class="input-group input-group-sm">
                 <input type="number" name="horasEstimadas" id="horasEstimadas" class="form-control"
@@ -205,7 +211,7 @@
             <div class="col-12">
               <div class="alert alert-light border py-2 px-3 small d-flex align-items-center gap-2 mb-0 text-muted">
                 <i class="bi bi-calculator text-primary fs-5"></i>
-                <span>Al seleccionar el tipo y cantidad de prendas, las <strong>Horas estimadas</strong> se calcularán automáticamente. Puedes ajustarlas libremente si lo requieres.</span>
+                <span>Puedes ingresar la cantidad de prendas y las <strong>Horas estimadas</strong> manualmente, o dejarlas en blanco si no aplican.</span>
               </div>
             </div>
 
@@ -240,14 +246,6 @@
 {% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    const TIEMPOS_ESTANDAR = {
-      'Camisas': 5,
-      'Pantalones': 10,
-      'Vestidos': 12,
-      'Chaquetas': 12,
-      'Bermudas': 15
-    };
-
     const selectTarea = document.getElementById('selectTarea');
     const tareasPersonalizadasContainer = document.getElementById('tareasPersonalizadasContainer');
     const procesoPersonalizadoContainer = document.getElementById('procesoPersonalizadoContainer');
@@ -298,22 +296,6 @@
       }
     });
 
-    // Recálculo dinámico de horas estimadas
-    function recalcularHoras() {
-      const tipo = document.getElementById('tipoPrenda').value;
-      const cantidad = parseInt(document.getElementById('cantidadPrendas').value, 10);
-      const horasInput = document.getElementById('horasEstimadas');
-
-      if (tipo && cantidad > 0) {
-        const minutosUnidad = TIEMPOS_ESTANDAR[tipo] || 0;
-        const horasTotales = (cantidad * minutosUnidad) / 60;
-        horasInput.value = horasTotales.toFixed(2);
-      }
-    }
-
-    document.getElementById('tipoPrenda').addEventListener('change', recalcularHoras);
-    document.getElementById('cantidadPrendas').addEventListener('input', recalcularHoras);
-
     // Validación del formulario Bootstrap
     formAsignarTarea.addEventListener('submit', function(e) {
       let valido = formAsignarTarea.checkValidity();
@@ -335,7 +317,7 @@
       } else {
         if (errOperarios) errOperarios.style.setProperty('display', 'none', 'important');
       }
-Ñ
+
       if (!valido) {
         e.preventDefault();
         e.stopPropagation();

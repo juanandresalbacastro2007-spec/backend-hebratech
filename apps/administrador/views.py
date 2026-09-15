@@ -35,6 +35,7 @@ from .models import (
     TIEMPOS_ESTANDAR_MINUTOS,
 )
 from apps.core.decorators import login_required_rol
+from apps.produccion.models import OrdenProduccion
 
 
 from apps.proveedores.models import Proveedor  
@@ -470,6 +471,11 @@ def tarea_asignar(request):
     ordenes = Orden.objects.exclude(estado__in=ESTADOS_ORDEN_FINALIZADOS) \
         .select_related('idCliente') \
         .order_by('-fechaCreacion')
+    # Órdenes de producción activas — para conectar la tarea con
+    # recalcular_produccion_desde_tareas() y que el avance se calcule solo.
+    ordenes_produccion = OrdenProduccion.objects.exclude(
+        estado__in=['Completado', 'Cancelada']
+    ).select_related('idProducto').order_by('-fechaCreacion')
 
     if request.method == 'POST':
         id_tarea = request.POST.get('tarea')
@@ -477,6 +483,7 @@ def tarea_asignar(request):
         proceso_personalizado = request.POST.get('proceso_personalizado', '').strip()
         ids_operarios = request.POST.getlist('operarios')
         id_orden = request.POST.get('orden')
+        id_orden_produccion = request.POST.get('orden_produccion')
         descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fechaInicio')
         fecha_limite = request.POST.get('fechaLimite')
@@ -502,7 +509,8 @@ def tarea_asignar(request):
                     nombreTarea=tarea_personalizada,
                     descripcionTarea=descripcion or f'Tarea personalizada: {tarea_personalizada}',
                     proceso=proceso_personalizado,
-                    complejidad='media'
+                    complejidad='media',
+                    idProduccion=orden_produccion.idOrdenProduccion if orden_produccion else None,
                 )
                 mensaje_tarea = f'✓ Tarea personalizada "{tarea_personalizada}" creada. '
             else:
@@ -512,6 +520,15 @@ def tarea_asignar(request):
                 except Tarea.DoesNotExist:
                     messages.error(request, 'La tarea seleccionada no existe.')
                     return redirect('admin_tarea_asignar')
+
+                # Nota: idProduccion vive en Tarea (el catálogo maestro), no en
+                # AsignacionTarea. Si esta tarea de catálogo se reutiliza en
+                # varias órdenes, solo queda conectada a la última orden de
+                # producción con la que se asigne. Para tareas 100% únicas por
+                # orden, usa "+ Otra (crear nueva tarea)".
+                if orden_produccion and tarea.idProduccion != orden_produccion.idOrdenProduccion:
+                    tarea.idProduccion = orden_produccion.idOrdenProduccion
+                    tarea.save(update_fields=['idProduccion'])
 
             operarios_seleccionados = list(
                 Operario.objects.select_related('idUsuario').filter(idOperario__in=ids_operarios)
@@ -552,6 +569,22 @@ def tarea_asignar(request):
                         request,
                         f'La orden #{orden.idOrden} ya está en estado "{orden.estado}" y no admite '
                         'nuevas tareas asociadas.'
+                    )
+                    return redirect('admin_tarea_asignar')
+
+            orden_produccion = None
+            if id_orden_produccion:
+                try:
+                    orden_produccion = OrdenProduccion.objects.get(pk=id_orden_produccion)
+                except OrdenProduccion.DoesNotExist:
+                    messages.error(request, 'La orden de producción seleccionada no existe.')
+                    return redirect('admin_tarea_asignar')
+
+                if orden_produccion.estado in ('Completado', 'Cancelada'):
+                    messages.error(
+                        request,
+                        f'La orden de producción {orden_produccion.numero} ya está '
+                        f'"{orden_produccion.estado}" y no admite nuevas tareas.'
                     )
                     return redirect('admin_tarea_asignar')
 
@@ -617,6 +650,7 @@ def tarea_asignar(request):
         'operarios': operarios,
         'tareas': tareas,
         'ordenes': ordenes,
+        'ordenes_produccion': ordenes_produccion,
         'tiempos_estandar': TIEMPOS_ESTANDAR_MINUTOS,
     })
 
