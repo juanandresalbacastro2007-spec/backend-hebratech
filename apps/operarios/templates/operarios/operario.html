@@ -37,33 +37,46 @@
       </a>
 
       <div class="ms-auto d-flex align-items-center gap-3">
-        <div id="topClock" class="top-clock px-3 py-2 rounded bg-white border shadow-sm fw-semibold d-flex align-items-center gap-2">
+        <div id="topClock" class="top-clock px-3 py-2 rounded   bg-white border shadow-sm fw-semibold d-flex align-items-center gap-2">
           <i class="bi bi-clock text-primary"></i>
           <span id="clockText">--:--:--</span>
         </div>
       </div>
-
+      
       <div class="ht-nav-actions">
+
+        <!-- Generar incidencia -->
         <button class="ht-nav-btn" id="btnGenerateReport">
           <i class="bi bi-plus-lg"></i>
           <span class="d-none d-sm-inline">Generar Incidencia</span>
         </button>
-        <button class="ht-nav-btn" type="button" id="btnVerIncidenciasGeneradas" title="Ver incidencias generadas">
+
+        <!-- Ver incidencias -->
+        <button class="ht-nav-btn"
+                type="button"
+                id="btnVerIncidenciasGeneradas"
+                title="Ver incidencias generadas">
           <i class="bi bi-journal-text"></i>
           <span class="d-none d-xl-inline">Ver incidencias generadas</span>
         </button>
+
+        <!-- Notificaciones -->
         <div class="dropdown">
-          <button class="ht-nav-btn position-relative" type="button"
-                  data-bs-toggle="dropdown" data-bs-auto-close="outside"
+          <button class="ht-nav-btn position-relative"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  data-bs-auto-close="outside"
                   title="Notificaciones">
             <i class="bi bi-bell-fill"></i>
             <span class="ht-badge-count" id="navNotifBadge">0</span>
           </button>
+
           <div class="dropdown-menu dropdown-menu-end ht-dropdown-panel ht-dropdown-panel--wide">
             <div class="ht-dropdown-header">
               <i class="bi bi-bell me-2"></i>
               <span>Notificaciones</span>
             </div>
+
             <div id="navNotifContainer">
               <div class="ht-empty-state">
                 <i class="bi bi-bell-slash"></i>
@@ -72,51 +85,49 @@
             </div>
           </div>
         </div>
-        <div class="ht-nav-divider"></div>
-        <div class="dropdown">
-          <button class="ht-profile-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            {% if operario.idUsuario.fotoPerfil %}
-              <img src="{{ operario.idUsuario.fotoPerfil.url }}" class="ht-avatar" alt="Avatar" style="object-fit:cover;">
+
+        <div class="ht-nav-divider d-none d-md-block"></div>
+
+        <!-- Información de usuario -->
+        <div class="ht-profile-info d-flex align-items-center gap-2">
+          {% if operario.idUsuario.fotoPerfil %}
+            <img src="{{ operario.idUsuario.fotoPerfil.url }}"
+                class="ht-avatar"
+                alt="Avatar"
+                style="object-fit:cover;">
+          {% else %}
+            <div class="ht-avatar">
+              {% if operario %}
+                {{ operario.idUsuario.nombre|first|upper }}{{ operario.idUsuario.apellido|first|upper }}
+              {% else %}
+                OP
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <span class="d-none d-md-inline ht-profile-name-pill">
+            {% if operario %}
+              {{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}
             {% else %}
-              <div class="ht-avatar">
-                {% if operario %}
-                  {{ operario.idUsuario.nombre|first|upper }}{{ operario.idUsuario.apellido|first|upper }}
-                {% else %}OP{% endif %}
-              </div>
+              Operario
             {% endif %}
-            <span class="d-none d-md-inline" style="font-weight:500; font-size:.9rem;">
-              {% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% else %}Operario{% endif %}
-            </span>
-            <i class="bi bi-chevron-down ht-chevron"></i>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end ht-dropdown-panel py-2"
-              style="min-width:200px; background: transparent !important; box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important; border: 1px solid var(--border-md) !important;">
-            <li class="px-3 py-2 border-bottom"
-                style="border-color:var(--border)!important; background: var(--surface2) !important; border-radius: 8px 8px 0 0;">
-              <div style="font-family:'Fredoka',sans-serif;font-size:1rem;color:var(--primary);">
-                {% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% endif %}
-              </div>
-              <small style="color:var(--text-muted);">{{ operario.especialidad|default:"Operario de Planta" }}</small>
-            </li>
-            <li>
-              <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2"
-                href="{% url 'operarios:perfil' %}"
-                style="background: transparent !important; color: var(--text) !important;">
-                <i class="bi bi-person-gear text-muted"></i>
-                <span>Editar Perfil</span>
-              </a>
-            </li>
-            <li><hr class="dropdown-divider my-1" style="border-color:var(--border);"></li>
-            <li>
-              <a class="dropdown-item py-2 px-3 d-flex align-items-center gap-2 text-danger"
-                href="{% url 'logout' %}"
-                style="background: transparent !important;">
-                <i class="bi bi-box-arrow-right"></i>
-                <span>Cerrar Sesión</span>
-              </a>
-            </li>
-          </ul>
+          </span>
         </div>
+
+        <!-- Editar perfil (Lápiz) -->
+        <a href="{% url 'operarios:perfil' %}"
+          class="ht-profile-action"
+          title="Editar perfil">
+          <i class="bi bi-pencil-square"></i>
+        </a>
+
+        <!-- Cerrar sesión (Salir Blanco -> Rojo) -->
+        <a href="{% url 'logout' %}"
+          class="ht-profile-action ht-logout-action"
+          title="Cerrar sesión">
+          <i class="bi bi-box-arrow-right"></i>
+        </a>
+
       </div>
     </div>
   </nav>

@@ -100,21 +100,29 @@
         <div class="nav-divider d-none d-md-block"></div>
 
         <!-- ✅ PERFIL — ACTUALIZADO PARA FASE 1 -->
-        <div class="dropdown">
-          <a class="d-flex align-items-center text-white text-decoration-none dropdown-toggle gap-2" href="#"
-            id="profileMenu" data-bs-toggle="dropdown" aria-expanded="false">
-            <div
-              class="avatar bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold"
-              style="width:32px;height:32px;font-family:var(--ff-display);font-size:0.9rem;">
-              {{ usuario.nombre|first|upper }}
-            </div>
-            <div class="d-none d-md-block text-start">
-              <div style="font-family:var(--ff-body);font-size:0.8rem;font-weight:600;line-height:1;">{{ usuario.nombre }}</div>
-              <div style="font-family:var(--ff-body);font-size:0.68rem;color:var(--accent);opacity:0.8;">
-                {{ cliente.empresa|default:cliente.nombre }}
-              </div>
-            </div>
-          </a>
+         <div class="dropdown">
+            <a class="d-flex align-items-center text-white text-decoration-none gap-2"
+              href="#"
+              id="profileMenu"
+              data-bs-toggle="dropdown"
+              aria-expanded="false">
+
+                <div
+                    class="avatar bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                    style="width:32px;height:32px;font-family:var(--ff-display);font-size:0.9rem;">
+                    {{ usuario.nombre|first|upper }}
+                </div>
+
+                <div class="d-none d-md-block text-start">
+                    <div style="font-family:var(--ff-body);font-size:0.8rem;font-weight:600;line-height:1;">
+                        {{ usuario.nombre }}
+                    </div>
+
+                    <div style="font-family:var(--ff-body);font-size:0.68rem;color:var(--accent);opacity:0.8;">
+                        {{ cliente.empresa|default:cliente.nombre }}
+                    </div>
+                </div>
+            </a>
         </div>
         <div>
             <a href="{% url 'login' %}" class="puerta">

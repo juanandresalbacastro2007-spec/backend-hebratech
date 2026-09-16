@@ -199,41 +199,9 @@ html, body {
 }
 
 
-/* Botón de perfil estilo Píldora Compacta */
-.ht-profile-btn {
-  background: var(--surface2);
-  border: 1px solid var(--border-md);
-  color: var(--blue);
-  border-radius: 50px;              /* Hace que siempre mantenga la curva de píldora exacta */
-  padding: 4px 14px 4px 4px;        /* Padding contenido para no crecer en altura */
-  display: flex;
-  align-items: center;
-  gap: 8px;                         /* Espacio equilibrado entre avatar, texto y flecha */
-  font-size: .9rem;                 /* Tamaño de letra intermedio y legible */
-  font-weight: 500;
-  cursor: pointer;
-  transition: all .15s ease;
-  font-family: 'Roboto', sans-serif;
-}
 
-.ht-profile-btn:hover {
-  background: rgba(165, 201, 202, 0.25);
-  border-color: var(--primary);
-}
 
-/* Avatar proporcional al botón */
-.ht-avatar {
-  width: 30px;                      /* Tamaño compacto perfecto */
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: var(--primary);
-  color: #fff;
-}
+
 
 /* Flecha pequeña para no recargar */
 .ht-chevron {
@@ -512,13 +480,7 @@ html, body {
 .ht-page-sub { margin: 4px 0 0; color: var(--text-muted); font-size: .84rem; }
 .ht-page-sub strong { color: var(--primary); }
 
-.ht-loading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: .84rem;
-}
+
 
 .ht-spinner {
   width: 18px; height: 18px;
@@ -888,14 +850,95 @@ html, body {
 }
 .ht-detail-desc p { margin: 0; font-size: .87rem; line-height: 1.6; color: var(--text-muted); }
 
-/* ================================================================ EDITAR PERFIL LAYOUT */
-.ht-profile-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 24px;
-  align-items: start;
+/* ── Píldora que envuelve foto de perfil + nombre del operario ── */
+.ht-profile-info {
+  background: var(--surface2);
+  border: 1px solid var(--border-md);
+  border-radius: 30px;
+  padding: 6px 16px 6px 6px;
 }
 
+.ht-profile-name-pill {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--primary);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+[data-bs-theme="dark"] .ht-profile-info {
+  background: var(--surface2);
+  border-color: var(--border-md);
+}
+[data-bs-theme="dark"] .ht-profile-name-pill {
+  color: var(--accent);
+}
+
+/* ================================================================ EDITAR PERFIL LAYOUT */
+/* Botón circular base para las acciones del perfil (editar / cerrar sesión) */
+.ht-profile-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border-md);
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+  flex-shrink: 0;
+}
+
+.ht-profile-action i {
+  font-size: 1.15rem;
+  line-height: 1;
+  display: block;
+}
+
+/* Editar perfil -> hover en color primario (Blanco/Gris -> Verde-azulado) */
+.ht-profile-action:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Cerrar sesión (Salir Blanco -> Rojo) */
+.ht-profile-action.ht-logout-action {
+  color: var(--danger);
+  background: var(--surface2);
+  border-color: rgba(176,42,55,.3);
+}
+
+.ht-profile-action.ht-logout-action:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* Modo oscuro */
+[data-bs-theme="dark"] .ht-profile-action {
+  background: var(--surface2);
+  border-color: var(--border-md);
+  color: var(--accent);
+}
+[data-bs-theme="dark"] .ht-profile-action:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+[data-bs-theme="dark"] .ht-profile-action.ht-logout-action {
+  border-color: rgba(176,42,55,.4);
+  color: #e07a82;
+}
+[data-bs-theme="dark"] .ht-profile-action.ht-logout-action:hover {
+  background: var(--danger);
+  color: #fff;
+}
 @media (max-width: 992px) {
   .ht-profile-grid {
     grid-template-columns: 1fr;
@@ -1455,15 +1498,6 @@ html, body {
   border-color: rgba(165,201,202,0.15) !important;
 }
 
-/* Los items del dropdown: sin fondo */
-[data-bs-theme="dark"] .dropdown-item {
-  background: transparent !important;
-  color: var(--text) !important;
-}
-
-[data-bs-theme="dark"] .dropdown-item:hover {
-  background: rgba(165,201,202,0.08) !important;
-}
 
 /* El li del perfil (donde está "Carlos Méndez / Confección") */
 [data-bs-theme="dark"] .dropdown-menu .px-3.py-2 {
@@ -1474,6 +1508,7 @@ html, body {
 
 [data-bs-theme="dark"] .top-clock {
   background: var(--border) !important;
+
 }
 
 [data-bs-theme="dark"] .nombre{
