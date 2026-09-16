@@ -70,7 +70,6 @@
           <th>Fecha inicio</th>
           <th>Fecha límite</th>
           <th>Horas est.</th>
-          <th>Tipo prenda</th>
           <th>Cantidad</th>
           <th>Prioridad</th>
           <th>Estado</th>
@@ -110,7 +109,6 @@
             {% endif %}
           </td>
           <td>{{ asig.horasEstimadas }} h</td>
-          <td>{{ asig.tipoPrenda|default:"—" }}</td>
           <td>{{ asig.cantidadPrendas|default:"—" }}</td>
           <td>
             {% if asig.prioridad == 'Urgente' %}
@@ -183,7 +181,7 @@
 
         {% empty %}
         <tr>
-          <td colspan="13" class="text-center text-muted py-5">
+          <td colspan="12" class="text-center text-muted py-5">
             <i class="bi bi-clipboard2-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
             {% if buscar_filtro %}
               <p class="mb-1 fw-medium">No se encontraron asignaciones que coincidan con "<strong>{{ buscar_filtro }}</strong>".</p>
@@ -269,18 +267,6 @@
                    onclick="this.showPicker && this.showPicker()">
             <div class="invalid-feedback small">La fecha límite no puede ser anterior a la fecha de inicio.</div>
             <small class="text-muted fs-7">Si se supera, la asignación se marca automáticamente como retrasada.</small>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-medium small">Tipo de prenda</label>
-            <select name="tipoPrenda" class="form-select">
-              <option value="">— Seleccionar —</option>
-              <option value="Camisas" {% if asig.tipoPrenda == 'Camisas' %}selected{% endif %}>Camisas</option>
-              <option value="Pantalones" {% if asig.tipoPrenda == 'Pantalones' %}selected{% endif %}>Pantalones</option>
-              <option value="Vestidos" {% if asig.tipoPrenda == 'Vestidos' %}selected{% endif %}>Vestidos</option>
-              <option value="Chaquetas" {% if asig.tipoPrenda == 'Chaquetas' %}selected{% endif %}>Chaquetas</option>
-              <option value="Bermudas" {% if asig.tipoPrenda == 'Bermudas' %}selected{% endif %}>Bermudas</option>
-            </select>
           </div>
 
           <div class="row g-2 mb-3">

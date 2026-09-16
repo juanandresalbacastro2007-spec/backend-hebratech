@@ -379,7 +379,7 @@ def usuario_eliminar(request, idUsuario):
 @admin_required
 def ordenes_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-    ordenes = Orden.objects.all().order_by('-fechaCreacion')
+    ordenes = Orden.objects.select_related('idCliente', 'idProducto').order_by('-fechaCreacion')
 
     buscar_filtro = request.GET.get('buscar', '')
     if buscar_filtro:

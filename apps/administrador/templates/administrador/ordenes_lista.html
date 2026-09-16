@@ -75,7 +75,7 @@
         <tr>
           <td><strong>#{{ orden.idOrden }}</strong></td>
           <td>{{ orden.idCliente.empresa|default:orden.idCliente.nombre|default:"—" }}</td>
-          <td>{{ orden.nombreProducto|default:"—" }}</td>
+          <td>{{ orden.idProducto.nombre|default:orden.nombreProducto|default:"—" }}</td>
           <td>{{ orden.fechaCreacion|date:"d/m/Y"|default:"—" }}</td>
           <td>{{ orden.cantidad|default:"—" }}</td>
           <td>

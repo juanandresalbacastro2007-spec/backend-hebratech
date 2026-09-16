@@ -467,7 +467,6 @@ def avance_operarios(request):
                     'nombreTarea':       t.idTarea.nombreTarea,
                     'proceso':           t.idTarea.proceso,
                     'idProduccion':      t.idTarea.idProduccion,
-                    'tipoPrenda':        t.tipoPrenda,
                     'cantidadPrendas':   t.cantidadPrendas,
                     'estado':            t.estado,
                     'prioridad':         t.prioridad,
