@@ -62,9 +62,7 @@
 
       <div class="nav-divider d-none d-lg-block"></div>
 
-      <div class="company-name d-none d-md-block ms-1">
-        Cliente: <strong>{{ cliente.empresa|default:cliente.nombre }}</strong>
-      </div>
+      
 
       <div class="flex-grow-1"></div>
 
@@ -117,22 +115,11 @@
               </div>
             </div>
           </a>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileMenu">
-            <!-- ✅ Botón "Editar mi perfil" ahora lleva a la página completa -->
-            <li>
-              <a class="dropdown-item" href="{% url 'editar_perfil_cliente' %}">
-                <i class="bi bi-pencil-square me-2"></i>Editar mi perfil
-              </a>
-            </li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-            <li>
-              <a class="dropdown-item text-danger" href="/login/">
-                <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
-              </a>
-            </li>
-          </ul>
+        </div>
+        <div>
+            <a href="{% url 'login' %}" class="puerta">
+                <i class="bi bi-box-arrow-right" ></i>
+            </a>
         </div>
 
       </div>

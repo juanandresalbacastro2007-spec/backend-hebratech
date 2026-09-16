@@ -411,6 +411,40 @@ body {
   background-color: var(--bg-card);
 }
 
+
+
+
+/*puerta de cierre de secio*/
+
+.puerta {
+    border: 0;
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.3s ease; /* Transición suave para el color y fondo */
+}
+
+/* Color inicial del icono */
+.puerta i {
+    font-size: 20px;
+    color: white; 
+    transition: color 0.3s ease;
+}
+
+/* Efecto HOVER al pasar el mouse por encima de la puerta */
+.puerta:hover {
+    background-color: rgba(239, 68, 68, 0.15); /* Fondo rojo suave/transparente */
+}
+
+.puerta:hover i {
+    color: #ef4444; /* Cambia el icono a un color rojo intenso */
+}
+
+
 /* ── BADGES ── */
 .badge {
   font-family: var(--ff-body);
@@ -433,18 +467,8 @@ body {
 .list-group-item:hover { background: var(--bg-mid); }
 
 /* ── DROPDOWN ── */
-.dropdown-menu {
-  border: 1px solid var(--border-solid);
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(57,91,100,0.14);
-  background: var(--bg-card);           /* antes: white */
-}
-.dropdown-item {
-  font-family: var(--ff-body);
-  font-size: 0.83rem;
-  color: var(--primary-dark);
-}
-.dropdown-item:hover { background: var(--bg-mid); color: var(--primary); }
+
+
 .dropdown-header {
   font-family: var(--ff-display);
   font-size: 0.82rem;
