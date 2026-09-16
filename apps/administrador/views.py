@@ -32,7 +32,6 @@ from django_fsm import can_proceed
 from .models import (
     Usuario, Operario, Tarea,
     AsignacionTarea, Orden, Cliente, Incidencia, Inventario, Material, Producto, Factura,
-    TIEMPOS_ESTANDAR_MINUTOS,
 )
 from apps.core.decorators import login_required_rol
 from apps.produccion.models import OrdenProduccion
@@ -488,7 +487,6 @@ def tarea_asignar(request):
         fecha_inicio = request.POST.get('fechaInicio')
         fecha_limite = request.POST.get('fechaLimite')
         prioridad = request.POST.get('prioridad', 'Media')
-        tipo_prenda = request.POST.get('tipoPrenda')
         cantidad = request.POST.get('cantidadPrendas')
         horas_estimadas = request.POST.get('horasEstimadas')
 
@@ -608,11 +606,7 @@ def tarea_asignar(request):
                 )
                 return redirect('admin_tarea_asignar')
 
-            if (not horas_estimadas or not horas_estimadas.strip()) and tipo_prenda and cantidad_int:
-                minutos_unidad = TIEMPOS_ESTANDAR_MINUTOS.get(tipo_prenda, 0)
-                horas_calculadas = round((cantidad_int * minutos_unidad) / 60, 2)
-            else:
-                horas_calculadas = float(horas_estimadas) if horas_estimadas and horas_estimadas.strip() else 0.5
+            horas_calculadas = float(horas_estimadas) if horas_estimadas and horas_estimadas.strip() else 0.5
 
             asignaciones_creadas = []
             for operario in operarios_seleccionados:
@@ -624,7 +618,6 @@ def tarea_asignar(request):
                     fechaInicio=fecha_inicio_dt,
                     fechaLimite=fecha_limite_dt,
                     prioridad=prioridad,
-                    tipoPrenda=tipo_prenda or None,
                     cantidadPrendas=cantidad_int,
                     horasEstimadas=horas_calculadas,
                     estado='Pendiente'
@@ -651,7 +644,6 @@ def tarea_asignar(request):
         'tareas': tareas,
         'ordenes': ordenes,
         'ordenes_produccion': ordenes_produccion,
-        'tiempos_estandar': TIEMPOS_ESTANDAR_MINUTOS,
     })
 
 
@@ -706,7 +698,6 @@ def tarea_editar(request, idAsignacion):
         fecha_limite = request.POST.get('fecha_limite')
         estado = request.POST.get('estado')
         prioridad = request.POST.get('prioridad')
-        tipo_prenda = request.POST.get('tipoPrenda')
         cantidad_prendas = request.POST.get('cantidadPrendas')
         horas_estimadas = request.POST.get('horas_estimadas')
         id_orden = request.POST.get('orden')
@@ -727,7 +718,6 @@ def tarea_editar(request, idAsignacion):
             if prioridad:
                 asignacion.prioridad = prioridad
 
-            asignacion.tipoPrenda = tipo_prenda or None
             asignacion.cantidadPrendas = int(cantidad_prendas) if cantidad_prendas and cantidad_prendas.strip() else None
 
             if horas_estimadas and horas_estimadas.strip():

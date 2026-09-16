@@ -13,16 +13,6 @@ from django_fsm import FSMField, transition
 from simple_history.models import HistoricalRecords
 
 
-TIEMPOS_ESTANDAR_MINUTOS = {
-    'Camisas': 5,
-    'Pantalones': 10,
-    'Vestidos': 12,
-    'Chaquetas': 12,
-    'Bermudas': 15,
-}
-
-TIPO_PRENDA_CHOICES = [(k, k) for k in TIEMPOS_ESTANDAR_MINUTOS.keys()]
-
 
 class Usuario(models.Model):
     ROL_CHOICES = [
@@ -183,7 +173,6 @@ class AsignacionTarea(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
     prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='Media')
     horasEstimadas = models.DecimalField(max_digits=5, decimal_places=2)
-    tipoPrenda = models.CharField(max_length=50, choices=TIPO_PRENDA_CHOICES, null=True, blank=True)
     cantidadPrendas = models.IntegerField(null=True, blank=True)
     horasReales = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
