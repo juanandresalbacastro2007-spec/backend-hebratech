@@ -350,16 +350,21 @@ def orden_produccion_detalle(request, id):
 @admin_required_api
 def ordenes_cliente(request):
     if request.method == 'GET':
-        ordenes = Orden.objects.select_related('idCliente').all().order_by('-fechaCreacion')
+        ordenes = Orden.objects.select_related('idCliente', 'idProducto').all().order_by('-fechaCreacion')
         data = []
         for o in ordenes:
+            # nombreProducto casi siempre está vacío; la fuente real es la FK
+            nombre_producto = (
+                o.idProducto.nombre if o.idProducto
+                else o.nombreProducto or ''
+            )
             data.append({
                 'idOrden': o.idOrden,
                 'cliente': o.idCliente.empresa or o.idCliente.nombre or 'Sin cliente',
+                'producto': nombre_producto,
                 'fechaPedido': str(o.fechaCreacion),
                 'fechaEntrega': str(o.fechaEntregaEstimada) if o.fechaEntregaEstimada else None,
                 'estado': o.estado,
-                'producto': o.nombreProducto or '',
                 'cantidad': o.cantidad or 0,
             })
         return JsonResponse(data, safe=False)

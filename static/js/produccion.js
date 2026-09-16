@@ -137,18 +137,19 @@ async function cargarOrdenesCliente() {
 function renderOrdenesCliente(lista) {
   const tbody = document.getElementById('tbody-clientes');
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No hay órdenes de clientes.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No hay órdenes de clientes.</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map(o => `
     <tr>
       <td><strong>#${o.idOrden}</strong></td>
       <td>${o.cliente}</td>
+      <td>${o.producto || '—'}</td>
       <td>${formatearFecha(o.fechaPedido)}</td>
-      <td>${formatearFecha(o.fechaEntrega)}</td>
+      <td>${o.fechaEntrega ? formatearFecha(o.fechaEntrega) : '—'}</td>
       <td><span class="badge ${estadoClienteBadge(o.estado)}">${o.estado}</span></td>
       <td>
-        <button class="action-btn edit" onclick="editarCliente(${o.idOrden})">✏️</button>
+        <button class="action-btn edit" onclick="editarCliente(${o.idOrden})" title="Editar orden">✏️</button>
       </td>
     </tr>
   `).join('');
@@ -156,10 +157,12 @@ function renderOrdenesCliente(lista) {
 
 function estadoClienteBadge(estado) {
   const map = {
-    'Pendiente': 'badge-gris',
-    'En Proceso': 'badge-azul',
-    'Completado': 'badge-verde',
-    'Cancelado': 'badge-rojo'
+    'Pendiente':  'badge-gris',
+    'Procesando': 'badge-azul',
+    'Enviado':    'badge-azul',
+    'Entregado':  'badge-verde',
+    'Cancelado':  'badge-rojo',
+    'Retrasado':  'badge-rojo',
   };
   return map[estado] || 'badge-gris';
 }
