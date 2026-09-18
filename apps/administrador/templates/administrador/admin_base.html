@@ -90,29 +90,36 @@
             <i class="bi bi-box-arrow-right"></i> Cerrar sesión
           </a>
         </div>
-      </nav>
+      </nav> 
   </aside>
+  
   <!-- ══ MAIN ══ -->
   <div class="main-content">
-
-    <!-- Topbar -->
-    <header class="topbar d-flex align-items-center gap-3 p-3 bg-white border-bottom">
-      <button type="button" class="sidebar-toggle" onclick="toggleSidebar()" title="Alternar menú">
-        <i class="bi bi-list fs-4"></i>
-      </button>
-      <div>
-        <h5 class="topbar-title mb-0">{% block topbar_titulo %}{% endblock %}</h5>
-        <small class="topbar-sub text-muted">{% block topbar_sub %}{% endblock %}</small>
+    <!-- Se cambia top: 56px por top: 0 -->
+    <div class="bg-white border-bottom sticky-top" style="top: 0; z-index: 99;">
+      <div class="container-fluid py-2">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-{% block topbar_icono %}speedometer2{% endblock %} me-2"></i>
+              {% block topbar_titulo %}Dashboard{% endblock %}
+            </h5>
+            <small class="text-muted">{% block topbar_sub %}Resumen general{% endblock %}</small>
+          </div>
+          {% block topbar_extra %}{% endblock %}
+        </div>
       </div>
-      {% block topbar_extra %}{% endblock %}
-    </header>
+    </div>
+
+
 
     <!-- Contenido Principal -->
     <div class="content-wrap">
-
       {% block contenido %}{% endblock %}
     </div>
   </div>
+
+
 
 <!-- ══ MODAL EDITAR PERFIL ══ -->
 <div class="modal fade" id="modalEditarPerfil" tabindex="-1" aria-hidden="true">

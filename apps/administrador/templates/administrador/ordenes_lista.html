@@ -14,8 +14,11 @@
   <a href="{% url 'exportar_ordenes_pdf' %}?buscar={{ request.GET.buscar }}&estado={{ request.GET.estado }}" class="btn btn-danger d-inline-flex align-items-center bg-danger border-danger px-3 py-2 fw-medium shadow-sm">
     <i class="bi bi-file-earmark-pdf me-2 fs-5"></i> Exportar a PDF
   </a>
+  
 </div>
 <div class="ms-auto">
+
+  
   <form method="GET" class="d-flex gap-2 align-items-center" id="searchForm">
 
     <div class="input-group input-group-sm" style="max-width: 280px;">
@@ -48,7 +51,30 @@
 </div>
 {% endblock %}
 
+
+
 {% block contenido %}
+
+<!-- Mensajes Flash de Django -->
+{% if messages %}
+  <div class="messages-wrapper mb-3">
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
+        {% if message.tags == 'success' %}
+          <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+        {% elif message.tags == 'error' or message.tags == 'danger' %}
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+        {% elif message.tags == 'warning' %}
+          <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
+        {% else %}
+          <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
+        {% endif %}
+        <div>{{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
 
 <div class="section-card">
   <div class="section-card-header">
