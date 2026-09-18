@@ -173,6 +173,11 @@ class AsignacionTarea(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
     prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='Media')
     horasEstimadas = models.DecimalField(max_digits=5, decimal_places=2)
+    # La columna 'tipoPrenda' sí existe en la tabla real 'asignacion_tareas'
+    # pero no estaba mapeada acá; apps/operarios/views.py la lee (a.tipoPrenda)
+    # y eso rompía api_tareas con AttributeError, dejando el tablero del
+    # operario colgado en "Cargando tareas…".
+    tipoPrenda = models.CharField(max_length=50, null=True, blank=True)
     cantidadPrendas = models.IntegerField(null=True, blank=True)
     horasReales = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 

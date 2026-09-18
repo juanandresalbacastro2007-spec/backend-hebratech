@@ -495,6 +495,24 @@ def tarea_asignar(request):
                 messages.error(request, 'Debes seleccionar al menos un operario.')
                 return redirect('admin_tarea_asignar')
 
+            # Se calcula ANTES de crear/actualizar la tarea, porque esta
+            # se usa en ambos casos (idProduccion=orden_produccion...).
+            orden_produccion = None
+            if id_orden_produccion:
+                try:
+                    orden_produccion = OrdenProduccion.objects.get(pk=id_orden_produccion)
+                except OrdenProduccion.DoesNotExist:
+                    messages.error(request, 'La orden de producción seleccionada no existe.')
+                    return redirect('admin_tarea_asignar')
+
+                if orden_produccion.estado in ('Completado', 'Cancelada'):
+                    messages.error(
+                        request,
+                        f'La orden de producción {orden_produccion.numero} ya está '
+                        f'"{orden_produccion.estado}" y no admite nuevas tareas.'
+                    )
+                    return redirect('admin_tarea_asignar')
+
             if id_tarea == 'otra':
                 if not tarea_personalizada:
                     messages.error(request, 'Por favor, ingresa el nombre de la tarea personalizada.')
@@ -567,22 +585,6 @@ def tarea_asignar(request):
                         request,
                         f'La orden #{orden.idOrden} ya está en estado "{orden.estado}" y no admite '
                         'nuevas tareas asociadas.'
-                    )
-                    return redirect('admin_tarea_asignar')
-
-            orden_produccion = None
-            if id_orden_produccion:
-                try:
-                    orden_produccion = OrdenProduccion.objects.get(pk=id_orden_produccion)
-                except OrdenProduccion.DoesNotExist:
-                    messages.error(request, 'La orden de producción seleccionada no existe.')
-                    return redirect('admin_tarea_asignar')
-
-                if orden_produccion.estado in ('Completado', 'Cancelada'):
-                    messages.error(
-                        request,
-                        f'La orden de producción {orden_produccion.numero} ya está '
-                        f'"{orden_produccion.estado}" y no admite nuevas tareas.'
                     )
                     return redirect('admin_tarea_asignar')
 
