@@ -6,6 +6,8 @@ urlpatterns = [
     path('', views.admin_portal, name='admin_portal'),
     path('editar-perfil/', views.editar_perfil, name='editar_perfil'),
     path('cotizaciones/', views.cotizaciones_lista, name='admin_cotizaciones'),
+    path('cotizaciones/crear/', views.cotizacion_crear, name='admin_cotizacion_crear'),
+    path('cotizaciones/<int:idCotizacion>/pdf/', views.cotizacion_pdf, name='admin_cotizacion_pdf'),
 
     # Usuarios
     path('usuarios/', views.usuarios_lista, name='admin_usuarios'),

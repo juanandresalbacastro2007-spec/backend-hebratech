@@ -1,9 +1,18 @@
 {% extends "administrador/admin_base.html" %}
 {% load humanize %}
+{% load l10n %}
 
 {% block titulo %}Cotizaciones{% endblock %}
 {% block topbar_titulo %}Cotizaciones{% endblock %}
-{% block topbar_sub %}Cotizaciones solicitadas por los clientes{% endblock %}
+{% block topbar_sub %}Cotizaciones generadas por el administrador{% endblock %}
+
+{% block topbar_extra %}
+<div class="ms-auto">
+  <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaCotizacion">
+    <i class="bi bi-plus-lg me-1"></i>Nueva cotización
+  </button>
+</div>
+{% endblock %}
 
 {% block contenido %}
 <div class="card shadow-sm">
@@ -17,33 +26,25 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Cliente</th>
             <th>Producto</th>
             <th>Cantidad</th>
             <th>Subtotal estimado</th>
             <th>Fecha</th>
-            <th>Estado</th>
+            <th class="text-end">PDF</th>
           </tr>
         </thead>
         <tbody>
           {% for cot in cotizaciones %}
           <tr>
             <td><strong>#{{ cot.idCotizacion }}</strong></td>
-            <td>{{ cot.idCliente.nombre|default:"—" }}</td>
             <td>{{ cot.idProducto.nombre|default:"—" }}</td>
             <td>{{ cot.cantidad }}</td>
             <td>${{ cot.subtotalEstimado|floatformat:0|intcomma }}</td>
             <td>{{ cot.fechaCreacion|date:"d/m/Y H:i" }}</td>
-            <td>
-              {% if cot.estado == 'Aprobada' %}
-                <span class="badge" style="background-color:#d4edda;color:#155724;">Aprobada</span>
-              {% elif cot.estado == 'Rechazada' %}
-                <span class="badge" style="background-color:#f8d7da;color:#721c24;">Rechazada</span>
-              {% elif cot.estado == 'Revisada' %}
-                <span class="badge" style="background-color:#cfe2ff;color:#084298;">Revisada</span>
-              {% else %}
-                <span class="badge" style="background-color:#F5D6A8;color:#7A5200;">Pendiente</span>
-              {% endif %}
+            <td class="text-end">
+              <a href="{% url 'admin_cotizacion_pdf' cot.idCotizacion %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+              </a>
             </td>
           </tr>
           {% endfor %}
@@ -58,4 +59,147 @@
     {% endif %}
   </div>
 </div>
+
+<!-- ══ MODAL: NUEVA COTIZACIÓN ══ -->
+<div class="modal fade" id="modalNuevaCotizacion" tabindex="-1" aria-labelledby="modalNuevaCotizacionLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalNuevaCotizacionLabel">
+          <i class="bi bi-file-earmark-text me-2"></i>Generar Cotización
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <!-- Formulario -->
+      <form id="formNuevaCotizacion" novalidate data-url="{% url 'admin_cotizacion_crear' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+
+          <div class="alert alert-danger d-none" id="cotError" role="alert"></div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Producto</label>
+            <select class="form-select" name="producto" id="cotProducto" required>
+              <option value="" disabled selected>Seleccionar...</option>
+              {% for p in productos %}
+              <option value="{{ p.idProducto }}" data-precio="{{ p.precio|unlocalize }}">{{ p.nombre }} — ${{ p.precio|floatformat:0|intcomma }}</option>
+              {% endfor %}
+            </select>
+            <div class="invalid-feedback">Selecciona un producto.</div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Cantidad (Unidades)</label>
+              <input type="number" class="form-control" name="cantidad" id="cotCantidad" min="1" placeholder="Ej. 200" required>
+              <div class="invalid-feedback">Ingresa una cantidad válida.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Precio Unitario</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="text" class="form-control" id="cotPrecio" readonly placeholder="Se autocompleta">
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-3 d-flex justify-content-between align-items-center mt-3 bg-body-tertiary"
+               style="border:1px dashed var(--primary, #395B64);">
+            <span class="fw-bold text-uppercase" style="font-size:0.8rem;">Subtotal estimado:</span>
+            <span class="h5 mb-0 fw-bold text-primary" id="cotSubtotal">$0</span>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="cotBtnGuardar">
+            <i class="bi bi-file-earmark-plus me-1"></i>Generar cotización
+          </button>
+        </div>
+      </form>
+
+      <!-- Éxito: descargar PDF -->
+      <div id="cotExito" class="d-none">
+        <div class="modal-body text-center py-4">
+          <i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>
+          <h5 class="mt-2 mb-1">Cotización generada</h5>
+          <p class="text-muted mb-3">Ya puedes descargar el PDF.</p>
+          <a href="#" id="cotPdfLink" class="btn btn-primary">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+          </a>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var modalEl   = document.getElementById('modalNuevaCotizacion');
+  var form      = document.getElementById('formNuevaCotizacion');
+  var selProd   = document.getElementById('cotProducto');
+  var inpCant   = document.getElementById('cotCantidad');
+  var inpPrecio = document.getElementById('cotPrecio');
+  var lblSub    = document.getElementById('cotSubtotal');
+  var errBox    = document.getElementById('cotError');
+  var btn       = document.getElementById('cotBtnGuardar');
+  var exito     = document.getElementById('cotExito');
+  var creada    = false;
+
+  function fmt(n) { return '$' + Math.round(n).toLocaleString('es-CO'); }
+
+  function calcular() {
+    var opt = selProd.options[selProd.selectedIndex];
+    var precio = opt && opt.dataset.precio ? parseFloat(opt.dataset.precio) : 0;
+    var cant = parseInt(inpCant.value, 10) || 0;
+    inpPrecio.value = precio ? Math.round(precio).toLocaleString('es-CO') : '';
+    lblSub.textContent = fmt(precio * cant);
+  }
+  selProd.addEventListener('change', calcular);
+  inpCant.addEventListener('input', calcular);
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    errBox.classList.add('d-none');
+    if (!form.checkValidity()) { form.classList.add('was-validated'); return; }
+
+    btn.disabled = true;
+    try {
+      var res = await fetch(form.dataset.url, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      var data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'No se pudo generar la cotización.');
+
+      creada = true;
+      document.getElementById('cotPdfLink').href = data.pdf_url;
+      form.classList.add('d-none');
+      exito.classList.remove('d-none');
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove('d-none');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Al cerrar: si se creó una cotización, recargamos para que aparezca en la tabla
+  modalEl.addEventListener('hidden.bs.modal', function () {
+    if (creada) { window.location.reload(); return; }
+    form.reset();
+    form.classList.remove('was-validated');
+    errBox.classList.add('d-none');
+    calcular();
+  });
+})();
+</script>
 {% endblock %}

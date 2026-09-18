@@ -646,11 +646,6 @@ def generar_cotizacion(request):
         'cantidad'
     )
 
-    notas = request.POST.get(
-        'notas',
-        ''
-    ).strip()
-
     if not producto_id or not cantidad:
 
         return JsonResponse(
@@ -714,11 +709,7 @@ def generar_cotizacion(request):
 
         precioUnitario=producto.precio,
 
-        subtotalEstimado=subtotal,
-
-        notas=notas or None,
-
-        estado='Pendiente'
+        subtotalEstimado=subtotal
     )
 
     return JsonResponse(

@@ -54,23 +54,18 @@ class Notificacion(models.Model):
 # ── Cotizaciones ───────────────────────────────────────────────
 class Cotizacion(models.Model):
     """
-    Solicitud de cotización que el cliente genera desde el portal.
-    A diferencia de Orden, NO reserva producción: es solo una
-    estimación de costo, no está sujeta a "una orden activa a la vez".
+    Estimación de costo. La genera el cliente desde su portal (idCliente
+    con valor) o el administrador desde su panel (idCliente NULL).
+    A diferencia de Orden, NO reserva producción: no está sujeta a
+    "una orden activa a la vez".
     """
-    ESTADO_CHOICES = [
-        ('Pendiente', 'Pendiente'),
-        ('Revisada', 'Revisada'),
-        ('Aprobada', 'Aprobada'),
-        ('Rechazada', 'Rechazada'),
-    ]
-
     idCotizacion = models.AutoField(primary_key=True)
     idCliente = models.ForeignKey(
         Cliente,
         on_delete=models.CASCADE,
         db_column='idCliente',
-        related_name='cotizaciones'
+        related_name='cotizaciones',
+        null=True, blank=True
     )
     idProducto = models.ForeignKey(
         Producto,
@@ -81,8 +76,6 @@ class Cotizacion(models.Model):
     cantidad = models.IntegerField()
     precioUnitario = models.DecimalField(max_digits=10, decimal_places=2)
     subtotalEstimado = models.DecimalField(max_digits=12, decimal_places=2)
-    notas = models.TextField(null=True, blank=True)
-    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
     fechaCreacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -91,4 +84,5 @@ class Cotizacion(models.Model):
         ordering = ['-fechaCreacion']
 
     def __str__(self):
-        return f'Cotización #{self.idCotizacion} — Cliente #{self.idCliente_id}'
+        origen = f'Cliente #{self.idCliente_id}' if self.idCliente_id else 'Administrador'
+        return f'Cotización #{self.idCotizacion} — {origen}'

@@ -26,6 +26,8 @@ from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils.html import escape
 from apps.clientes.models import Cotizacion
 from django_fsm import can_proceed
 
@@ -97,7 +99,7 @@ def admin_portal(request):
     ordenes_pendientes = Orden.objects.filter(estado='Pendiente').count()
     tareas_pendientes = AsignacionTarea.objects.filter(estado='Pendiente').count()
     usuarios_pendientes = Usuario.objects.filter(estado='pendiente').count()
-    total_cotizaciones = Cotizacion.objects.count()
+    total_cotizaciones = Cotizacion.objects.filter(idCliente__isnull=True).count()
 
     ultimas_ordenes = Orden.objects.order_by('-fechaCreacion')[:5]
     ultimas_asignaciones = AsignacionTarea.objects.order_by('-fechaAsignacion')[:5]
@@ -227,19 +229,182 @@ def admin_portal(request):
 # --cotizar --#
 @admin_required
 def cotizaciones_lista(request):
-    cotizaciones = Cotizacion.objects.select_related(
-        'idCliente', 'idProducto'
-    ).order_by('-fechaCreacion')
+    usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
 
-    contexto = {
+    # Solo las cotizaciones generadas por el administrador (sin cliente)
+    cotizaciones = Cotizacion.objects.filter(
+        idCliente__isnull=True
+    ).select_related('idProducto').order_by('-fechaCreacion')
+
+    # Datos para el modal "Nueva cotización"
+    productos = Producto.objects.exclude(estado='inactivo').order_by('nombre')
+
+    return render(request, 'administrador/cotizaciones_lista.html', {
+        'usuario': usuario,
+        'seccion_activa': 'cotizaciones',
         'cotizaciones': cotizaciones,
-    }
+        'productos': productos,
+    })
 
-    return render(
-        request,
-        'administrador/cotizaciones_lista.html',
-        contexto
+
+@admin_required
+@require_POST
+def cotizacion_crear(request):
+    """Genera una cotización del administrador (idCliente queda en NULL)."""
+    producto_id = request.POST.get('producto')
+    cantidad = request.POST.get('cantidad')
+
+    if not producto_id or not cantidad:
+        return JsonResponse(
+            {'error': 'Selecciona un producto y una cantidad.'},
+            status=400
+        )
+
+    try:
+        producto = Producto.objects.get(idProducto=producto_id)
+    except (Producto.DoesNotExist, ValueError):
+        return JsonResponse({'error': 'El producto seleccionado no existe.'}, status=400)
+
+    try:
+        cantidad_int = int(cantidad)
+        if cantidad_int <= 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        return JsonResponse(
+            {'error': 'La cantidad debe ser un número mayor a 0.'},
+            status=400
+        )
+
+    cotizacion = Cotizacion.objects.create(
+        idCliente=None,
+        idProducto=producto,
+        cantidad=cantidad_int,
+        precioUnitario=producto.precio,
+        subtotalEstimado=producto.precio * cantidad_int,
     )
+
+    return JsonResponse({
+        'ok': True,
+        'idCotizacion': cotizacion.idCotizacion,
+        'pdf_url': reverse('admin_cotizacion_pdf', args=[cotizacion.idCotizacion]),
+    })
+
+
+def _fmt_cop(valor):
+    """1900000 -> '$1.900.000' (formato de miles con punto)."""
+    return '${:,.0f}'.format(valor or 0).replace(',', '.')
+
+
+@admin_required
+def cotizacion_pdf(request, idCotizacion):
+    """Descarga la cotización en PDF."""
+    cot = get_object_or_404(
+        Cotizacion.objects.select_related('idCliente', 'idProducto'),
+        pk=idCotizacion
+    )
+
+    fecha = cot.fechaCreacion
+    if timezone.is_aware(fecha):
+        fecha = timezone.localtime(fecha)
+
+    primario = colors.HexColor('#395B64')
+    suave = colors.HexColor('#E7F6F2')
+    borde = colors.HexColor('#A5C9CA')
+
+    estilos = getSampleStyleSheet()
+    st_marca = ParagraphStyle('CotMarca', parent=estilos['Title'],
+                              textColor=primario, alignment=0, fontSize=22, leading=26)
+    st_num = ParagraphStyle('CotNum', parent=estilos['Normal'],
+                            fontSize=14, alignment=2, leading=26)
+    st_txt = ParagraphStyle('CotTxt', parent=estilos['Normal'], fontSize=10, leading=13)
+    st_nota = ParagraphStyle('CotNota', parent=estilos['Normal'], fontSize=8,
+                             textColor=colors.grey)
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=letter,
+        leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50,
+        title=f'Cotización #{cot.idCotizacion}'
+    )
+
+    elementos = []
+
+    # Encabezado
+    encabezado = Table(
+        [[Paragraph('HebraTech', st_marca),
+          Paragraph(f'Cotización #{cot.idCotizacion}', st_num)]],
+        colWidths=[256, 256]
+    )
+    encabezado.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (-1, 0), 1, borde),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+    ]))
+    elementos += [encabezado, Spacer(1, 16)]
+
+    # Datos del cliente
+    filas_info = []
+    if cot.idCliente:
+        filas_info.append([Paragraph('<b>Cliente:</b>', st_txt),
+                           Paragraph(escape(str(cot.idCliente)), st_txt)])
+        if cot.idCliente.nit:
+            filas_info.append([Paragraph('<b>NIT:</b>', st_txt),
+                               Paragraph(escape(cot.idCliente.nit), st_txt)])
+    filas_info.append([Paragraph('<b>Fecha:</b>', st_txt),
+                       Paragraph(fecha.strftime('%d/%m/%Y %H:%M'), st_txt)])
+    info = Table(filas_info, colWidths=[70, 442])
+    info.setStyle(TableStyle([('BOTTOMPADDING', (0, 0), (-1, -1), 3)]))
+    elementos += [info, Spacer(1, 18)]
+
+    # Detalle
+    nombre_producto = cot.idProducto.nombre if cot.idProducto else '—'
+    detalle = Table(
+        [
+            ['Producto', 'Cantidad', 'Precio unitario', 'Subtotal'],
+            [Paragraph(escape(nombre_producto), st_txt),
+             f'{cot.cantidad:,}'.replace(',', '.'),
+             _fmt_cop(cot.precioUnitario),
+             _fmt_cop(cot.subtotalEstimado)],
+        ],
+        colWidths=[232, 70, 105, 105]
+    )
+    detalle.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), primario),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BACKGROUND', (0, 1), (-1, 1), suave),
+        ('GRID', (0, 0), (-1, -1), 0.5, borde),
+        ('TOPPADDING', (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+    ]))
+    elementos += [detalle, Spacer(1, 14)]
+
+    # Total
+    total = Table(
+        [['Subtotal estimado:', _fmt_cop(cot.subtotalEstimado)]],
+        colWidths=[150, 105], hAlign='RIGHT'
+    )
+    total.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('TEXTCOLOR', (0, 0), (-1, -1), primario),
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+    ]))
+    elementos += [total, Spacer(1, 30)]
+
+    elementos.append(Paragraph(
+        'Valor estimado sujeto a confirmación por parte de HebraTech.', st_nota
+    ))
+
+    doc.build(elementos)
+
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename="Cotizacion_{cot.idCotizacion}.pdf"'
+    )
+    return response
 
 # ── Usuarios ─────────────────────────────────────────────────
 @admin_required

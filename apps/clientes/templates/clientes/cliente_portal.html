@@ -224,7 +224,7 @@
                     <th>Cantidad</th>
                     <th>Subtotal estimado</th>
                     <th>Fecha</th>
-                    <th>Estado</th>
+                    <th class="text-end">PDF</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -235,16 +235,15 @@
                     <td>{{ cot.cantidad }}</td>
                     <td>${{ cot.subtotalEstimado|floatformat:0|intcomma }}</td>
                     <td>{{ cot.fechaCreacion|date:"d/m/Y H:i" }}</td>
-                    <td>
-                      {% if cot.estado == 'Aprobada' %}
-                        <span class="badge" style="background-color:#d4edda;color:#155724;">Aprobada</span>
-                      {% elif cot.estado == 'Rechazada' %}
-                        <span class="badge" style="background-color:#f8d7da;color:#721c24;">Rechazada</span>
-                      {% elif cot.estado == 'Revisada' %}
-                        <span class="badge" style="background-color:#cfe2ff;color:#084298;">Revisada</span>
-                      {% else %}
-                        <span class="badge" style="background-color:#F5D6A8;color:#7A5200;">Pendiente</span>
-                      {% endif %}
+                    <td class="text-end">
+                      <button type="button" class="btn btn-sm btn-outline-primary btn-cot-pdf"
+                        data-id="{{ cot.idCotizacion }}"
+                        data-producto="{{ cot.idProducto.nombre|default:'—' }}"
+                        data-cantidad="{{ cot.cantidad|unlocalize }}"
+                        data-subtotal="{{ cot.subtotalEstimado|unlocalize }}"
+                        data-fecha="{{ cot.fechaCreacion|date:'d/m/Y H:i' }}">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Guardar PDF
+                      </button>
                     </td>
                   </tr>
                   {% endfor %}
@@ -532,7 +531,7 @@
               <select class="form-select" name="producto" id="quotePrenda" required>
                 <option value="" disabled selected>Seleccionar...</option>
                 {% for producto in productos %}
-                <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio_js|unlocalize }}">{{ producto.nombre }}</option>
+                <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio_js|unlocalize }}">{{ producto.nombre }} — ${{ producto.precio|floatformat:0|intcomma }}</option>
                 {% endfor %}
               </select>
               <div class="invalid-feedback">Selecciona un producto.</div>
@@ -561,17 +560,11 @@
               <span class="h5 mb-0 fw-bold text-primary" id="quoteSubtotalDisplay">$0</span>
             </div>
 
-            <div class="mt-3">
-              <label class="form-label fw-semibold">Notas adicionales</label>
-              <textarea class="form-control" name="notas" rows="2" maxlength="500"
-                placeholder="Detalles, tallas, colores..."></textarea>
-            </div>
-
           </div>
           <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button type="submit" class="btn btn-primary">
-              <i class="bi bi-send me-1"></i>Solicitar cotización
+              <i class="bi bi-send me-1"></i>Registrar cotización
             </button>
           </div>
         </form>
@@ -626,7 +619,71 @@
 
   <!-- ══ TU PROPIO ARCHIVO JAVASCRIPT LIMPIO ══ -->
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="{% static 'js/cliente.js' %}?v=2"></script>
+  <script>
+    // ── Guardar cotización como PDF (se genera en el navegador) ──
+    (function () {
+      var EMPRESA = "{{ cliente.empresa|default:cliente.nombre|escapejs }}";
+      function money(n) { return '$' + Math.round(n).toLocaleString('es-CO'); }
+
+      document.querySelectorAll('.btn-cot-pdf').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var d = btn.dataset;
+          var cantidad = parseFloat(d.cantidad) || 0;
+          var subtotal = parseFloat(d.subtotal) || 0;
+          var unitario = cantidad ? subtotal / cantidad : 0;
+
+          var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+          var L = 20, R = 190;
+
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(20);
+          doc.setTextColor(57, 91, 100);
+          doc.text('HebraTech', L, 25);
+          doc.setFontSize(14); doc.setTextColor(40);
+          doc.text('Cotización #' + d.id, R, 25, { align: 'right' });
+
+          doc.setDrawColor(165, 201, 202); doc.setLineWidth(0.6);
+          doc.line(L, 30, R, 30);
+
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+          doc.setTextColor(90);
+          doc.text('Cliente:', L, 42);  doc.setTextColor(20); doc.text(EMPRESA, L + 25, 42);
+          doc.setTextColor(90);
+          doc.text('Fecha:', L, 50);    doc.setTextColor(20); doc.text(d.fecha, L + 25, 50);
+
+          // Tabla
+          var y = 68;
+          doc.setFillColor(214, 236, 233); doc.rect(L, y - 6, R - L, 9, 'F');
+          doc.setFont('helvetica', 'bold'); doc.setTextColor(57, 91, 100);
+          doc.text('Producto', L + 3, y);
+          doc.text('Cantidad', 105, y, { align: 'right' });
+          doc.text('P. unitario', 145, y, { align: 'right' });
+          doc.text('Subtotal', R - 3, y, { align: 'right' });
+
+          y += 10;
+          doc.setFont('helvetica', 'normal'); doc.setTextColor(20);
+          doc.text(doc.splitTextToSize(d.producto, 60), L + 3, y);
+          doc.text(cantidad.toLocaleString('es-CO'), 105, y, { align: 'right' });
+          doc.text(money(unitario), 145, y, { align: 'right' });
+          doc.text(money(subtotal), R - 3, y, { align: 'right' });
+
+          y += 12;
+          doc.setDrawColor(200); doc.setLineWidth(0.3); doc.line(L, y, R, y);
+
+          y += 10;
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(57, 91, 100);
+          doc.text('Subtotal estimado:', 130, y, { align: 'right' });
+          doc.text(money(subtotal), R - 3, y, { align: 'right' });
+
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(120);
+          doc.text('Valor estimado sujeto a confirmación por parte de HebraTech.', L, 280);
+
+          doc.save('cotizacion_' + d.id + '.pdf');
+        });
+      });
+    })();
+  </script>
 
   <!-- ✅ FASE 5: Polling para actualizar estado de órdenes en tiempo real -->
   <script>
