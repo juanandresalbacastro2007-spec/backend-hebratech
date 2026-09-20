@@ -391,7 +391,7 @@ class Material(models.Model):
     unidadBase = models.CharField(max_length=20, default='unidad')
     costoUnitario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     fechaActualizacion = models.DateField(auto_now=True)
-
+   
     class Meta:
         db_table = 'materiales'
         managed = False

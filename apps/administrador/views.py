@@ -19,7 +19,8 @@ from xhtml2pdf import pisa
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
-from django.db import connection, IntegrityError, transaction
+from django.db import connection, transaction
+from django.db import IntegrityError
 from django.db.models import Q
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
@@ -1168,49 +1169,29 @@ def exportar_ordenes_pdf(request):
 @admin_required
 def inventario_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
-
     buscar = request.GET.get('buscar', '').strip()
 
-    # Optimizado: Carga en conjunto 'producto' y 'cliente'
-    inventario_list = Inventario.objects.all().select_related('producto', 'cliente')
-    materiales_list = Material.objects.all().select_related('proveedor')
-    proveedores_list = Proveedor.objects.filter(estado='activo').order_by('nombreEmpresa')
-    productos_list = Producto.objects.all()
-    
-    # 🔹 1. Consultar todos los clientes registrados
-    clientes_list = Cliente.objects.all().order_by('nombre')
+    inventario_list = Inventario.objects.select_related('producto', 'cliente')
+    materiales_list = Material.objects.select_related('proveedor')
 
     if buscar:
         inventario_list = inventario_list.filter(
             Q(producto__nombre__icontains=buscar) |
-            Q(idInventario__icontains=buscar) |
-            Q(ubicacion__icontains=buscar) |
-            Q(cliente__empresa__icontains=buscar) |  # Permite buscar por nombre de empresa
-            Q(cliente__nombre__icontains=buscar)     # Permite buscar por nombre del contacto
+            Q(ubicacion__icontains=buscar)
         )
-
         materiales_list = materiales_list.filter(
             Q(nombreMaterial__icontains=buscar) |
-            Q(descripcion__icontains=buscar) |
-            Q(idMaterial__icontains=buscar)|
-            Q(proveedor__nombreEmpresa__icontains=buscar) 
+            Q(descripcion__icontains=buscar)
         )
 
-    context = {
+    return render(request, 'administrador/inventario_lista.html', {
         'usuario': usuario,
         'inventario_list': inventario_list,
-        'total_items': inventario_list.count(),
         'materiales_list': materiales_list,
-        'total_materiales': materiales_list.count(),
-        'productos_list': productos_list,
-        'clientes_list': clientes_list,  # 🔹 2. Enviar los clientes a la plantilla HTML
+        'clientes_list': Cliente.objects.all(),
+        'proveedores_list': Proveedor.objects.filter(estado='activo'),
         'buscar_filtro': buscar,
-        'ubicaciones_predefinidas': UBICACIONES_PREDEFINIDAS,
-        'clientes_list': clientes_list,
-        'proveedores_list': proveedores_list,    # <-- NUEVO
-    }
-    return render(request, 'administrador/inventario_lista.html', context)
-
+    })
 # ── CRUD: MATERIALES ─────────────────────────────────────────
 
 @admin_required
@@ -1274,12 +1255,15 @@ def editar_material(request, pk):
 @admin_required
 def eliminar_material(request, pk):
     material = get_object_or_404(Material, pk=pk)
-    if request.method == 'POST':
-        nombre = material.nombreMaterial
+    nombre = material.nombreMaterial
+    
+    try:
         material.delete()
-        messages.success(request, f"Material '{nombre}' eliminado correctamente.")
+        messages.success(request, f'✅ Material "{nombre}" eliminado correctamente')
+    except Exception as e:
+        messages.error(request, f'❌ Error al eliminar: {str(e)}')
+    
     return redirect('admin_inventario')
-
 
 # ── Helper: resolver ubicación (predefinida u "Otro") ────────
 def _resolver_ubicacion(request):
