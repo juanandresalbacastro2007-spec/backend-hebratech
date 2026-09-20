@@ -43,7 +43,7 @@
       <option value="Enviado" {% if estado_filtro == 'Enviado' %}selected{% endif %}>Enviado</option>
       <option value="Entregado" {% if estado_filtro == 'Entregado' %}selected{% endif %}>Entregado</option>
       <option value="Cancelado" {% if estado_filtro == 'Cancelado' %}selected{% endif %}>Cancelado</option>
-      <option value="Retrasado" {% if estado_filtro == 'Retrasado' %}selected{% endif %}>Retrasado</option>
+      <option value="Retrasado" {% if estado_filtro == 'Retrasado' %}selected{% endif %}>Atrasado</option>
     </select>
 
     <button type="submit" class="d-none"></button>
@@ -78,7 +78,7 @@
 
 <div class="section-card">
   <div class="section-card-header">
-    <h6><i class="bi bi-bag me-2"></i> {% if estado_filtro %}Órdenes — {% if estado_filtro == 'Procesando' %}En producción{% else %}{{ estado_filtro }}{% endif %}{% else %}Todas las órdenes{% endif %} ({{ ordenes|length }}) </h6>
+    <h6><i class="bi bi-bag me-2"></i> {% if estado_filtro %}Órdenes — {% if estado_filtro == 'Procesando' %}En producción{% elif estado_filtro == 'Retrasado' %}Atrasado{% else %}{{ estado_filtro }}{% endif %}{% else %}Todas las órdenes{% endif %} ({{ ordenes|length }}) </h6>
   </div>
   <div class="section-card-body p-0">
     <table class="ht-table">
@@ -134,7 +134,7 @@
             {% elif orden.estado == 'Cancelado' %}
             <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>Cancelado</span>
             {% elif orden.estado == 'Retrasado' %}
-            <span class="badge-ht badge-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Retrasado</span>
+            <span class="badge-ht badge-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Atrasado</span>
             {% elif orden.estado == 'Pendiente' %}
             <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>Pendiente</span>
             {% else %}
@@ -206,7 +206,7 @@
                       <option value="Enviado" {% if orden.estado == 'Enviado' %}selected{% endif %}>Enviado</option>
                       <option value="Entregado" {% if orden.estado == 'Entregado' %}selected{% endif %}>Entregado</option>
                       <option value="Cancelado" {% if orden.estado == 'Cancelado' %}selected{% endif %}>Cancelado</option>
-                      <option value="Retrasado" {% if orden.estado == 'Retrasado' %}selected{% endif %}>Retrasado</option>
+                      <option value="Retrasado" {% if orden.estado == 'Retrasado' %}selected{% endif %}>Atrasado</option>
                     </select>
                     <div class="form-text small">Estas etiquetas son exactamente las que ve el cliente en el seguimiento de su orden.</div>
                   </div>
