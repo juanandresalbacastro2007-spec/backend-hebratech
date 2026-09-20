@@ -3,7 +3,6 @@
 // ============================================================
 
 const API_BASE = '/produccion';
-let PRODUCTOS_CACHE = [];
 let ORDENES_PROD_CACHE = [];
 let ORDENES_CLIENTE_CACHE = [];
 let OPERARIOS_CACHE = [];
@@ -83,7 +82,6 @@ function switchTab(nombre, el) {
 
   if (nombre === 'clientes' && ORDENES_CLIENTE_CACHE.length === 0) cargarOrdenesCliente();
   if (nombre === 'ordenes' && ORDENES_PROD_CACHE.length === 0) cargarOrdenesProduccion();
-  if (nombre === 'productos' && PRODUCTOS_CACHE.length === 0) cargarProductos();
   if (nombre === 'operarios' && OPERARIOS_CACHE.length === 0) cargarOperarios();
   if (nombre === 'calendario') {
     if (!calendar) {
@@ -208,116 +206,6 @@ async function guardarCliente() {
     mostrarToast('Orden de cliente actualizada.');
     cerrarModalCliente();
     cargarOrdenesCliente();
-  } catch (e) {
-    mostrarToast(e.message, 'error');
-  }
-}
-
-// ============================================================
-// PRODUCTOS (gestión)
-// ============================================================
-async function cargarProductos() {
-  try {
-    PRODUCTOS_CACHE = await apiFetch(`${API_BASE}/productos/`);
-    renderProductos(PRODUCTOS_CACHE);
-  } catch (e) {
-    mostrarToast('No se pudieron cargar los productos.', 'error');
-  }
-}
-
-function renderProductos(lista) {
-  const tbody = document.getElementById('tbody-productos');
-  if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No hay productos registrados.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = lista.map(p => `
-    <tr>
-      <td>${p.nombre}</td>
-      <td>${p.categoria}</td>
-      <td>$${Number(p.precio).toLocaleString()}</td>
-      <td class="celda-truncada">${p.descripcion || ''}</td>
-      <td>
-        <button class="action-btn edit" onclick="editarProducto(${p.idProducto})">✏️</button>
-        <button class="action-btn delete" onclick="eliminarProducto(${p.idProducto})">🗑️</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function filtrarProductos() {
-  const texto = (document.getElementById('search-productos').value || '').toLowerCase();
-  const cat = document.getElementById('filter-cat').value;
-  const filtrados = PRODUCTOS_CACHE.filter(p =>
-    (!texto || p.nombre.toLowerCase().includes(texto)) &&
-    (!cat || p.categoria === cat)
-  );
-  renderProductos(filtrados);
-}
-
-function abrirModalNuevoProducto() {
-  limpiarValidacion(['prod-nombre', 'prod-categoria', 'prod-descripcion']);
-  document.getElementById('modal-producto-title').textContent = '➕ Nuevo Producto';
-  document.getElementById('producto-id').value = '';
-  document.getElementById('prod-nombre').value = '';
-  document.getElementById('prod-categoria').value = '';
-  document.getElementById('prod-precio').value = 0;
-  document.getElementById('prod-descripcion').value = '';
-  document.getElementById('modal-producto').classList.add('open');
-  enfocarPrimerCampo('prod-nombre');
-}
-
-function editarProducto(id) {
-  const p = PRODUCTOS_CACHE.find(x => x.idProducto === id);
-  if (!p) return;
-  limpiarValidacion(['prod-nombre', 'prod-categoria', 'prod-descripcion']);
-  document.getElementById('modal-producto-title').textContent = '✏️ Editar Producto';
-  document.getElementById('producto-id').value = p.idProducto;
-  document.getElementById('prod-nombre').value = p.nombre;
-  document.getElementById('prod-categoria').value = p.categoria;
-  document.getElementById('prod-precio').value = p.precio;
-  document.getElementById('prod-descripcion').value = p.descripcion || '';
-  document.getElementById('modal-producto').classList.add('open');
-}
-
-function cerrarModalProducto() {
-  document.getElementById('modal-producto').classList.remove('open');
-}
-
-async function guardarProducto() {
-  const id = document.getElementById('producto-id').value;
-  const nombre = document.getElementById('prod-nombre').value.trim();
-  const categoria = document.getElementById('prod-categoria').value;
-  const descripcion = document.getElementById('prod-descripcion').value.trim();
-  const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
-
-  limpiarValidacion(['prod-nombre', 'prod-categoria', 'prod-descripcion']);
-  let valido = true;
-  if (!nombre) { marcarError('prod-nombre'); valido = false; }
-  if (!categoria) { marcarError('prod-categoria'); valido = false; }
-  if (!descripcion) { marcarError('prod-descripcion'); valido = false; }
-  if (!valido) return;
-
-  const payload = { nombre, categoria, descripcion, precio };
-  const url = id ? `${API_BASE}/productos/${id}/` : `${API_BASE}/productos/`;
-  const metodo = id ? 'PUT' : 'POST';
-
-  try {
-    await apiFetch(url, { method: metodo, body: JSON.stringify(payload) });
-    mostrarToast(id ? 'Producto actualizado.' : 'Producto creado.');
-    cerrarModalProducto();
-    await cargarProductos();
-  } catch (e) {
-    mostrarToast(e.message, 'error');
-  }
-}
-
-async function eliminarProducto(id) {
-  if (!confirm('¿Eliminar este producto?')) return;
-  try {
-    await apiFetch(`${API_BASE}/productos/${id}/`, { method: 'DELETE' });
-    mostrarToast('Producto eliminado.');
-    await cargarProductos();
   } catch (e) {
     mostrarToast(e.message, 'error');
   }

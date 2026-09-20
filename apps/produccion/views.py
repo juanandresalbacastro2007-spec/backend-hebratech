@@ -4,7 +4,6 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 from django.utils import timezone
 import json
-import unicodedata
 from datetime import timedelta
 
 from .models import Producto, OrdenProduccion, Prenda
@@ -29,16 +28,6 @@ def produccion_portal(request):
 
 
 # ── UTILIDADES ───────────────────────────────────────
-def producto_to_dict(p):
-    return {
-        'idProducto':  p.idProducto,
-        'nombre':      p.nombre,
-        'descripcion': p.descripcion,
-        'precio':      float(p.precio),
-        'categoria':   p.categoria,
-    }
-
-
 def orden_produccion_to_dict(o):
     # Calcular progreso basado en estado
     progreso = 0
@@ -115,80 +104,6 @@ def dashboard(request):
         'progresoGeneral': progreso_general,
         'alertas': alertas,
     })
-
-
-# ── PRODUCTOS ────────────────────────────────────────
-@admin_required_api
-@csrf_exempt
-@require_http_methods(['GET', 'POST'])
-def productos(request):
-    if request.method == 'GET':
-        lista = list(Producto.objects.all())
-        return JsonResponse([producto_to_dict(p) for p in lista], safe=False)
-
-    data = json.loads(request.body)
-    nombre = (data.get('nombre') or '').strip()
-    if not nombre:
-        return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
-
-    nombre_normalizado = unicodedata.normalize('NFKD', nombre).lower()
-    duplicado = any(
-        unicodedata.normalize('NFKD', p_nombre).lower() == nombre_normalizado
-        for p_nombre in Producto.objects.values_list('nombre', flat=True)
-    )
-    if duplicado:
-        return JsonResponse(
-            {'error': f'Ya existe un producto llamado "{nombre}". Usa otro nombre.'},
-            status=400
-        )
-
-    p = Producto.objects.create(
-        nombre      = nombre,
-        descripcion = data.get('descripcion', ''),
-        precio      = data.get('precio', 0),
-        categoria   = data['categoria'],
-    )
-    return JsonResponse(producto_to_dict(p), status=201)
-
-
-@admin_required_api
-@csrf_exempt
-@require_http_methods(['GET', 'PUT', 'DELETE'])
-def producto_detalle(request, id):
-    try:
-        p = Producto.objects.get(pk=id)
-    except Producto.DoesNotExist:
-        return JsonResponse({'error': 'Producto no encontrado'}, status=404)
-
-    if request.method == 'GET':
-        return JsonResponse(producto_to_dict(p))
-
-    if request.method == 'PUT':
-        data = json.loads(request.body)
-        if 'nombre' in data:
-            nuevo_nombre = (data['nombre'] or '').strip()
-            if not nuevo_nombre:
-                return JsonResponse({'error': 'El nombre del producto es obligatorio.'}, status=400)
-            nombre_normalizado = unicodedata.normalize('NFKD', nuevo_nombre).lower()
-            duplicado = any(
-                unicodedata.normalize('NFKD', otro_nombre).lower() == nombre_normalizado
-                for otro_nombre in Producto.objects.exclude(pk=p.pk).values_list('nombre', flat=True)
-            )
-            if duplicado:
-                return JsonResponse(
-                    {'error': f'Ya existe un producto llamado "{nuevo_nombre}". Usa otro nombre.'},
-                    status=400
-                )
-            data['nombre'] = nuevo_nombre
-
-        for campo in ['nombre', 'descripcion', 'precio', 'categoria']:
-            if campo in data:
-                setattr(p, campo, data[campo])
-        p.save()
-        return JsonResponse(producto_to_dict(p))
-
-    p.delete()
-    return JsonResponse({'mensaje': 'Producto eliminado'})
 
 
 # ── PRODUCTOS (para el select en órdenes) ────────────

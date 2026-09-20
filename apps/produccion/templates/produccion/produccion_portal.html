@@ -122,7 +122,6 @@
     <div class="tab active" onclick="switchTab('clientes', this)">📋 Órdenes Cliente</div>
     <div class="tab" onclick="switchTab('ordenes', this)">🏭 Órdenes Producción</div>
     <div class="tab" onclick="switchTab('calendario', this)">📅 Calendario</div>
-    <div class="tab" onclick="switchTab('productos', this)">👕 Productos</div>
     <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance Operarios</div>
   </div>
 
@@ -207,43 +206,6 @@
     </div>
   </div>
 
-  <!-- TAB: Productos -->
-  <div id="tab-productos" class="tab-content">
-    <div class="table-card">
-      <div class="table-toolbar">
-        <h3>Productos Registrados</h3>
-        <div class="toolbar-right">
-          <div class="search-wrap">
-            <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input id="search-productos" type="text" placeholder="Buscar producto..." oninput="filtrarProductos()" />
-          </div>
-          <select id="filter-cat" class="filter-select" onchange="filtrarProductos()">
-            <option value="">Todas las categorías</option>
-            <option>Camisa</option>
-            <option>Pantalón</option>
-            <option>Uniforme</option>
-            <option>Chaqueta</option>
-            <option>Accesorio</option>
-          </select>
-          <button class="btn btn-primary" onclick="abrirModalNuevoProducto()">➕ Nuevo Producto</button>
-        </div>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Descripción</th><th>Acciones</th></tr>
-          </thead>
-          <tbody id="tbody-productos">
-            <tr><td colspan="5" style="text-align:center;padding:30px"><span class="spinner"></span></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
   <!-- TAB: Avance Operarios -->
   <div id="tab-operarios" class="tab-content">
     <div class="table-card">
@@ -273,55 +235,6 @@
   </div>
 
   <!-- ==================== MODALES ==================== -->
-
-  <!-- MODAL: Nuevo/Editar Producto -->
-  <div class="prod-modal-backdrop" id="modal-producto">
-    <div class="prod-modal">
-      <div class="prod-modal-header">
-        <h3 id="modal-producto-title">➕ Nuevo Producto</h3>
-        <button class="prod-modal-close" onclick="cerrarModalProducto()">×</button>
-      </div>
-      <div class="prod-modal-body">
-        <input type="hidden" id="producto-id" />
-        <div class="form-row">
-          <div class="form-group">
-            <label>Nombre *</label>
-            <input id="prod-nombre" type="text" placeholder="Ej: Camisa Oxford" />
-            <span class="campo-error-msg" id="err-prod-nombre">Ingresa el nombre del producto.</span>
-          </div>
-          <div class="form-group">
-            <label>Categoría *</label>
-            <select id="prod-categoria">
-              <option value="">Seleccionar...</option>
-              <option>Camisa</option>
-              <option>Pantalón</option>
-              <option>Uniforme</option>
-              <option>Chaqueta</option>
-              <option>Accesorio</option>
-            </select>
-            <span class="campo-error-msg" id="err-prod-categoria">Selecciona una categoría.</span>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Precio</label>
-            <input id="prod-precio" type="number" value="0" min="0" step="1000" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group full">
-            <label>Descripción *</label>
-            <textarea id="prod-descripcion" placeholder="Descripción del producto..."></textarea>
-            <span class="campo-error-msg" id="err-prod-descripcion">Ingresa una descripción del producto.</span>
-          </div>
-        </div>
-      </div>
-      <div class="prod-modal-footer">
-        <button class="btn btn-outline" onclick="cerrarModalProducto()">Cancelar</button>
-        <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
-      </div>
-    </div>
-  </div>
 
   <!-- MODAL: Editar Orden Cliente -->
   <div class="prod-modal-backdrop" id="modal-cliente">
