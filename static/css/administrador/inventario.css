@@ -1,0 +1,97 @@
+/* ============================================================
+   HebraTech — Módulo Inventario y Materiales (admin)
+   Archivo: static/css/administrador/inventario.css
+   Se carga desde administrador/inventario_lista.html
+   ============================================================ */
+
+/* ── Animación de los toasts de feedback ───────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Pestañas integradas con la section-card ───────────────── */
+#inventarioTabs .nav-link {
+  border-radius: 6px 6px 0 0;
+  color: var(--ht-text-muted, #6c757d);
+  border: 1px solid transparent;
+  border-bottom: none;
+}
+#inventarioTabs .nav-link.active {
+  color: var(--ht-primary, #395B64);
+  background: #fff;
+  border-color: #dee2e6 #dee2e6 #fff;
+  font-weight: 600;
+}
+#inventarioTabs .nav-link:hover:not(.active) {
+  background: rgba(57, 91, 100, .06);
+}
+.tab-content {
+  border-top: 1px solid #dee2e6;
+}
+
+/* ── Botones xs para acciones rápidas (+ / −) ──────────────── */
+.btn-xs {
+  font-size: 0.78rem;
+  padding: 2px 7px;
+}
+
+/* ── Modal "Registrar producto" ────────────────────────────── */
+.inv-form-section {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .25rem 0 .9rem;
+  padding-bottom: .45rem;
+  border-bottom: 1px solid #e3ecea;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ht-primary, #395B64);
+}
+.row + .inv-form-section {
+  margin-top: 1.5rem;
+}
+.inv-form-section .inv-paso {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ht-primary, #395B64);
+  color: #fff;
+  font-size: .72rem;
+  letter-spacing: 0;
+}
+#formCrearInventario input[readonly],
+#formCrearInventario textarea[readonly] {
+  background-color: #f4f7f7;
+  cursor: not-allowed;
+}
+#modalCrearInventario .form-text {
+  font-size: .75rem;
+}
+
+/* ── Modo oscuro ───────────────────────────────────────────── */
+[data-bs-theme="dark"] #inventarioTabs .nav-link.active {
+  background: var(--bs-body-bg);
+  border-color: var(--bs-border-color) var(--bs-border-color) var(--bs-body-bg);
+  color: #A5C9CA;
+}
+[data-bs-theme="dark"] .tab-content {
+  border-top-color: var(--bs-border-color);
+}
+[data-bs-theme="dark"] .inv-form-section {
+  border-bottom-color: var(--bs-border-color);
+  color: #A5C9CA;
+}
+[data-bs-theme="dark"] .inv-form-section .inv-paso {
+  background: #A5C9CA;
+  color: #1e2d35;
+}
+[data-bs-theme="dark"] #formCrearInventario input[readonly],
+[data-bs-theme="dark"] #formCrearInventario textarea[readonly] {
+  background-color: rgba(255, 255, 255, .06);
+}

@@ -48,10 +48,19 @@ urlpatterns = [
     path('inventario/exportar/pdf/', views.exportar_inventario_pdf, name='exportar_inventario_pdf'),
     path('inventario/exportar/excel/', views.exportar_inventario_excel, name='exportar_inventario_excel'),
 
+    # Ajuste rápido de stock (botones +/-)
+    path('inventario/ajustar/<int:pk>/', views.ajustar_stock, name='ajustar_stock'),
+
+    # Historial de movimientos de un ítem de inventario
+    path('inventario/historial/<int:pk>/', views.historial_movimientos, name='historial_movimientos'),
+
     # Materiales
     path('materiales/crear/', views.crear_material, name='crear_material'),
     path('materiales/editar/<int:pk>/', views.editar_material, name='editar_material'),
     path('materiales/eliminar/<int:pk>/', views.eliminar_material, name='eliminar_material'),
+
+    # Ajuste rápido de material (botones +/-)
+    path('materiales/ajustar/<int:pk>/', views.ajustar_stock_material, name='ajustar_stock_material'),
 
     # Módulos externos
     path('produccion/', views.produccion_placeholder, name='admin_produccion'),

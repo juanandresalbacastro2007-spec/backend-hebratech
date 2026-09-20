@@ -19,8 +19,7 @@ from xhtml2pdf import pisa
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
-from django.db import connection, transaction
-from django.db import IntegrityError
+from django.db import connection, IntegrityError, transaction, models
 from django.db.models import Q
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
@@ -35,12 +34,14 @@ from django_fsm import can_proceed
 from .models import (
     Usuario, Operario, Tarea,
     AsignacionTarea, Orden, Cliente, Incidencia, Inventario, Material, Producto, Factura,
+    MovimientoStock,
 )
 from apps.core.decorators import login_required_rol
 from apps.produccion.models import OrdenProduccion
 
 
-from apps.proveedores.models import Proveedor  
+from apps.proveedores.models import Proveedor
+
 
 # ── Decorador de protección por rol (centralizado en apps.core) ────
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
@@ -86,6 +87,28 @@ def _safe_import(ruta_modulo, nombre_modelo):
         return getattr(modulo, nombre_modelo)
     except Exception:
         return None
+
+
+# ── Helper: nivel de stock calculado (0-3) ──────────────────
+def _calcular_nivel_stock(disponible: int, minimo: int) -> int:
+    """
+    Devuelve 0-3 en función de la relación stock/mínimo.
+      0 = Crítico  (disponible == 0)
+      1 = Bajo     (disponible < mínimo)
+      2 = Normal   (mínimo <= disponible < 2×mínimo)
+      3 = Alto     (disponible >= 2×mínimo)
+    """
+    if disponible == 0:
+        return 0
+    if minimo <= 0:
+        return 3  # sin mínimo definido → siempre "Alto"
+    ratio = disponible / minimo
+    if ratio >= 2:
+        return 3
+    elif ratio >= 1:
+        return 2
+    else:
+        return 1
 
 
 # ── Portal principal ─────────────────────────────────────────
@@ -633,9 +656,6 @@ def tarea_asignar(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     operarios = Operario.objects.filter(estado='activo').select_related('idUsuario')
     tareas = Tarea.objects.all()
-    ordenes = Orden.objects.exclude(estado__in=ESTADOS_ORDEN_FINALIZADOS) \
-        .select_related('idCliente') \
-        .order_by('-fechaCreacion')
     # Órdenes de producción activas — para conectar la tarea con
     # recalcular_produccion_desde_tareas() y que el avance se calcule solo.
     ordenes_produccion = OrdenProduccion.objects.exclude(
@@ -647,7 +667,6 @@ def tarea_asignar(request):
         tarea_personalizada = request.POST.get('tarea_personalizada', '').strip()
         proceso_personalizado = request.POST.get('proceso_personalizado', '').strip()
         ids_operarios = request.POST.getlist('operarios')
-        id_orden = request.POST.get('orden')
         id_orden_produccion = request.POST.get('orden_produccion')
         descripcion = request.POST.get('descripcion')
         fecha_inicio = request.POST.get('fechaInicio')
@@ -738,22 +757,6 @@ def tarea_asignar(request):
                 )
                 return redirect('admin_tarea_asignar')
 
-            orden = None
-            if id_orden:
-                try:
-                    orden = Orden.objects.get(idOrden=id_orden)
-                except Orden.DoesNotExist:
-                    messages.error(request, 'La orden seleccionada no existe.')
-                    return redirect('admin_tarea_asignar')
-
-                if orden.estado in ESTADOS_ORDEN_FINALIZADOS:
-                    messages.error(
-                        request,
-                        f'La orden #{orden.idOrden} ya está en estado "{orden.estado}" y no admite '
-                        'nuevas tareas asociadas.'
-                    )
-                    return redirect('admin_tarea_asignar')
-
             cantidad_int = int(cantidad) if cantidad and cantidad.strip() else None
 
             fecha_inicio_dt = _parsear_fecha(fecha_inicio)
@@ -781,7 +784,6 @@ def tarea_asignar(request):
                 asignacion = AsignacionTarea.objects.create(
                     idTarea=tarea,
                     idOperario=operario,
-                    idOrden=orden,
                     descripcion=descripcion,
                     fechaInicio=fecha_inicio_dt,
                     fechaLimite=fecha_limite_dt,
@@ -810,7 +812,6 @@ def tarea_asignar(request):
         'usuario': usuario,
         'operarios': operarios,
         'tareas': tareas,
-        'ordenes': ordenes,
         'ordenes_produccion': ordenes_produccion,
     })
 
@@ -1165,33 +1166,80 @@ def exportar_ordenes_pdf(request):
     if pisa_status.err:
         return HttpResponse('Hubo un error al generar el PDF', status=500)
     return response
+
+
 # ── Inventario y Materiales ──────────────────────────────────
 @admin_required
 def inventario_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
+
     buscar = request.GET.get('buscar', '').strip()
 
-    inventario_list = Inventario.objects.select_related('producto', 'cliente')
-    materiales_list = Material.objects.select_related('proveedor')
+    inventario_list  = Inventario.objects.all().select_related('producto', 'cliente')
+    materiales_list  = Material.objects.all().select_related('proveedor')
+    proveedores_list = Proveedor.objects.filter(estado='activo').order_by('nombreEmpresa')
+    productos_list   = Producto.objects.all().order_by('nombre')
+    clientes_list    = Cliente.objects.all().order_by('nombre')
 
     if buscar:
         inventario_list = inventario_list.filter(
             Q(producto__nombre__icontains=buscar) |
-            Q(ubicacion__icontains=buscar)
+            Q(idInventario__icontains=buscar)     |
+            Q(ubicacion__icontains=buscar)        |
+            Q(cliente__empresa__icontains=buscar) |
+            Q(cliente__nombre__icontains=buscar)
         )
         materiales_list = materiales_list.filter(
             Q(nombreMaterial__icontains=buscar) |
-            Q(descripcion__icontains=buscar)
+            Q(descripcion__icontains=buscar)    |
+            Q(idMaterial__icontains=buscar)     |
+            Q(proveedor__nombreEmpresa__icontains=buscar)
         )
 
-    return render(request, 'administrador/inventario_lista.html', {
-        'usuario': usuario,
-        'inventario_list': inventario_list,
-        'materiales_list': materiales_list,
-        'clientes_list': Cliente.objects.all(),
-        'proveedores_list': Proveedor.objects.filter(estado='activo'),
-        'buscar_filtro': buscar,
+    # ── KPIs de alerta para las badges de las pestañas ──
+    alertas_stock = inventario_list.filter(
+        cantidadDisponible__lte=models.F('minimoDefinido')
+    ).count()
+    alertas_materiales = materiales_list.filter(
+        stockActual__lte=models.F('stockMinimo')
+    ).count()
+
+    # nivelStock se recalcula al mostrar: las filas antiguas guardan otros
+    # valores (120, 60, 45...) y saldrían como "Crítico" en la tabla.
+    inventario_list = list(inventario_list)
+    for it in inventario_list:
+        it.nivelStock = _calcular_nivel_stock(it.cantidadDisponible, it.minimoDefinido)
+
+    # Para el modal "Registrar producto": categorías existentes y productos
+    # del catálogo que ya tienen registro de inventario (uno por producto)
+    categorias_list = sorted({
+        c for c in Producto.objects.values_list('categoria', flat=True)
+        if c and c != 'Sin categoría'
     })
+    productos_con_inventario = list(
+        Inventario.objects.values_list('producto_id', flat=True)
+    )
+
+    context = {
+        'usuario':            usuario,
+        'inventario_list':    inventario_list,
+        'total_items':        len(inventario_list),
+        'materiales_list':    materiales_list,
+        'total_materiales':   materiales_list.count(),
+        'productos_list':     productos_list,
+        'categorias_list':    categorias_list,
+        'productos_con_inventario': productos_con_inventario,
+        'clientes_list':      clientes_list,
+        'buscar_filtro':      buscar,
+        'ubicaciones_predefinidas': UBICACIONES_PREDEFINIDAS,
+        'proveedores_list':   proveedores_list,
+        'alertas_stock':      alertas_stock,
+        'alertas_materiales': alertas_materiales,
+        'today':              timezone.now().date(),
+    }
+    return render(request, 'administrador/inventario_lista.html', context)
+
+
 # ── CRUD: MATERIALES ─────────────────────────────────────────
 
 @admin_required
@@ -1255,15 +1303,12 @@ def editar_material(request, pk):
 @admin_required
 def eliminar_material(request, pk):
     material = get_object_or_404(Material, pk=pk)
-    nombre = material.nombreMaterial
-    
-    try:
+    if request.method == 'POST':
+        nombre = material.nombreMaterial
         material.delete()
-        messages.success(request, f'✅ Material "{nombre}" eliminado correctamente')
-    except Exception as e:
-        messages.error(request, f'❌ Error al eliminar: {str(e)}')
-    
+        messages.success(request, f"Material '{nombre}' eliminado correctamente.")
     return redirect('admin_inventario')
+
 
 # ── Helper: resolver ubicación (predefinida u "Otro") ────────
 def _resolver_ubicacion(request):
@@ -1292,101 +1337,132 @@ def _parse_decimal_es(valor):
     except InvalidOperation:
         return None
 
+
 # ── CRUD: INVENTARIO (PRODUCTOS) ─────────────────────────────
 
 @admin_required
 def crear_inventario(request):
-    if request.method == 'POST':
-        nombre_producto = request.POST.get('nombre_producto', '').strip()
+    """
+    Registra un producto terminado: crea el Producto en el catálogo (si el
+    nombre no existe todavía), su registro de inventario y el movimiento
+    inicial de stock.
 
-        if not nombre_producto:
-            messages.error(request, "Debes ingresar el nombre del producto.")
+    Primero se valida TODO y luego se guarda en una sola transacción, para no
+    dejar productos huérfanos (sin inventario) si algo falla a mitad de camino.
+    """
+    if request.method != 'POST':
+        return redirect('admin_inventario')
+
+    # ── Producto ─────────────────────────────────────────────
+    nombre_producto = request.POST.get('nombre_producto', '').strip()
+    if not nombre_producto:
+        messages.error(request, "Debes ingresar el nombre del producto.")
+        return redirect('admin_inventario')
+
+    # ── Cliente (obligatorio) ────────────────────────────────
+    cliente_id = request.POST.get('cliente')
+    if not cliente_id:
+        messages.error(request, "Debes seleccionar un cliente o empresa de manera obligatoria.")
+        return redirect('admin_inventario')
+    cliente_obj = get_object_or_404(Cliente, pk=cliente_id)
+
+    # Datos del producto: solo se usan si el producto es nuevo
+    categoria = request.POST.get('categoria', '').strip() or 'Sin categoría'
+    descripcion = request.POST.get('descripcion', '').strip()
+    precio = _parse_decimal_es(request.POST.get('precio'))
+
+    # iexact: mismo criterio que el buscador del modal, sin depender de la collation de la BD
+    producto = Producto.objects.filter(nombre__iexact=nombre_producto).first()
+    producto_nuevo = producto is None
+
+    if producto_nuevo:
+        if precio is None or precio <= 0:
+            messages.error(request, "Ingresa un precio mayor a 0 para el producto nuevo.")
             return redirect('admin_inventario')
-
-        # 🔹 Procesar asignación OBLIGATORIA de cliente
-        cliente_id = request.POST.get('cliente')
-        if not cliente_id:
-            messages.error(request, "Debes seleccionar un cliente o empresa de manera obligatoria.")
-            return redirect('admin_inventario')
-
-        cliente_obj = get_object_or_404(Cliente, pk=cliente_id)
-
-        producto, creado = Producto.objects.get_or_create(
-            nombre=nombre_producto,
-            defaults={
-                'descripcion': f'Producto registrado desde inventario ({nombre_producto})',
-                'precio': 0,
-                'categoria': 'Sin categoría',
-                'estado': 'activo',
-            }
+    elif Inventario.objects.filter(producto=producto).exists():
+        messages.error(
+            request,
+            f"Ya existe un registro de inventario para el producto '{producto.nombre}'. Edítalo en lugar de crear uno nuevo."
         )
+        return redirect('admin_inventario')
 
-        if not creado and Inventario.objects.filter(producto=producto).exists():
-            messages.error(
-                request,
-                f"Ya existe un registro de inventario para el producto '{producto.nombre}'. Edítalo en lugar de crear uno nuevo."
-            )
-            return redirect('admin_inventario')
+    # ── Stock inicial ────────────────────────────────────────
+    try:
+        cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
+        min_definido = int(request.POST.get('minimoDefinido') or 0)
+    except ValueError:
+        messages.error(request, "La cantidad disponible y el mínimo definido deben ser números enteros.")
+        return redirect('admin_inventario')
 
-        try:
-            cant_disponible = int(request.POST.get('cantidadDisponible') or 0)
-            min_definido = int(request.POST.get('minimoDefinido') or 0)
-        except ValueError:
-            messages.error(request, "La cantidad disponible y el mínimo definido deben ser números enteros.")
-            return redirect('admin_inventario')
+    if cant_disponible < 0 or min_definido < 0:
+        messages.error(request, "Los valores de stock no pueden ser negativos.")
+        return redirect('admin_inventario')
 
-        if cant_disponible < 0 or min_definido < 0:
-            messages.error(request, "Los valores de stock no pueden ser negativos.")
-            return redirect('admin_inventario')
+    if cant_disponible < min_definido:
+        messages.error(request, "El stock actual no puede ser menor al mínimo definido.")
+        return redirect('admin_inventario')
 
-        if cant_disponible < min_definido:
-            messages.error(request, "El stock actual no puede ser menor al mínimo definido.")
-            return redirect('admin_inventario')
+    unidades = request.POST.get('unidades') or 'Unidades'
+    ubicacion = _resolver_ubicacion(request)
+    fecha_ingreso = request.POST.get('fechaIngreso') or timezone.now().date()
 
-        try:
-            cant_ingresada = int(request.POST.get('cantidadIngresada') or 0)
-        except ValueError:
-            messages.error(request, "La cantidad ingresada debe ser un número entero.")
-            return redirect('admin_inventario')
+    # ── Guardado atómico ─────────────────────────────────────
+    try:
+        with transaction.atomic():
+            if producto_nuevo:
+                producto = Producto.objects.create(
+                    nombre=nombre_producto,
+                    descripcion=descripcion,
+                    precio=precio,
+                    categoria=categoria,
+                    estado='activo',
+                )
 
-        if cant_ingresada < 0:
-            messages.error(request, "La cantidad ingresada no puede ser negativa.")
-            return redirect('admin_inventario')
-
-        nivel_stock_input = request.POST.get('nivelStock')
-        try:
-            nivel_stock = int(nivel_stock_input)
-        except (ValueError, TypeError):
-            nivel_stock = cant_disponible - min_definido
-
-        unidades = request.POST.get('unidades') or 'Unidades'
-        ubicacion = _resolver_ubicacion(request)
-        cant_egresada = 0
-        fecha_ingreso = request.POST.get('fechaIngreso') or timezone.now().date()
-        fecha_salida = request.POST.get('fechaSalida') or None
-
-        try:
-            Inventario.objects.create(
+            nuevo_item = Inventario.objects.create(
                 producto=producto,
-                cliente=cliente_obj,  # 🔹 Garantizado que no sea None
+                cliente=cliente_obj,
                 cantidadDisponible=cant_disponible,
                 minimoDefinido=min_definido,
-                nivelStock=nivel_stock,
+                nivelStock=_calcular_nivel_stock(cant_disponible, min_definido),
                 unidades=unidades,
                 ubicacion=ubicacion,
-                cantidadIngresada=cant_ingresada,
-                cantidadEgresada=cant_egresada,
+                # Registro nuevo: todo lo que hay disponible es lo que ingresó,
+                # así ingresado − egresado siempre cuadra con el disponible.
+                cantidadIngresada=cant_disponible,
+                cantidadEgresada=0,
                 fechaIngreso=fecha_ingreso,
-                fechaSalida=fecha_salida if fecha_salida else None
-            )
-            messages.success(request, f"Registro de inventario para '{producto.nombre}' asignado a '{cliente_obj.nombre}' creado exitosamente.")
-        except IntegrityError:
-            messages.error(
-                request,
-                f"Ya existe un registro de inventario para el producto '{producto.nombre}'."
+                fechaSalida=None,
             )
 
+            if cant_disponible > 0:
+                MovimientoStock.objects.create(
+                    idInventario=nuevo_item,
+                    tipoMovimiento='ENTRADA',
+                    cantidad=cant_disponible,
+                    motivo='Stock inicial al registrar el producto',
+                    usuarioId_id=request.session.get('usuario_id'),
+                )
+    except IntegrityError:
+        messages.error(
+            request,
+            f"No se pudo registrar: el producto '{nombre_producto}' ya tiene un registro de inventario."
+        )
+        return redirect('admin_inventario')
+
+    if producto_nuevo:
+        messages.success(
+            request,
+            f"Producto '{producto.nombre}' registrado y asignado a '{cliente_obj}'."
+        )
+    else:
+        precio_actual = f"${producto.precio:,.0f}".replace(',', '.')
+        messages.success(
+            request,
+            f"Se reutilizó el producto existente '{producto.nombre}' (precio actual {precio_actual}) "
+            f"y se creó su inventario para '{cliente_obj}'."
+        )
     return redirect('admin_inventario')
+
 
 @admin_required
 def editar_inventario(request, pk):
@@ -1436,15 +1512,14 @@ def editar_inventario(request, pk):
             messages.error(request, "Las cantidades ingresada/egresada no pueden ser negativas.")
             return redirect('admin_inventario')
 
+        disponible_anterior = item.cantidadDisponible
+
         item.producto = nuevo_producto
         item.cantidadDisponible = cant_disponible
         item.minimoDefinido = min_definido
 
-        nivel_stock_input = request.POST.get('nivelStock')
-        try:
-            item.nivelStock = int(nivel_stock_input)
-        except (ValueError, TypeError):
-            item.nivelStock = cant_disponible - min_definido
+        # PATCH: nivelStock se calcula automáticamente
+        item.nivelStock = _calcular_nivel_stock(cant_disponible, min_definido)
 
         item.unidades = request.POST.get('unidades')
         item.ubicacion = _resolver_ubicacion(request)
@@ -1455,7 +1530,19 @@ def editar_inventario(request, pk):
         item.fechaSalida = fecha_salida if fecha_salida else None
 
         try:
-            item.save()
+            with transaction.atomic():
+                item.save()
+
+                # Trazabilidad: si el disponible cambió, queda como AJUSTE
+                delta = cant_disponible - disponible_anterior
+                if delta != 0:
+                    MovimientoStock.objects.create(
+                        idInventario=item,
+                        tipoMovimiento='AJUSTE',
+                        cantidad=delta,
+                        motivo='Edición manual del registro de inventario',
+                        usuarioId_id=request.session.get('usuario_id'),
+                    )
             messages.success(request, f"Registro de inventario #{item.idInventario} actualizado.")
         except IntegrityError:
             messages.error(
@@ -1503,6 +1590,19 @@ def registrar_egreso(request, pk):
         item.fechaSalida = timezone.now().date()
         item.save()
 
+        # PATCH: registrar movimiento de salida
+        MovimientoStock.objects.create(
+            idInventario=item,
+            tipoMovimiento='SALIDA',
+            cantidad=-cantidad,
+            motivo=request.POST.get('motivo', 'Egreso registrado desde panel'),
+            usuarioId_id=request.session.get('usuario_id'),
+        )
+
+        # PATCH: recalcular nivelStock tras el egreso
+        item.nivelStock = _calcular_nivel_stock(item.cantidadDisponible, item.minimoDefinido)
+        item.save()
+
         messages.success(
             request,
             f"Se registraron {cantidad} unidades egresadas de '{item.producto.nombre}'. "
@@ -1531,11 +1631,22 @@ def registrar_egresos_masivo(request):
                                 item.cantidadDisponible -= cantidad_egreso
                                 item.cantidadEgresada = (item.cantidadEgresada or 0) + cantidad_egreso
                                 item.fechaSalida = timezone.now().date()
+                                item.nivelStock = _calcular_nivel_stock(
+                                    item.cantidadDisponible, item.minimoDefinido
+                                )
                                 item.save()
+
+                                MovimientoStock.objects.create(
+                                    idInventario=item,
+                                    tipoMovimiento='SALIDA',
+                                    cantidad=-cantidad_egreso,
+                                    motivo='Egreso masivo desde panel admin',
+                                    usuarioId_id=request.session.get('usuario_id'),
+                                )
                                 egresos_realizados += 1
                             else:
                                 messages.error(
-                                    request, 
+                                    request,
                                     f"No hay suficiente stock disponible para {item.producto.nombre}. Disponible: {item.cantidadDisponible}."
                                 )
                                 return redirect('admin_inventario')
@@ -1556,11 +1667,11 @@ def registrar_egresos_masivo(request):
 def exportar_inventario_pdf(request):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="inventario_hebratech.pdf"'
-    
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     elements = []
-    
+
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         'TitleStyle',
@@ -1570,13 +1681,13 @@ def exportar_inventario_pdf(request):
         alignment=1,
         spaceAfter=15
     )
-    
+
     elements.append(Paragraph("<b>Reporte General de Inventario - HebraTech</b>", title_style))
     elements.append(Spacer(1, 10))
-    
+
     data = [["ID", "Producto", "Disponible", "Mínimo", "Ubicación"]]
     items = Inventario.objects.all().select_related('producto')
-    
+
     for item in items:
         data.append([
             str(item.idInventario),
@@ -1585,7 +1696,7 @@ def exportar_inventario_pdf(request):
             str(item.minimoDefinido),
             item.ubicacion or 'N/A'
         ])
-        
+
     t = Table(data, colWidths=[40, 180, 80, 80, 110])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2C3E50")),
@@ -1595,10 +1706,10 @@ def exportar_inventario_pdf(request):
         ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8F9FA")])
     ]))
-    
+
     elements.append(t)
     doc.build(elements)
-    
+
     pdf = buffer.getvalue()
     buffer.close()
     response.write(pdf)
@@ -1610,19 +1721,19 @@ def exportar_inventario_excel(request):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Inventario"
-    
+
     headers = ["ID Inventario", "Producto", "Cantidad Disponible", "Mínimo Definido", "Unidades", "Ubicación"]
     ws.append(headers)
-    
+
     header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
     header_fill = PatternFill(start_color='2C3E50', end_color='2C3E50', fill_type='solid')
-    
+
     for col_num in range(1, len(headers) + 1):
         cell = ws.cell(row=1, column=col_num)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal='center', vertical='center')
-        
+
     for item in Inventario.objects.all().select_related('producto'):
         ws.append([
             item.idInventario,
@@ -1632,11 +1743,204 @@ def exportar_inventario_excel(request):
             item.unidades,
             item.ubicacion or 'N/A'
         ])
-        
+
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="inventario_hebratech.xlsx"'
     wb.save(response)
     return response
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# NUEVA VISTA: ajustar_stock  (botones +/- de la tabla Productos)
+# ═══════════════════════════════════════════════════════════════════════
+
+@admin_required
+@require_POST
+def ajustar_stock(request, pk):
+    """
+    Endpoint AJAX para los botones rápidos +/- de stock de productos.
+    POST params:
+        accion  : 'sumar' | 'restar'
+        cantidad: int (default 1)
+        motivo  : str  (default vacío → texto automático)
+
+    Devuelve JSON con el nuevo estado del item.
+    """
+    item = get_object_or_404(Inventario, pk=pk)
+
+    try:
+        cantidad = abs(int(request.POST.get('cantidad', 1)))
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'Cantidad inválida.'}, status=400)
+
+    if cantidad == 0:
+        return JsonResponse({'ok': False, 'error': 'La cantidad debe ser mayor a 0.'}, status=400)
+
+    accion = request.POST.get('accion', '').strip()
+    motivo = request.POST.get('motivo', '').strip()
+
+    if accion == 'sumar':
+        item.cantidadDisponible += cantidad
+        item.cantidadIngresada  += cantidad
+        item.fechaIngreso        = timezone.now().date()
+        tipo_mov                 = 'ENTRADA'
+        cantidad_mov             = cantidad
+        motivo                   = motivo or f'Entrada rápida (+{cantidad})'
+
+    elif accion == 'restar':
+        if cantidad > item.cantidadDisponible:
+            return JsonResponse({
+                'ok': False,
+                'error': (
+                    f"Solo hay {item.cantidadDisponible} unidades disponibles "
+                    f"de '{item.producto.nombre}'."
+                )
+            }, status=400)
+        item.cantidadDisponible -= cantidad
+        item.cantidadEgresada   += cantidad
+        item.fechaSalida         = timezone.now().date()
+        tipo_mov                 = 'SALIDA'
+        cantidad_mov             = -cantidad
+        motivo                   = motivo or f'Salida rápida (−{cantidad})'
+
+    else:
+        return JsonResponse({'ok': False, 'error': 'Acción no reconocida.'}, status=400)
+
+    item.nivelStock = _calcular_nivel_stock(item.cantidadDisponible, item.minimoDefinido)
+    item.save()
+
+    MovimientoStock.objects.create(
+        idInventario=item,
+        tipoMovimiento=tipo_mov,
+        cantidad=cantidad_mov,
+        motivo=motivo,
+        usuarioId_id=request.session.get('usuario_id'),
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'disponible':  item.cantidadDisponible,
+        'nivelStock':  item.nivelStock,
+        'ingresado':   item.cantidadIngresada,
+        'egresado':    item.cantidadEgresada,
+        'bajo_minimo': item.cantidadDisponible <= item.minimoDefinido,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# NUEVA VISTA: ajustar_stock_material  (botones +/- pestaña Materiales)
+# ═══════════════════════════════════════════════════════════════════════
+
+@admin_required
+@require_POST
+def ajustar_stock_material(request, pk):
+    """
+    Endpoint AJAX para los botones +/- de stock de materiales.
+    Registra la entrada en `entrada_materiales` (sumar) o resta
+    directamente stockActual (restar — consumo puntual sin tarea).
+
+    POST params:
+        accion  : 'sumar' | 'restar'
+        cantidad: Decimal  (default 1)
+        motivo  : str
+    """
+    from decimal import Decimal, InvalidOperation
+
+    material = get_object_or_404(Material, pk=pk)
+
+    raw = request.POST.get('cantidad', '1').replace(',', '.')
+    try:
+        cantidad = abs(Decimal(raw))
+    except InvalidOperation:
+        return JsonResponse({'ok': False, 'error': 'Cantidad inválida.'}, status=400)
+
+    if cantidad == 0:
+        return JsonResponse({'ok': False, 'error': 'La cantidad debe ser mayor a 0.'}, status=400)
+
+    accion = request.POST.get('accion', '').strip()
+    motivo = request.POST.get('motivo', '').strip()
+
+    if accion == 'sumar':
+        # Todo o nada: si falla el registro en entrada_materiales, el stock no cambia.
+        with transaction.atomic():
+            material.stockActual += cantidad
+            material.save()
+
+            # entrada_materiales exige proveedor (FK NOT NULL): solo se registra
+            # la entrada si el material tiene proveedor asignado.
+            if material.proveedor_id:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        INSERT INTO entrada_materiales
+                            (idProveedor, idMaterial, fechaEntrada,
+                             cantidad, precioUnitario, unidad, observaciones, estado)
+                        VALUES (%s, %s, CURDATE(), %s, %s, %s, %s, 'Recibida')
+                    """, [
+                        material.proveedor_id,
+                        material.idMaterial,
+                        float(cantidad),
+                        float(material.costoUnitario),
+                        material.unidadBase,
+                        motivo or f'Entrada rápida desde panel admin (+{cantidad})',
+                    ])
+
+    elif accion == 'restar':
+        if cantidad > material.stockActual:
+            return JsonResponse({
+                'ok': False,
+                'error': (
+                    f"Solo hay {material.stockActual} {material.unidadBase} disponibles "
+                    f"de '{material.nombreMaterial}'."
+                )
+            }, status=400)
+        material.stockActual -= cantidad
+        material.save()
+        # Nota: consumos por tarea se registran en tarea_materiales desde
+        # el módulo de producción. Este egreso rápido es solo ajuste manual.
+
+    else:
+        return JsonResponse({'ok': False, 'error': 'Acción no reconocida.'}, status=400)
+
+    return JsonResponse({
+        'ok': True,
+        'stockActual': float(material.stockActual),
+        'bajo_minimo': material.stockActual <= material.stockMinimo,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# NUEVA VISTA: historial_movimientos  (pestaña lateral en modal futuro)
+# ═══════════════════════════════════════════════════════════════════════
+
+@admin_required
+def historial_movimientos(request, pk):
+    """
+    Devuelve los últimos N movimientos de un ítem de inventario (JSON).
+    Usado por el botón "Ver historial" de cada fila.
+    """
+    item = get_object_or_404(Inventario, pk=pk)
+    movs = (
+        MovimientoStock.objects
+        .filter(idInventario=item)
+        .select_related('usuarioId')
+        .order_by('-fecha')[:20]
+    )
+
+    data = [
+        {
+            'tipo':     m.tipoMovimiento,
+            'cantidad': m.cantidad,
+            'motivo':   m.motivo,
+            'fecha':    m.fecha.strftime('%d/%m/%Y %H:%M'),
+            'usuario':  (
+                f'{m.usuarioId.nombre} {m.usuarioId.apellido}'
+                if m.usuarioId else 'Sistema'
+            ),
+        }
+        for m in movs
+    ]
+
+    return JsonResponse({'ok': True, 'movimientos': data})
 
 
 # ── Perfil de Usuario ────────────────────────────────────────

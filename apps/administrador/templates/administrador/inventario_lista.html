@@ -1,193 +1,593 @@
 {% extends "administrador/admin_base.html" %}
+{% load humanize l10n static %}
 
 {% block titulo %}Inventario y Materiales{% endblock %}
-{% block topbar_titulo %}Gestión de Inventario y Materiales{% endblock %}
-{% block topbar_sub %}Listado detallado de existencias, bodegas y materias primas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/administrador/inventario.css' %}?v=1">
+{% endblock %}
+{% block topbar_titulo %}Gestión de Inventario{% endblock %}
+{% block topbar_sub %}Productos terminados · Materias primas · Trazabilidad de stock{% endblock %}
 
 {% block topbar_extra %}
-{% load humanize l10n %}
-<div class="ms-auto d-flex gap-2 align-items-center">
-  <form method="GET" action="{% url 'admin_inventario' %}" id="searchForm" class="d-flex align-items-center">
-    <div class="input-group input-group-sm" style="max-width: 280px;">
-      <span class="input-group-text bg-white border-end-0 text-muted">
-        <i class="bi bi-search"></i>
-      </span>
-
-      <input type="search" name="buscar" id="buscarInput"
-             class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
-             placeholder="Buscar producto o material..." value="{{ buscar_filtro|default:'' }}">
-
-      {% if buscar_filtro %}
-      <a href="{% url 'admin_inventario' %}" class="input-group-text bg-white border-start-0 text-muted"
-         title="Limpiar búsqueda" style="cursor: pointer; text-decoration: none;">
-        <i class="bi bi-x-circle-fill"></i>
-      </a>
-      {% endif %}
-    </div>
-    <button type="submit" class="d-none"></button>
-  </form>
-</div>
+{# La barra de búsqueda se mueve a cada pestaña para buscar solo en su contexto #}
 {% endblock %}
 
 {% block contenido %}
 
-<!-- Mensajes Flash de Django -->
+<!-- ── Mensajes Flash ─────────────────────────────────────── -->
 {% if messages %}
-  <div class="messages-wrapper mb-3">
-    {% for message in messages %}
-      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
-        {% if message.tags == 'success' %}
-          <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
-        {% elif message.tags == 'error' or message.tags == 'danger' %}
-          <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
-        {% elif message.tags == 'warning' %}
-          <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
-        {% else %}
-          <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
-        {% endif %}
-        <div>{{ message }}</div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    {% endfor %}
+<div class="messages-wrapper mb-3">
+  {% for message in messages %}
+  <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius:10px;">
+    {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+    {% elif message.tags == 'error' or message.tags == 'danger' %}<i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+    {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
+    {% else %}<i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>{% endif %}
+    <div>{{ message }}</div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
+  {% endfor %}
+</div>
 {% endif %}
 
-<!-- Tabla 1: Inventario de Productos -->
-<div class="section-card mb-4">
-  <div class="section-card-header d-flex justify-content-between align-items-center">
-    <h6 class="mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>Registros de Inventario (Productos)</h6>
-    <div class="d-flex gap-2">
-      <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEgresos">
-        <i class="bi bi-box-arrow-up me-1"></i>Registrar Egreso
-      </button>
-      <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearInventario">
-        <i class="bi bi-plus-lg me-1"></i>Nuevo Registro
-      </button>
+<!-- ── KPI Cards ──────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="section-card p-3 text-center h-100">
+      <div class="fs-2 fw-bold text-primary">{{ total_items }}</div>
+      <div class="small text-muted">Productos en stock</div>
     </div>
   </div>
-<div class="table-responsive">
-  <table class="ht-table">
-    <thead>
-      <tr>
-        <th class="text-center">ID</th>
-        <th class="text-center">Producto</th>
-        <th class="text-center">Cliente / Empresa</th>
-        <th class="text-center">Disponible</th>
-        <th class="text-center">Mínimo</th>
-        <th class="text-center">Nivel Stock</th>
-        <th class="text-center">Unidades</th>
-        <th>Ubicación</th>
-        <th class="text-end">Ingresado</th>
-        <th class="text-end">Egresado</th>
-        <th class="text-center">Fecha Ingreso</th>
-        <th class="text-center">Fecha Salida</th>
-        <th class="text-center">Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in inventario_list %}
-      <tr>
-        <td class="text-center"><strong>#{{ item.idInventario }}</strong></td>
-        <td><span class="fw-medium">{{ item.producto.nombre|default:item.producto_id }}</span></td>
-        
-        <!-- CELDA DE CLIENTE / EMPRESA -->
-        <td class="text-center">
-          {% if item.cliente %}
-            <span class="fw-medium text-dark">
-              {{ item.cliente.empresa|default:item.cliente.nombre }}
-            </span>
-          {% else %}
-            <span class="badge bg-light text-muted border">Sin asignar</span>
-          {% endif %}
-        </td>
-
-        <td class="text-center">
-          {% if item.cantidadDisponible <= item.minimoDefinido %}
-            <span class="badge-ht badge-danger" title="Stock por debajo o igual al mínimo">
-              <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ item.cantidadDisponible }}
-            </span>
-          {% else %}
-            <span class="badge-ht badge-success">
-              <i class="bi bi-check-circle-fill me-1"></i>{{ item.cantidadDisponible }}
-            </span>
-          {% endif %}
-        </td>
-        <td class="text-center">{{ item.minimoDefinido }}</td>
-        <td class="text-center">
-          <span class="badge-ht
-            {% if item.nivelStock == 3 %}badge-success
-            {% elif item.nivelStock == 2 %}badge-info
-            {% elif item.nivelStock == 1 %}badge-warning
-            {% elif item.nivelStock == 0 %}badge-danger
-            {% else %}badge-info{% endif %}">
-            {% if item.nivelStock == 3 %}Alto
-            {% elif item.nivelStock == 2 %}Normal
-            {% elif item.nivelStock == 1 %}Bajo
-            {% elif item.nivelStock == 0 %}Crítico
-            {% else %}Sin definir{% endif %}
-          </span>
-        </td>
-        <td class="text-center">{{ item.unidades }}</td>
-        <td>
-          <i class="bi bi-geo-alt me-1 text-muted"></i>
-          <span>{{ item.ubicacion|default:"Bodega Principal" }}</span>
-        </td>
-        <td class="text-end text-success fw-medium">+{{ item.cantidadIngresada }}</td>
-        <td class="text-end text-danger fw-medium">-{{ item.cantidadEgresada }}</td>
-        <td class="text-center">{{ item.fechaIngreso|date:"d/m/Y" }}</td>
-        <td class="text-center">{{ item.fechaSalida|date:"d/m/Y"|default:"—" }}</td>
-        <td class="text-center">
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarInventario{{ item.idInventario }}" title="Editar">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarInventario{{ item.idInventario }}" title="Eliminar">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="13" class="text-center text-muted py-5">
-          <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
-          <p class="mb-0 fw-medium">No hay registros de inventario disponibles.</p>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="col-6 col-md-3">
+    <div class="section-card p-3 text-center h-100">
+      <div class="fs-2 fw-bold {% if alertas_stock > 0 %}text-danger{% else %}text-success{% endif %}">{{ alertas_stock }}</div>
+      <div class="small text-muted">Bajo mínimo</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="section-card p-3 text-center h-100">
+      <div class="fs-2 fw-bold text-primary">{{ total_materiales }}</div>
+      <div class="small text-muted">Materiales registrados</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="section-card p-3 text-center h-100">
+      <div class="fs-2 fw-bold {% if alertas_materiales > 0 %}text-warning{% else %}text-success{% endif %}">{{ alertas_materiales }}</div>
+      <div class="small text-muted">Materiales bajo mínimo</div>
+    </div>
+  </div>
 </div>
 
-<!-- Modal Registrar Egresos Masivos -->
+<!-- ── Pestañas ───────────────────────────────────────────── -->
+<div class="section-card">
+
+  <!-- Cabecera con tabs y controles contextuales -->
+  <div class="section-card-header p-0">
+    <div class="d-flex align-items-stretch justify-content-between flex-wrap gap-0">
+
+      <!-- Tabs izquierda -->
+      <ul class="nav nav-tabs border-0 ps-3" id="inventarioTabs" role="tablist" style="gap:2px; padding-top:12px;">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active fw-semibold d-flex align-items-center gap-2"
+                  id="tab-productos" data-bs-toggle="tab" data-bs-target="#panel-productos"
+                  type="button" role="tab" aria-selected="true">
+            <i class="bi bi-box-seam"></i>
+            📦 Productos Terminados
+            {% if alertas_stock > 0 %}
+            <span class="badge bg-danger rounded-pill ms-1">{{ alertas_stock }}</span>
+            {% endif %}
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-semibold d-flex align-items-center gap-2"
+                  id="tab-materiales" data-bs-toggle="tab" data-bs-target="#panel-materiales"
+                  type="button" role="tab" aria-selected="false">
+            <i class="bi bi-scissors"></i>
+            ✂️ Materias Primas
+            {% if alertas_materiales > 0 %}
+            <span class="badge bg-warning text-dark rounded-pill ms-1">{{ alertas_materiales }}</span>
+            {% endif %}
+          </button>
+        </li>
+      </ul>
+
+      <!-- Controles derechos — cambian con la pestaña activa -->
+      <div class="d-flex align-items-center gap-2 pe-3 py-2" id="controles-productos">
+        <form method="GET" action="{% url 'admin_inventario' %}" class="d-flex align-items-center">
+          <input type="hidden" name="tab" value="productos">
+          <div class="input-group input-group-sm" style="max-width:240px;">
+            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+            <input type="search" name="buscar" class="form-control border-start-0 ps-1"
+                   placeholder="Buscar producto..." value="{{ buscar_filtro|default:'' }}">
+          </div>
+        </form>
+        <a href="{% url 'exportar_inventario_excel' %}" class="btn btn-sm btn-outline-secondary" title="Exportar Excel">
+          <i class="bi bi-file-earmark-excel"></i>
+        </a>
+        <a href="{% url 'exportar_inventario_pdf' %}" class="btn btn-sm btn-outline-secondary" title="Exportar PDF">
+          <i class="bi bi-file-earmark-pdf"></i>
+        </a>
+        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEgresos">
+          <i class="bi bi-box-arrow-up me-1"></i>Egreso masivo
+        </button>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearInventario">
+          <i class="bi bi-plus-lg me-1"></i>Registrar producto
+        </button>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 pe-3 py-2 d-none" id="controles-materiales">
+        <form method="GET" action="{% url 'admin_inventario' %}" class="d-flex align-items-center">
+          <input type="hidden" name="tab" value="materiales">
+          <div class="input-group input-group-sm" style="max-width:240px;">
+            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+            <input type="search" name="buscar" class="form-control border-start-0 ps-1"
+                   placeholder="Buscar material..." value="{{ buscar_filtro|default:'' }}">
+          </div>
+        </form>
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearMaterial">
+          <i class="bi bi-plus-lg me-1"></i>Nuevo material
+        </button>
+      </div>
+
+    </div>
+  </div><!-- /section-card-header -->
+
+  <!-- ── Contenido de pestañas ─────────────────────────────── -->
+  <div class="tab-content" id="inventarioTabsContent">
+
+    <!-- ════════════════════════════════════════════════════════
+         PESTAÑA 1: PRODUCTOS TERMINADOS
+    ════════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade show active" id="panel-productos" role="tabpanel">
+      <div class="table-responsive">
+        <table class="ht-table" id="tablaProductos">
+          <thead>
+            <tr>
+              <th class="text-center" style="width:60px">ID</th>
+              <th>Producto</th>
+              <th class="text-center">Cliente / Empresa</th>
+              <th class="text-center">Disponible</th>
+              <th class="text-center">Mínimo</th>
+              <th class="text-center">Estado Stock</th>
+              <th class="text-center">Unidades</th>
+              <th>Ubicación</th>
+              <th class="text-center">F. Ingreso</th>
+              <th class="text-center">F. Salida</th>
+              <th class="text-center" style="width:180px">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in inventario_list %}
+            {% with hoy=today %}
+            <tr id="fila-inv-{{ item.idInventario }}">
+              <td class="text-center"><strong>#{{ item.idInventario }}</strong></td>
+
+              <td>
+                <span class="fw-medium">{{ item.producto.nombre|default:item.producto_id }}</span>
+                {% if item.producto.precio == 0 %}
+                <span class="badge bg-warning text-dark ms-1" title="Este producto se creó sin precio desde inventario">$0</span>
+                {% endif %}
+              </td>
+
+              <td class="text-center">
+                {% if item.cliente %}
+                  <span class="fw-medium text-dark">{{ item.cliente.empresa|default:item.cliente.nombre }}</span>
+                {% else %}
+                  <span class="badge bg-light text-muted border">Sin asignar</span>
+                {% endif %}
+              </td>
+
+              <!-- Stock disponible: editable inline con +/- -->
+              <td class="text-center">
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                  <button class="btn btn-xs btn-outline-danger btn-ajuste-stock"
+                          data-pk="{{ item.idInventario }}"
+                          data-accion="restar"
+                          title="Restar 1 unidad"
+                          style="padding:1px 6px; font-size:13px; line-height:1.4;">
+                    <i class="bi bi-dash"></i>
+                  </button>
+
+                  {# ✅ nivelStock viene calculado desde la vista (0=Crítico,1=Bajo,2=Normal,3=Alto) #}
+                  <span class="badge-ht {% if item.nivelStock == 0 or item.nivelStock == 1 %}badge-danger{% elif item.nivelStock == 2 %}badge-warning{% else %}badge-success{% endif %}"
+                        id="disponible-{{ item.idInventario }}"
+                        style="min-width:36px; text-align:center;">
+                    {% if item.nivelStock == 0 or item.nivelStock == 1 %}
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    {% endif %}
+                    {{ item.cantidadDisponible }}
+                  </span>
+
+                  <button class="btn btn-xs btn-outline-success btn-ajuste-stock"
+                          data-pk="{{ item.idInventario }}"
+                          data-accion="sumar"
+                          title="Sumar 1 unidad"
+                          style="padding:1px 6px; font-size:13px; line-height:1.4;">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                </div>
+              </td>
+
+              <td class="text-center">{{ item.minimoDefinido }}</td>
+
+              <td class="text-center">
+                <span class="badge-ht nivel-badge-{{ item.idInventario }}
+                  {% if item.nivelStock == 3 %}badge-success
+                  {% elif item.nivelStock == 2 %}badge-info
+                  {% elif item.nivelStock == 1 %}badge-warning
+                  {% else %}badge-danger{% endif %}">
+                  {% if item.nivelStock == 3 %}Alto
+                  {% elif item.nivelStock == 2 %}Normal
+                  {% elif item.nivelStock == 1 %}Bajo
+                  {% else %}Crítico{% endif %}
+                </span>
+              </td>
+
+              <td class="text-center">{{ item.unidades }}</td>
+
+              <td>
+                <i class="bi bi-geo-alt me-1 text-muted"></i>
+                {{ item.ubicacion|default:"Bodega Principal" }}
+              </td>
+
+              <td class="text-center small text-muted">{{ item.fechaIngreso|date:"d/m/Y"|default:"—" }}</td>
+
+              <td class="text-center small {% if item.fechaSalida and item.fechaSalida > hoy %}text-warning{% else %}text-muted{% endif %}">
+                {{ item.fechaSalida|date:"d/m/Y"|default:"—" }}
+                {% if item.fechaSalida and item.fechaSalida > hoy %}
+                <i class="bi bi-clock-history ms-1" title="Fecha de salida programada en el futuro"></i>
+                {% endif %}
+              </td>
+
+              <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                  <!-- Ajuste personalizado -->
+                  <button class="btn btn-outline-primary btn-ajuste-custom"
+                          data-pk="{{ item.idInventario }}"
+                          data-nombre="{{ item.producto.nombre|default:'Producto' }}"
+                          data-disponible="{{ item.cantidadDisponible }}"
+                          title="Ajuste personalizado"
+                          data-bs-toggle="modal" data-bs-target="#modalAjusteStock">
+                    <i class="bi bi-sliders"></i>
+                  </button>
+                  <!-- Historial -->
+                  <button class="btn btn-outline-secondary btn-historial"
+                          data-pk="{{ item.idInventario }}"
+                          data-nombre="{{ item.producto.nombre|default:'Producto' }}"
+                          title="Ver historial de movimientos"
+                          data-bs-toggle="modal" data-bs-target="#modalHistorial">
+                    <i class="bi bi-clock-history"></i>
+                  </button>
+                  <!-- Editar -->
+                  <button class="btn btn-outline-primary"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalEditarInventario{{ item.idInventario }}"
+                          title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <!-- Eliminar -->
+                  <button class="btn btn-outline-danger"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalEliminarInventario{{ item.idInventario }}"
+                          title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <tr>
+              <td colspan="11" class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                <p class="mb-1 fw-medium">No hay registros de inventario.</p>
+                <button class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#modalCrearInventario">
+                  <i class="bi bi-plus-lg me-1"></i>Registrar primer producto
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /panel-productos -->
+
+
+    <!-- ════════════════════════════════════════════════════════
+         PESTAÑA 2: MATERIAS PRIMAS / INSUMOS
+    ════════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="panel-materiales" role="tabpanel">
+      <div class="table-responsive">
+        <table class="ht-table" id="tablaMateriales">
+          <thead>
+            <tr>
+              <th class="text-center" style="width:60px">ID</th>
+              <th>Material</th>
+              <th class="text-center">Proveedor</th>
+              <th>Descripción</th>
+              <th class="text-center">Stock actual</th>
+              <th class="text-center">Mínimo</th>
+              <th class="text-center">Unidad</th>
+              <th class="text-end">Costo unit.</th>
+              <th class="text-center">Últ. actualiz.</th>
+              <th class="text-center" style="width:140px">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mat in materiales_list %}
+            <tr id="fila-mat-{{ mat.idMaterial }}">
+              <td class="text-center"><strong>#{{ mat.idMaterial }}</strong></td>
+
+              <td>
+                <strong class="text-dark">{{ mat.nombreMaterial|striptags }}</strong>
+              </td>
+
+              <td class="text-center">
+                {% if mat.proveedor %}
+                  <span class="fw-medium text-dark">
+                    <i class="bi bi-truck me-1 text-muted"></i>{{ mat.proveedor.nombreEmpresa }}
+                  </span>
+                  {% if mat.proveedor.estado == 'inactivo' %}
+                  <br><span class="badge bg-secondary small">Proveedor inactivo</span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-light text-muted border">Sin asignar</span>
+                {% endif %}
+              </td>
+
+              <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                  title="{{ mat.descripcion }}">
+                <small class="text-muted">{{ mat.descripcion|default:"—" }}</small>
+              </td>
+
+              <!-- Stock actual con +/- -->
+              <td class="text-center">
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                  <button class="btn btn-xs btn-outline-danger btn-ajuste-mat"
+                          data-pk="{{ mat.idMaterial }}"
+                          data-accion="restar"
+                          title="Restar 1 {{ mat.unidadBase }}"
+                          style="padding:1px 6px; font-size:13px; line-height:1.4;">
+                    <i class="bi bi-dash"></i>
+                  </button>
+                  <span class="badge-ht {% if mat.stockActual <= mat.stockMinimo %}badge-danger{% else %}badge-success{% endif %}"
+                        id="stock-mat-{{ mat.idMaterial }}"
+                        style="min-width:48px; text-align:center;">
+                    {% if mat.stockActual <= mat.stockMinimo %}
+                    <i class="bi bi-exclamation-diamond-fill me-1"></i>
+                    {% endif %}
+                    {{ mat.stockActual }}
+                  </span>
+                  <button class="btn btn-xs btn-outline-success btn-ajuste-mat"
+                          data-pk="{{ mat.idMaterial }}"
+                          data-accion="sumar"
+                          title="Sumar 1 {{ mat.unidadBase }}"
+                          style="padding:1px 6px; font-size:13px; line-height:1.4;">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                </div>
+              </td>
+
+              <td class="text-center">{{ mat.stockMinimo }}</td>
+
+              <td class="text-center">
+                <span class="badge-ht badge-pending">
+                  {{ mat.unidadBase|capfirst }}
+                </span>
+              </td>
+
+              <td class="text-end fw-bold text-dark">
+                {% if mat.costoUnitario %}${{ mat.costoUnitario|intcomma }}{% else %}—{% endif %}
+              </td>
+
+              <td class="text-center"><small class="text-muted">{{ mat.fechaActualizacion|date:"d/m/Y" }}</small></td>
+
+              <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-primary"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalEditarMaterial{{ mat.idMaterial }}"
+                          title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-outline-danger"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalEliminarMaterial{{ mat.idMaterial }}"
+                          title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center text-muted py-5">
+                <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                <p class="mb-1 fw-medium">No hay materias primas registradas.</p>
+                <button class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#modalCrearMaterial">
+                  <i class="bi bi-plus-lg me-1"></i>Agregar primer material
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /panel-materiales -->
+
+  </div><!-- /tab-content -->
+</div><!-- /section-card principal -->
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODALES GLOBALES (no duplicados por fila)
+══════════════════════════════════════════════════════════════ -->
+
+<!-- Modal: Registrar producto (datos del producto + stock inicial) -->
+<div class="modal fade" id="modalCrearInventario" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'crear_inventario' %}" id="formCrearInventario">
+        {% csrf_token %}
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title"><i class="bi bi-box-seam me-2 text-primary"></i>Registrar producto</h5>
+            <div class="small text-muted">Datos del producto y su stock inicial</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div id="alertErrorInventario" class="alert alert-danger d-none">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <span id="alertErrorInventarioTexto"></span>
+          </div>
+
+          <!-- ── 1. Datos del producto ── -->
+          <div class="inv-form-section"><span class="inv-paso">1</span>Datos del producto</div>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Nombre del producto <span class="text-danger">*</span></label>
+              <input type="text" name="nombre_producto" id="nombreProductoInv" class="form-control"
+                     list="listaProductosExistentes" autocomplete="off" maxlength="150"
+                     placeholder="Ej: Camiseta Básica" required>
+              <datalist id="listaProductosExistentes">
+                {% for p in productos_list %}
+                <option value="{{ p.nombre }}"
+                        data-categoria="{{ p.categoria }}"
+                        data-descripcion="{{ p.descripcion }}"
+                        data-precio="{{ p.precio|unlocalize }}"
+                        data-inv="{% if p.idProducto in productos_con_inventario %}1{% else %}0{% endif %}"></option>
+                {% endfor %}
+              </datalist>
+              <div class="form-text">Si el nombre ya existe en el catálogo, se reutiliza ese producto.</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Categoría</label>
+              <input type="text" name="categoria" id="categoriaProductoInv" class="form-control"
+                     list="listaCategoriasInv" autocomplete="off" maxlength="100" placeholder="Ej: Camisetas">
+              <datalist id="listaCategoriasInv">
+                {% for c in categorias_list %}<option value="{{ c }}"></option>{% endfor %}
+              </datalist>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Precio unitario <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="text" id="precioProductoDisplay" class="form-control" inputmode="numeric"
+                       placeholder="0" autocomplete="off" data-miles-target="precioProductoHidden" required>
+                <input type="hidden" name="precio" id="precioProductoHidden">
+                <div class="invalid-feedback">Ingresa un precio mayor a 0.</div>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea name="descripcion" id="descripcionProductoInv" class="form-control" rows="2"
+                        maxlength="500" placeholder="Material, corte, tallas, colores..."></textarea>
+            </div>
+            <div class="col-12">
+              <div id="avisoProductoExistente" class="alert alert-info py-2 small mb-0 d-none">
+                <i class="bi bi-info-circle me-1"></i>Este producto ya existe en el catálogo: se reutiliza con su precio y datos actuales.
+              </div>
+              <div id="avisoProductoConInventario" class="alert alert-warning py-2 small mb-0 mt-2 d-none">
+                <i class="bi bi-exclamation-triangle me-1"></i>Este producto ya tiene un registro de inventario. Edítalo en la tabla en lugar de crear uno nuevo.
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 2. Cliente y stock inicial ── -->
+          <div class="inv-form-section"><span class="inv-paso">2</span>Cliente y stock inicial</div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Cliente / Empresa <span class="text-danger">*</span></label>
+              <select name="cliente" class="form-select" required>
+                <option value="">-- Seleccionar --</option>
+                {% for cli in clientes_list %}
+                <option value="{{ cli.idCliente }}">
+                  {% if cli.empresa %}{{ cli.empresa }}{% if cli.nombre %} ({{ cli.nombre }}){% endif %}{% else %}{{ cli.nombre|default:"Cliente #"|add:cli.idCliente|stringformat:"s" }}{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Unidades</label>
+              <select name="unidades" class="form-select" required>
+                <option value="Unidades" selected>Unidades</option>
+                <option value="Metros">Metros</option>
+                <option value="Kilogramos">Kilogramos</option>
+                <option value="Cajas">Cajas</option>
+                <option value="Pares">Pares</option>
+                <option value="Docenas">Docenas</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Fecha de ingreso</label>
+              <input type="date" name="fechaIngreso" class="form-control" value="{{ today|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Cantidad disponible <span class="text-danger">*</span></label>
+              <input type="number" name="cantidadDisponible" id="cantidadDisponibleInv" class="form-control" value="0" min="0" required>
+              <div class="invalid-feedback" id="feedbackDisponibleInv"></div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Stock mínimo <span class="text-danger">*</span></label>
+              <input type="number" name="minimoDefinido" id="minimoDefinidoInv" class="form-control" value="0" min="0" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Ubicación</label>
+              <select name="ubicacion" class="form-select ubicacion-select" data-target="ubicacionOtroWrapNuevo">
+                <option value="">-- Seleccionar --</option>
+                {% for ub in ubicaciones_predefinidas %}
+                <option value="{{ ub }}">{{ ub }}</option>
+                {% endfor %}
+                <option value="otro">Otro (especificar)</option>
+              </select>
+            </div>
+            <div class="col-12 d-none" id="ubicacionOtroWrapNuevo">
+              <input type="text" name="ubicacion_personalizada" class="form-control" placeholder="Ej: Bodega Norte">
+            </div>
+          </div>
+          <div class="form-text mt-3">
+            <i class="bi bi-clock-history me-1"></i>El stock inicial queda registrado como la primera entrada en el historial de movimientos.
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnRegistrarProducto">
+            <i class="bi bi-check-lg me-1"></i>Registrar producto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Egreso Masivo -->
 <div class="modal fade" id="modalEgresos" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-box-arrow-up me-2 text-danger"></i>Registrar Egresos Rápido</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title"><i class="bi bi-box-arrow-up me-2 text-danger"></i>Registrar egresos masivos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-
-        <!-- 🔍 BARRA DE BÚSQUEDA DENTRO DEL MODAL -->
         <div class="mb-3">
           <div class="input-group">
-            <span class="input-group-text bg-white text-muted border-end-0">
-              <i class="bi bi-search"></i>
-            </span>
-            <input type="text" id="buscarModalEgreso" class="form-control border-start-0" placeholder="Buscar producto por nombre o ID...">
+            <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-search"></i></span>
+            <input type="text" id="buscarModalEgreso" class="form-control border-start-0" placeholder="Filtrar por nombre o ID...">
           </div>
         </div>
-
         <form id="formEgresosMasivos" method="POST" action="{% url 'registrar_egresos_masivo' %}">
           {% csrf_token %}
-          <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+          <div class="table-responsive" style="max-height:360px; overflow-y:auto;">
             <table class="table align-middle mb-0" id="tablaModalEgresos">
-              <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+              <thead class="table-light" style="position:sticky; top:0; z-index:1;">
                 <tr>
                   <th>Producto</th>
                   <th class="text-center">Disponible</th>
-                  <th class="text-center" style="width: 160px;">Cantidad a egresar</th>
+                  <th class="text-center" style="width:160px;">Cantidad a egresar</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,19 +603,15 @@
                     </span>
                   </td>
                   <td class="text-center">
-                    <input type="number" 
-                           name="egreso_{{ item.idInventario }}" 
-                           class="form-control form-control-sm text-center input-egreso" 
-                           value="0" 
-                           min="0" 
-                           max="{{ item.cantidadDisponible }}"
+                    <input type="number"
+                           name="egreso_{{ item.idInventario }}"
+                           class="form-control form-control-sm text-center input-egreso"
+                           value="0" min="0" max="{{ item.cantidadDisponible }}"
                            {% if item.cantidadDisponible == 0 %}disabled{% endif %}>
                   </td>
                 </tr>
                 {% empty %}
-                <tr>
-                  <td colspan="3" class="text-center text-muted py-4">No hay productos disponibles en inventario.</td>
-                </tr>
+                <tr><td colspan="3" class="text-center text-muted py-4">No hay productos en inventario.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -225,773 +621,414 @@
       <div class="modal-footer d-flex justify-content-between">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
         <button type="submit" form="formEgresosMasivos" class="btn btn-danger">
-          <i class="bi bi-check-lg me-1"></i> Aplicar Egresos
+          <i class="bi bi-check-lg me-1"></i>Aplicar egresos
         </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modales de Inventario (Edit y Delete) fuera de la tabla -->
-{% for item in inventario_list %}
-  <!-- Modal Editar Inventario -->
-  <div class="modal fade" id="modalEditarInventario{{ item.idInventario }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <form method="POST" action="{% url 'editar_inventario' item.idInventario %}">
-          {% csrf_token %}
-          <div class="modal-header">
-            <h5 class="modal-title">Editar Inventario #{{ item.idInventario }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal: Ajuste personalizado de stock (comparte entre filas via JS) -->
+<div class="modal fade" id="modalAjusteStock" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-sliders me-2 text-primary"></i>Ajuste de stock</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">Producto: <strong id="ajuste-nombre-producto">—</strong></p>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Acción</label>
+          <div class="d-flex gap-2">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="ajuste-accion" id="radioSumar" value="sumar" checked>
+              <label class="form-check-label text-success fw-semibold" for="radioSumar">
+                <i class="bi bi-plus-circle me-1"></i>Entrada
+              </label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="ajuste-accion" id="radioRestar" value="restar">
+              <label class="form-check-label text-danger fw-semibold" for="radioRestar">
+                <i class="bi bi-dash-circle me-1"></i>Salida
+              </label>
+            </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Cliente / Empresa</label>
-            <select name="cliente" class="form-select">
-              <option value="">-- Sin asignar --</option>
-              {% for cli in clientes_list %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Cantidad <span class="text-danger">*</span></label>
+          <input type="number" id="ajuste-cantidad" class="form-control" value="1" min="1" required>
+          <div class="form-text">Disponible actual: <span id="ajuste-disponible-actual">—</span></div>
+        </div>
+        <div class="mb-1">
+          <label class="form-label fw-semibold">Motivo</label>
+          <input type="text" id="ajuste-motivo" class="form-control" placeholder="Ej: Producción completada, Despacho cliente...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmarAjuste">
+          <i class="bi bi-check-lg me-1"></i>Aplicar ajuste
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Historial de movimientos -->
+<div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-clock-history me-2 text-secondary"></i>Historial de movimientos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">Producto: <strong id="historial-nombre-producto">—</strong></p>
+        <div id="historial-loading" class="text-center py-4">
+          <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+          Cargando movimientos...
+        </div>
+        <div id="historial-vacio" class="text-center text-muted py-4 d-none">
+          <i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>
+          Sin movimientos registrados aún.
+        </div>
+        <div class="table-responsive d-none" id="historial-tabla-wrap">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Fecha</th>
+                <th class="text-center">Tipo</th>
+                <th class="text-center">Cantidad</th>
+                <th>Motivo</th>
+                <th>Usuario</th>
+              </tr>
+            </thead>
+            <tbody id="historial-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Crear Material -->
+<div class="modal fade" id="modalCrearMaterial" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'crear_material' %}" id="formCrearMaterial">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-plus-lg me-2 text-primary"></i>Nuevo material / insumo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="alertErrorMaterial" class="alert alert-danger d-none">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <span id="alertErrorMaterialTexto"></span>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Nombre del material <span class="text-danger">*</span></label>
+              <input type="text" name="nombreMaterial" class="form-control" placeholder="Ej: Tela Algodón Peinado" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Proveedor <span class="text-danger">*</span></label>
+              <select name="proveedor" class="form-select" required>
+                <option value="">-- Seleccionar --</option>
+                {% for prov in proveedores_list %}
+                <option value="{{ prov.idProveedor }}">{{ prov.nombreEmpresa }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea name="descripcion" class="form-control" rows="2" placeholder="Características del material..."></textarea>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Stock actual</label>
+              <input type="number" name="stockActual" id="stockActualMat" class="form-control" value="0" min="0" step="0.01">
+              <div class="invalid-feedback" id="feedbackStockActualMat"></div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Stock mínimo</label>
+              <input type="number" name="stockMinimo" id="stockMinimoMat" class="form-control" value="0" min="0" step="0.01">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Unidad base</label>
+              <select name="unidadBase" class="form-select" required>
+                <option value="Metro">Metros</option>
+                <option value="Cono">Conos</option>
+                <option value="Unidad">Unidades</option>
+                <option value="Kilogramo">Kilogramos</option>
+                <option value="Gramo">Gramos</option>
+                <option value="Centímetro">Centímetros</option>
+                <option value="Rollo">Rollos</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Costo unitario</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="text" name="costoUnitario" id="costoUnitarioMatDisplay"
+                       class="form-control" placeholder="0"
+                       data-miles-target="costoUnitarioMatHidden">
+                <input type="hidden" name="costoUnitario" id="costoUnitarioMatHidden">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Crear material</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODALES POR FILA: Editar y Eliminar Inventario
+══════════════════════════════════════════════════════════════ -->
+{% for item in inventario_list %}
+
+<!-- Modal Editar Inventario #{{ item.idInventario }} -->
+<div class="modal fade" id="modalEditarInventario{{ item.idInventario }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'editar_inventario' item.idInventario %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Editar inventario #{{ item.idInventario }} — {{ item.producto.nombre }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Producto</label>
+              <select name="producto" class="form-select" required>
+                {% for prod in productos_list %}
+                <option value="{{ prod.idProducto }}" {% if prod.idProducto == item.producto.idProducto %}selected{% endif %}>
+                  {{ prod.nombre }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Cliente / Empresa</label>
+              <select name="cliente" class="form-select">
+                <option value="">-- Sin asignar --</option>
+                {% for cli in clientes_list %}
                 <option value="{{ cli.idCliente }}"
                   {% if item.cliente and cli.idCliente == item.cliente.idCliente %}selected{% endif %}>
                   {% if cli.empresa %}{{ cli.empresa }}{% if cli.nombre %} ({{ cli.nombre }}){% endif %}{% else %}{{ cli.nombre|default:"Cliente #"|add:cli.idCliente|stringformat:"s" }}{% endif %}
                 </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label class="form-label">Producto</label>
-              <select name="producto" class="form-select" required>
-                {% for prod in productos_list %}
-                  <option value="{{ prod.idProducto }}" {% if prod.idProducto == item.producto.idProducto %}selected{% endif %}>
-                    {{ prod.nombre }}
-                  </option>
                 {% endfor %}
               </select>
             </div>
-            <div class="row">
-              <div class="col-6 mb-3">
-                <label class="form-label">Disponible</label>
-                <input type="number" name="cantidadDisponible" class="form-control" value="{{ item.cantidadDisponible }}" min="0" required>
-              </div>
-              <div class="col-6 mb-3">
-                <label class="form-label">Mínimo Definido</label>
-                <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" min="0" required>
-              </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Cantidad disponible</label>
+              <input type="number" name="cantidadDisponible" class="form-control" value="{{ item.cantidadDisponible }}" min="0" required>
             </div>
-            <div class="row">
-              <div class="col-6 mb-3">
-                <label class="form-label">Nivel de Stock</label>
-                <select name="nivelStock" class="form-select">
-                  <option value="">-- Seleccionar --</option>
-                  <option value="3" {% if item.nivelStock == 3 %}selected{% endif %}>Alto</option>
-                  <option value="2" {% if item.nivelStock == 2 %}selected{% endif %}>Normal</option>
-                  <option value="1" {% if item.nivelStock == 1 %}selected{% endif %}>Bajo</option>
-                  <option value="0" {% if item.nivelStock == 0 %}selected{% endif %}>Crítico</option>
-                </select>
-              </div>
-              <div class="col-6 mb-3">
-                <label class="form-label">Unidades</label>
-                <select name="unidades" class="form-select" required>
-                  <option value="">-- Seleccionar --</option>
-                  <option value="Unidades" {% if item.unidades == "Unidades" %}selected{% endif %}>Unidades</option>
-                  <option value="Metros" {% if item.unidades == "Metros" %}selected{% endif %}>Metros</option>
-                  <option value="Kilogramos" {% if item.unidades == "Kilogramos" %}selected{% endif %}>Kilogramos</option>
-                  <option value="Cajas" {% if item.unidades == "Cajas" %}selected{% endif %}>Cajas</option>
-                  <option value="Pares" {% if item.unidades == "Pares" %}selected{% endif %}>Pares</option>
-                  <option value="Docenas" {% if item.unidades == "Docenas" %}selected{% endif %}>Docenas</option>
-                </select>
-              </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Stock mínimo</label>
+              <input type="number" name="minimoDefinido" class="form-control" value="{{ item.minimoDefinido }}" min="0" required>
             </div>
-            <div class="mb-3">
-              <label class="form-label">Ubicación</label>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Unidades</label>
+              <select name="unidades" class="form-select" required>
+                <option value="Unidades" {% if item.unidades == "Unidades" %}selected{% endif %}>Unidades</option>
+                <option value="Metros" {% if item.unidades == "Metros" %}selected{% endif %}>Metros</option>
+                <option value="Kilogramos" {% if item.unidades == "Kilogramos" %}selected{% endif %}>Kilogramos</option>
+                <option value="Cajas" {% if item.unidades == "Cajas" %}selected{% endif %}>Cajas</option>
+                <option value="Pares" {% if item.unidades == "Pares" %}selected{% endif %}>Pares</option>
+                <option value="Docenas" {% if item.unidades == "Docenas" %}selected{% endif %}>Docenas</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Cantidad ingresada acum.</label>
+              <input type="number" name="cantidadIngresada" class="form-control" value="{{ item.cantidadIngresada }}" min="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Cantidad egresada acum.</label>
+              <input type="number" name="cantidadEgresada" class="form-control" value="{{ item.cantidadEgresada }}" min="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Fecha salida</label>
+              <input type="date" name="fechaSalida" class="form-control" value="{{ item.fechaSalida|date:'Y-m-d' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Ubicación</label>
               <select name="ubicacion" class="form-select ubicacion-select" data-target="ubicacionOtroWrap{{ item.idInventario }}">
                 <option value="">-- Seleccionar --</option>
-                <option value="Bodega Principal" {% if item.ubicacion == "Bodega Principal" %}selected{% endif %}>Bodega Principal</option>
-                <option value="Bodega Secundaria" {% if item.ubicacion == "Bodega Secundaria" %}selected{% endif %}>Bodega Secundaria</option>
-                <option value="Bodega Formal" {% if item.ubicacion == "Bodega Formal" %}selected{% endif %}>Bodega Formal</option>
-                <option value="Área de Producción" {% if item.ubicacion == "Área de Producción" %}selected{% endif %}>Área de Producción</option>
-                <option value="Área de Despacho" {% if item.ubicacion == "Área de Despacho" %}selected{% endif %}>Área de Despacho</option>
+                {% for ub in ubicaciones_predefinidas %}
+                <option value="{{ ub }}" {% if item.ubicacion == ub %}selected{% endif %}>{{ ub }}</option>
+                {% endfor %}
                 <option value="otro" {% if item.ubicacion and item.ubicacion not in ubicaciones_predefinidas %}selected{% endif %}>Otro (especificar)</option>
               </select>
             </div>
-            <div class="mb-3 {% if item.ubicacion and item.ubicacion not in ubicaciones_predefinidas %}{% else %}d-none{% endif %}" id="ubicacionOtroWrap{{ item.idInventario }}">
-              <label class="form-label">Especifica la ubicación</label>
+            <div class="col-12 {% if item.ubicacion and item.ubicacion not in ubicaciones_predefinidas %}{% else %}d-none{% endif %}" id="ubicacionOtroWrap{{ item.idInventario }}">
               <input type="text" name="ubicacion_personalizada" class="form-control"
                      placeholder="Ej: Bodega Norte"
                      value="{% if item.ubicacion and item.ubicacion not in ubicaciones_predefinidas %}{{ item.ubicacion }}{% endif %}">
             </div>
-
-            <input type="hidden" name="cantidadIngresada" value="{{ item.cantidadIngresada }}">
-            <input type="hidden" name="cantidadEgresada" value="{{ item.cantidadEgresada }}">
-
-            <div class="mb-3">
-              <label class="form-label">Fecha Salida</label>
-              <input type="date" name="fechaSalida" class="form-control" value="{{ item.fechaSalida|date:'Y-m-d' }}">
-            </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </div>
+      </form>
     </div>
-  </div>
-
-  <!-- Modal Eliminar Inventario -->
-  <div class="modal fade" id="modalEliminarInventario{{ item.idInventario }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <form method="POST" action="{% url 'eliminar_inventario' item.idInventario %}">
-          {% csrf_token %}
-          <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar Inventario</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <p>¿Estás seguro de que deseas eliminar el registro de inventario <strong>#{{ item.idInventario }}</strong> para el producto <strong>{{ item.producto.nombre }}</strong>?</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-danger">Eliminar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-{% endfor %}
-
-<!-- Tabla 2: Control de Materiales -->
-<div class="section-card">
-  <div class="section-card-header d-flex justify-content-between align-items-center">
-    <h6 class="mb-0"><i class="bi bi-scissors me-2 text-primary"></i>Control de Materiales (Materias Primas)</h6>
-    <div>
-      <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearMaterial">
-        <i class="bi bi-plus-lg me-1"></i>Nuevo Material
-      </button>
-    </div>
-  </div>
-
-  <div class="table-responsive">
-    <table class="ht-table">
-      <thead>
-        <tr>
-          <th class="text-center">ID</th>
-          <th>Material</th>
-          <th class="text-center">Proveedor</th>
-          <th>Descripción</th>
-          <th class="text-center">Stock Actual</th>
-          <th class="text-center">Stock Mínimo</th>
-          <th class="text-center">Unidad Base</th>
-          <th class="text-end">Costo Unitario</th>
-          <th class="text-center">Última Act.</th>
-          <th class="text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for mat in materiales_list %}
-        <tr>
-          <td class="text-center"><strong>#{{ mat.idMaterial }}</strong></td>
-          <td><strong class="text-dark">{{ mat.nombreMaterial }}</strong></td>
-          <td class="text-center">
-            {% if mat.proveedor %}
-              <span class="fw-medium text-dark">
-                <i class="bi bi-truck me-1 text-muted"></i>{{ mat.proveedor.nombreEmpresa }}
-              </span>
-              {% if mat.proveedor.nombreContacto %}
-                <br><small class="text-muted">{{ mat.proveedor.nombreContacto }}</small>
-              {% endif %}
-            {% else %}
-              <span class="badge bg-light text-muted border">Sin asignar</span>
-            {% endif %}
-          </td>
-          <td style="max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ mat.descripcion }}">
-            <small class="text-muted">{{ mat.descripcion|default:"—" }}</small>
-          </td>
-          <td class="text-center">
-            {% if mat.stockActual <= mat.stockMinimo %}
-              <span class="badge-ht badge-danger" title="Alerta de reabastecimiento urgente">
-                <i class="bi bi-exclamation-diamond-fill me-1"></i>{{ mat.stockActual }}
-              </span>
-            {% else %}
-              <span class="badge-ht badge-success">
-                <i class="bi bi-check-circle-fill me-1"></i>{{ mat.stockActual }}
-              </span>
-            {% endif %}
-          </td>
-          <td class="text-center">{{ mat.stockMinimo }}</td>
-          <td class="text-center">
-            <span class="badge-ht badge-pending">
-              {% if mat.unidadBase == 'm' or mat.unidadBase == 'Metro' or mat.unidadBase == 'Metros' %}Metros
-              {% elif mat.unidadBase == 'cm' or mat.unidadBase == 'Centímetro' or mat.unidadBase == 'Centímetros' %}Centímetros
-              {% elif mat.unidadBase == 'mm' or mat.unidadBase == 'Milímetro' or mat.unidadBase == 'Milímetros' %}Milímetros
-              {% elif mat.unidadBase == 'kg' or mat.unidadBase == 'Kilogramo' or mat.unidadBase == 'Kilogramos' %}Kilogramos
-              {% elif mat.unidadBase == 'g' or mat.unidadBase == 'Gramo' or mat.unidadBase == 'Gramos' %}Gramos
-              {% elif mat.unidadBase == 'und' or mat.unidadBase == 'Unidad' or mat.unidadBase == 'Unidades' %}Unidad
-              {% elif mat.unidadBase == 'conos' or mat.unidadBase == 'Cono' or mat.unidadBase == 'Conos' %}Conos
-              {% else %}{{ mat.unidadBase|capfirst }}
-              {% endif %}
-            </span>
-          </td>
-          <td class="text-end fw-bold text-dark">
-            {% if mat.costoUnitario %}
-              ${{ mat.costoUnitario|intcomma }}
-            {% else %}
-              —
-            {% endif %}
-          </td>
-          <td class="text-center"><small class="text-muted">{{ mat.fechaActualizacion|date:"d/m/Y" }}</small></td>
-          <td class="text-center">
-            <div class="btn-group btn-group-sm">
-              <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarMaterial{{ mat.idMaterial }}" title="Editar">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarMaterial{{ mat.idMaterial }}" title="Eliminar">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="10" class="text-center text-muted py-5">
-            <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
-            <p class="mb-0 fw-medium">No hay materias primas registradas en el sistema.</p>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
   </div>
 </div>
 
-<!-- Modales de Materiales (Editar y Eliminar) -->
+<!-- Modal Eliminar Inventario #{{ item.idInventario }} -->
+<div class="modal fade" id="modalEliminarInventario{{ item.idInventario }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'eliminar_inventario' item.idInventario %}">
+        {% csrf_token %}
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar registro</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>¿Eliminar el registro de inventario <strong>#{{ item.idInventario }}</strong>
+             (<em>{{ item.producto.nombre }}</em>)?</p>
+          <p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Esta acción también eliminará el historial de movimientos asociado.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endfor %}
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODALES POR FILA: Editar y Eliminar Material
+══════════════════════════════════════════════════════════════ -->
 {% for mat in materiales_list %}
-  <!-- Modal Editar Material -->
-  <div class="modal fade" id="modalEditarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <form method="POST" action="{% url 'editar_material' mat.idMaterial %}">
-          {% csrf_token %}
-          <div class="modal-header">
-            <h5 class="modal-title">Editar Material #{{ mat.idMaterial }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-            <div class="mb-3">
-              <label class="form-label">Proveedor</label>
+
+<!-- Modal Editar Material #{{ mat.idMaterial }} -->
+<div class="modal fade" id="modalEditarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'editar_material' mat.idMaterial %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Editar material #{{ mat.idMaterial }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Nombre del material</label>
+              <input type="text" name="nombreMaterial" class="form-control" value="{{ mat.nombreMaterial|striptags }}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Proveedor</label>
               <select name="proveedor" class="form-select">
-                <option value="">-- Sin proveedor asignado --</option>
+                <option value="">-- Sin proveedor --</option>
                 {% for prov in proveedores_list %}
-                  <option value="{{ prov.idProveedor }}"
-                    {% if mat.proveedor and prov.idProveedor == mat.proveedor.idProveedor %}selected{% endif %}>
-                    {{ prov.nombreEmpresa }}
-                  </option>
+                <option value="{{ prov.idProveedor }}"
+                  {% if mat.proveedor and prov.idProveedor == mat.proveedor.idProveedor %}selected{% endif %}>
+                  {{ prov.nombreEmpresa }}
+                </option>
                 {% endfor %}
               </select>
             </div>
-            <td class="text-center">
-              {% if mat.proveedor %}
-                <span class="fw-medium text-dark">
-                  <i class="bi bi-truck me-1 text-muted"></i>{{ mat.proveedor.nombreEmpresa }}
-                </span>
-                {% if mat.proveedor.nombreContacto %}
-                  <br><small class="text-muted">{{ mat.proveedor.nombreContacto }}</small>
-                {% endif %}
-              {% else %}
-                <span class="badge bg-light text-muted border">Sin asignar</span>
-              {% endif %}
-            </td>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label class="form-label">Nombre del Material</label>
-              <input type="text" name="nombreMaterial" class="form-control" value="{{ mat.nombreMaterial }}" required>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea name="descripcion" class="form-control" rows="2">{{ mat.descripcion|default:"" }}</textarea>
             </div>
-            <div class="mb-3">
-              <label class="form-label">Descripción</label>
-              <textarea name="descripcion" class="form-control" rows="2">{{ mat.descripcion }}</textarea>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Stock actual</label>
+              <input type="number" name="stockActual" class="form-control" value="{{ mat.stockActual }}" min="0" step="0.01">
             </div>
-            <div class="row">
-              <div class="col-6 mb-3">
-                <label class="form-label">Stock Actual</label>
-                <input type="number" name="stockActual" class="form-control" value="{{ mat.stockActual }}" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
-              </div>
-              <div class="col-6 mb-3">
-                <label class="form-label">Stock Mínimo</label>
-                <input type="number" name="stockMinimo" class="form-control" value="{{ mat.stockMinimo }}" min="0" step="1" onkeypress="return event.charCode >= 48 && event.charCode <= 57" required>
-              </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Stock mínimo</label>
+              <input type="number" name="stockMinimo" class="form-control" value="{{ mat.stockMinimo }}" min="0" step="0.01">
             </div>
-            <div class="row">
-              <div class="col-6 mb-3">
-                <label class="form-label">Unidad Base</label>
-                <select name="unidadBase" class="form-select" required>
-                  <option value="Metros" {% if mat.unidadBase == 'Metros' or mat.unidadBase == 'm' %}selected{% endif %}>Metros</option>
-                  <option value="Centímetros" {% if mat.unidadBase == 'Centímetros' or mat.unidadBase == 'cm' %}selected{% endif %}>Centímetros</option>
-                  <option value="Milímetros" {% if mat.unidadBase == 'Milímetros' or mat.unidadBase == 'mm' %}selected{% endif %}>Milímetros</option>
-                  <option value="Kilogramos" {% if mat.unidadBase == 'Kilogramos' or mat.unidadBase == 'kg' %}selected{% endif %}>Kilogramos</option>
-                  <option value="Gramos" {% if mat.unidadBase == 'Gramos' or mat.unidadBase == 'g' %}selected{% endif %}>Gramos</option>
-                  <option value="Conos" {% if mat.unidadBase == 'Conos' or mat.unidadBase == 'conos' %}selected{% endif %}>Conos</option>
-                  <option value="Unidad" {% if mat.unidadBase == 'Unidad' or mat.unidadBase == 'und' %}selected{% endif %}>Unidad</option>
-                </select>
-              </div>
-              <div class="col-6 mb-3">
-                <label class="form-label">Costo Unitario</label>
-                <div class="input-group">
-                  <span class="input-group-text">$</span>
-                  <input type="text"
-                         class="form-control"
-                         placeholder="1.000.000"
-                         value="{% if mat.costoUnitario %}{{ mat.costoUnitario|intcomma }}{% endif %}"
-                         oninput="formatearMilesEdit(this, 'costoUnitarioEdit{{ mat.idMaterial }}')"
-                         required>
-                </div>
-                <input type="hidden"
-                       name="costoUnitario"
-                       id="costoUnitarioEdit{{ mat.idMaterial }}"
-                       value="{{ mat.costoUnitario|unlocalize|default:'' }}">
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Eliminar Material -->
-  <div class="modal fade" id="modalEliminarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <form method="POST" action="{% url 'eliminar_material' mat.idMaterial %}">
-          {% csrf_token %}
-          <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar Material</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <p>¿Estás seguro de que deseas eliminar la materia prima <strong>{{ mat.nombreMaterial }}</strong>?</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-danger">Eliminar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-{% endfor %}
-
-<!-- Modal Crear Inventario -->
-<div class="modal fade" id="modalCrearInventario" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form method="POST" action="{% url 'crear_inventario' %}" id="formCrearInventario" class="needs-validation" novalidate>
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title">Nuevo Registro de Inventario</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          {% if error_inventario %}
-            <div class="alert alert-danger d-flex align-items-center" role="alert">
-              <i class="bi bi-exclamation-triangle-fill me-2"></i>
-              <div>{{ error_inventario }}</div>
-            </div>
-          {% endif %}
-          <div class="alert alert-danger d-none" id="alertErrorInventario" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            <span id="alertErrorInventarioTexto"></span>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Nombre del Producto</label>
-            <input type="text" name="nombre_producto" class="form-control" placeholder="Escribe el nombre del producto..." required>
-            <div class="invalid-feedback">Ingresa el nombre del producto.</div>
-          </div>
-
-          <!-- Selector de Cliente / Empresa (OBLIGATORIO) -->
-          <div class="mb-3">
-            <label class="form-label">Cliente / Empresa <span class="text-danger">*</span></label>
-            <select name="cliente" class="form-select" required>
-              <option value="" selected disabled>-- Selecciona un cliente registrado --</option>
-              {% for cli in clientes_list %}
-                <option value="{{ cli.idCliente }}">
-                  {% if cli.empresa %}
-                    {{ cli.empresa }} ({{ cli.nombre }})
-                  {% else %}
-                    {{ cli.nombre }}
-                  {% endif %}
-                </option>
-              {% empty %}
-                <option value="" disabled>No hay clientes registrados en el sistema</option>
-              {% endfor %}
-            </select>
-            <div class="invalid-feedback">Por favor selecciona un cliente para este registro.</div>
-          </div>
-
-          <div class="row">
-            <div class="col-6 mb-3">
-              <label class="form-label">Mínimo Definido</label>
-              <input type="number" name="minimoDefinido" id="minimoDefinidoInv" class="form-control" value="0" min="0" step="1" 
-                     oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
-              <div class="invalid-feedback">El mínimo no puede ser negativo.</div>
-            </div>
-            <div class="col-6 mb-3">
-              <label class="form-label">Stock Actual (Disponible)</label>
-              <input type="number" name="cantidadDisponible" id="cantidadDisponibleInv" class="form-control" value="0" min="0" step="1" 
-                     oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
-              <div class="invalid-feedback" id="feedbackDisponibleInv">El stock actual no puede ser negativo ni menor al mínimo definido.</div>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="col-6 mb-3">
-              <label class="form-label">Nivel de Stock</label>
-              <select name="nivelStock" class="form-select">
-                <option value="">-- Seleccionar --</option>
-                <option value="3">Alto</option>
-                <option value="2" selected>Normal</option>
-                <option value="1">Bajo</option>
-                <option value="0">Crítico</option>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Unidad base</label>
+              {# ✅ FIX: opciones hardcodeadas (Django templates no tienen filtro 'split') #}
+              <select name="unidadBase" class="form-select">
+                <option value="Metro"      {% if mat.unidadBase == "Metro" %}selected{% endif %}>Metros</option>
+                <option value="Cono"       {% if mat.unidadBase == "Cono" %}selected{% endif %}>Conos</option>
+                <option value="Unidad"     {% if mat.unidadBase == "Unidad" %}selected{% endif %}>Unidades</option>
+                <option value="Kilogramo"  {% if mat.unidadBase == "Kilogramo" %}selected{% endif %}>Kilogramos</option>
+                <option value="Gramo"      {% if mat.unidadBase == "Gramo" %}selected{% endif %}>Gramos</option>
+                <option value="Centímetro" {% if mat.unidadBase == "Centímetro" %}selected{% endif %}>Centímetros</option>
+                <option value="Rollo"      {% if mat.unidadBase == "Rollo" %}selected{% endif %}>Rollos</option>
               </select>
             </div>
-            <div class="col-6 mb-3">
-              <label class="form-label">Unidades</label>
-              <select name="unidades" class="form-select" required>
-                <option value="Unidades" selected>Unidades</option>
-                <option value="Metros">Metros</option>
-                <option value="Kilogramos">Kilogramos</option>
-                <option value="Cajas">Cajas</option>
-                <option value="Pares">Pares</option>
-                <option value="Docenas">Docenas</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Ubicación</label>
-            <select name="ubicacion" class="form-select ubicacion-select" data-target="ubicacionOtroWrapCrear">
-              <option value="">-- Seleccionar --</option>
-              <option value="Bodega Principal">Bodega Principal</option>
-              <option value="Bodega Secundaria">Bodega Secundaria</option>
-              <option value="Bodega Formal">Bodega Formal</option>
-              <option value="Área de Producción">Área de Producción</option>
-              <option value="Área de Despacho">Área de Despacho</option>
-              <option value="otro">Otro (especificar)</option>
-            </select>
-          </div>
-          <div class="mb-3 d-none" id="ubicacionOtroWrapCrear">
-            <label class="form-label">Especifica la ubicación</label>
-            <input type="text" name="ubicacion_personalizada" class="form-control" placeholder="Ej: Bodega Norte">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Cantidad Ingresada</label>
-            <input type="number" name="cantidadIngresada" class="form-control" 
-             value="0" min="0" step="1" oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
-            <div class="invalid-feedback">La cantidad ingresada no puede ser negativa.</div>
-          </div>
-
-          <input type="hidden" name="cantidadEgresada" value="0">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Crear Registro</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Crear Material -->
-<div class="modal fade" id="modalCrearMaterial" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form method="POST" action="{% url 'crear_material' %}" id="formCrearMaterial" class="needs-validation" novalidate>
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title">Nuevo Material</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          {% if error_material %}
-            <div class="alert alert-danger d-flex align-items-center" role="alert">
-              <i class="bi bi-exclamation-triangle-fill me-2"></i>
-              <div>{{ error_material }}</div>
-            </div>
-          {% endif %}
-          <div class="alert alert-danger d-none" id="alertErrorMaterial" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            <span id="alertErrorMaterialTexto"></span>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Nombre del Material</label>
-            <input type="text" name="nombreMaterial" class="form-control" placeholder="Ej: Hilo de Nylon" required>
-            <div class="invalid-feedback">Ingresa el nombre del material.</div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Proveedor <span class="text-danger">*</span></label>
-            <select name="proveedor" class="form-select" required>
-              <option value="" selected disabled>-- Selecciona un proveedor --</option>
-              {% for prov in proveedores_list %}
-                <option value="{{ prov.idProveedor }}">
-                  {{ prov.nombreEmpresa }}{% if prov.nombreContacto %} ({{ prov.nombreContacto }}){% endif %}
-                </option>
-              {% empty %}
-                <option value="" disabled>No hay proveedores activos registrados</option>
-              {% endfor %}
-            </select>
-            <div class="invalid-feedback">Selecciona el proveedor de este material.</div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Descripción</label>
-            <textarea name="descripcion" class="form-control" rows="2" placeholder="Opcional..."></textarea>
-          </div>
-          <div class="row">
-            <div class="col-6 mb-3">
-              <label class="form-label">Stock Mínimo</label>
-              <input type="number" name="stockMinimo" id="stockMinimoMat" class="form-control" value="0" min="0" step="1"
-                     oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
-              <div class="invalid-feedback">El stock mínimo no puede ser negativo.</div>
-            </div>
-            <div class="col-6 mb-3">
-              <label class="form-label">Stock Actual</label>
-              <input type="number" name="stockActual" id="stockActualMat" class="form-control" value="0" min="0" step="1"
-                     oninput="if(this.value !== '') this.value = parseInt(this.value, 10);" required>
-              <div class="invalid-feedback" id="feedbackStockActualMat">El stock actual no puede ser negativo ni menor al stock mínimo.</div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-6 mb-3">
-              <label class="form-label">Unidad Base</label>
-              <select name="unidadBase" class="form-select" required>
-                <option value="Metros" selected>Metros</option>
-                <option value="Centímetros">Centímetros</option>
-                <option value="Milímetros">Milímetros</option>
-                <option value="Kilogramos">Kilogramos</option>
-                <option value="Gramos">Gramos</option>
-                <option value="Conos">Conos</option>
-                <option value="Unidad">Unidad</option>
-              </select>
-            </div>
-            <div class="col-6 mb-3">
-              <label class="form-label">Costo Unitario</label>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Costo unitario</label>
               <div class="input-group">
                 <span class="input-group-text">$</span>
-                <input type="text"
-                       id="costoUnitarioMaterialMostrar"
-                       class="form-control"
-                       placeholder="1.000.000"
-                       oninput="formatearMiles(this, 'costoUnitarioMaterial')"
-                       required>
+                <input type="text" id="costoEditDisplay{{ mat.idMaterial }}"
+                       class="form-control" value="{{ mat.costoUnitario|intcomma }}"
+                       data-miles-target="costoEditHidden{{ mat.idMaterial }}">
+                <input type="hidden" name="costoUnitario" id="costoEditHidden{{ mat.idMaterial }}" value="{{ mat.costoUnitario }}">
               </div>
-              <input type="hidden" name="costoUnitario" id="costoUnitarioMaterial">
-              <div class="invalid-feedback">Ingresa el costo unitario.</div>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Crear Material</button>
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
         </div>
       </form>
     </div>
   </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
 
-  // 🔍 Lógica de búsqueda dinámica dentro del Modal de Egresos
-  const inputBuscar = document.getElementById('buscarModalEgreso');
-  const filas = document.querySelectorAll('#tablaModalEgresos .fila-egreso');
+<!-- Modal Eliminar Material #{{ mat.idMaterial }} -->
+<div class="modal fade" id="modalEliminarMaterial{{ mat.idMaterial }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'eliminar_material' mat.idMaterial %}">
+        {% csrf_token %}
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar material</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>¿Eliminar el material <strong>{{ mat.nombreMaterial }}</strong> (#{{ mat.idMaterial }})?</p>
+          <p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Verifica que no esté referenciado en órdenes de producción activas antes de eliminar.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-  if (inputBuscar) {
-    inputBuscar.addEventListener('input', function () {
-      const termino = this.value.toLowerCase().trim();
+{% endfor %}
 
-      filas.forEach(fila => {
-        const nombre = fila.getAttribute('data-nombre') || '';
-        const id = fila.getAttribute('data-id') || '';
 
-        if (nombre.includes(termino) || id.includes(termino)) {
-          fila.style.display = '';
-        } else {
-          fila.style.display = 'none';
-        }
-      });
-    });
-  }
+<!-- ── Configuración para static/js/inventario.js (valores que solo conoce Django) ── -->
+<div id="inventarioConfig" class="d-none"
+     data-csrf="{{ csrf_token }}"
+     data-url-ajustar-stock="{% url 'ajustar_stock' pk=0 %}"
+     data-url-historial="{% url 'historial_movimientos' pk=0 %}"
+     data-url-ajustar-material="{% url 'ajustar_stock_material' pk=0 %}"
+     data-reabrir-inventario="{% if error_inventario %}1{% endif %}"
+     data-reabrir-material="{% if error_material %}1{% endif %}"></div>
+{% endblock %}
 
-  // Manejo de desplegable "Otro (especificar)" en ubicación
-  document.querySelectorAll('.ubicacion-select').forEach(function(select) {
-    select.addEventListener('change', function() {
-      var targetId = this.getAttribute('data-target');
-      var wrap = document.getElementById(targetId);
-      if (!wrap) return;
-
-      if (this.value === 'otro') {
-        wrap.classList.remove('d-none');
-      } else {
-        wrap.classList.add('d-none');
-        var inputCustom = wrap.querySelector('input');
-        if (inputCustom) inputCustom.value = '';
-      }
-    });
-  });
-
-  // Validaciones del Modal Crear Inventario
-  const formInv = document.getElementById('formCrearInventario');
-  if (formInv) {
-    const minInv = document.getElementById('minimoDefinidoInv');
-    const dispInv = document.getElementById('cantidadDisponibleInv');
-    const alertInv = document.getElementById('alertErrorInventario');
-    const alertInvTexto = document.getElementById('alertErrorInventarioTexto');
-    const feedbackDisp = document.getElementById('feedbackDisponibleInv');
-
-    function validarStockInventario() {
-      const minVal = parseInt(minInv.value, 10) || 0;
-      const dispVal = parseInt(dispInv.value, 10) || 0;
-
-      if (dispVal < 0) {
-        dispInv.classList.add('is-invalid');
-        feedbackDisp.textContent = 'El stock actual no puede ser negativo.';
-        return false;
-      }
-
-      if (dispVal < minVal) {
-        dispInv.classList.add('is-invalid');
-        feedbackDisp.textContent = 'El stock actual no puede ser menor al mínimo definido (' + minVal + ').';
-        return false;
-      } else {
-        dispInv.classList.remove('is-invalid');
-        return true;
-      }
-    }
-
-    if (minInv && dispInv) {
-      minInv.addEventListener('input', validarStockInventario);
-      dispInv.addEventListener('input', validarStockInventario);
-    }
-
-    formInv.addEventListener('submit', function(e) {
-      alertInv.classList.add('d-none');
-
-      if (!validarStockInventario()) {
-        e.preventDefault();
-        e.stopPropagation();
-        alertInvTexto.textContent = 'El stock actual no puede ser menor al mínimo definido.';
-        alertInv.classList.remove('d-none');
-        formInv.classList.add('was-validated');
-        return;
-      }
-
-      if (!formInv.checkValidity()) {
-        e.preventDefault();
-        e.stopPropagation();
-        alertInvTexto.textContent = 'Por favor completa todos los campos requeridos correctamente.';
-        alertInv.classList.remove('d-none');
-      }
-
-      formInv.classList.add('was-validated');
-    });
-  }
-
-  // Validaciones del Modal Crear Material
-  const formMat = document.getElementById('formCrearMaterial');
-  if (formMat) {
-    const minMat = document.getElementById('stockMinimoMat');
-    const actMat = document.getElementById('stockActualMat');
-    const alertMat = document.getElementById('alertErrorMaterial');
-    const alertMatTexto = document.getElementById('alertErrorMaterialTexto');
-    const feedbackActMat = document.getElementById('feedbackStockActualMat');
-
-    function validarStockMaterial() {
-      const minVal = parseInt(minMat.value, 10) || 0;
-      const actVal = parseInt(actMat.value, 10) || 0;
-
-      if (actVal < 0) {
-        actMat.classList.add('is-invalid');
-        feedbackActMat.textContent = 'El stock actual no puede ser negativo.';
-        return false;
-      }
-
-      if (actVal < minVal) {
-        actMat.classList.add('is-invalid');
-        feedbackActMat.textContent = 'El stock actual no puede ser menor al stock mínimo (' + minVal + ').';
-        return false;
-      } else {
-        actMat.classList.remove('is-invalid');
-        return true;
-      }
-    }
-
-    if (minMat && actMat) {
-      minMat.addEventListener('input', validarStockMaterial);
-      actMat.addEventListener('input', validarStockMaterial);
-    }
-
-    formMat.addEventListener('submit', function(e) {
-      alertMat.classList.add('d-none');
-
-      if (!validarStockMaterial()) {
-        e.preventDefault();
-        e.stopPropagation();
-        alertMatTexto.textContent = 'El stock actual no puede ser menor al stock mínimo.';
-        alertMat.classList.remove('d-none');
-        formMat.classList.add('was-validated');
-        return;
-      }
-
-      if (!formMat.checkValidity()) {
-        e.preventDefault();
-        e.stopPropagation();
-        alertMatTexto.textContent = 'Por favor completa todos los campos requeridos correctamente.';
-        alertMat.classList.remove('d-none');
-      }
-
-      formMat.classList.add('was-validated');
-    });
-  }
-
-  // Si hubo un error al crear inventario, reabrir modal
-  {% if error_inventario %}
-    var modalInv = new bootstrap.Modal(document.getElementById('modalCrearInventario'));
-    modalInv.show();
-  {% endif %}
-
-  // Si hubo un error al crear material, reabrir modal
-  {% if error_material %}
-    var modalMat = new bootstrap.Modal(document.getElementById('modalCrearMaterial'));
-    modalMat.show();
-  {% endif %}
-
-});
-
-// Formatear separadores de miles para inputs de texto (Crear)
-function formatearMiles(input, targetHiddenId) {
-  let valor = input.value.replace(/\D/g, '');
-  if (!valor) {
-    input.value = '';
-    document.getElementById(targetHiddenId).value = '';
-    return;
-  }
-  document.getElementById(targetHiddenId).value = valor;
-  input.value = new Intl.NumberFormat('es-CO').format(valor);
-}
-
-// Formatear separadores de miles para inputs de texto (Editar)
-function formatearMilesEdit(input, targetHiddenId) {
-  let valor = input.value.replace(/\D/g, '');
-  if (!valor) {
-    input.value = '';
-    document.getElementById(targetHiddenId).value = '';
-    return;
-  }
-  document.getElementById(targetHiddenId).value = valor;
-  input.value = new Intl.NumberFormat('es-CO').format(valor);
-}
-</script>
-
+{% block extra_js %}
+<script src="{% static 'js/inventario.js' %}?v=1"></script>
 {% endblock %}

@@ -338,6 +338,7 @@ class Factura(models.Model):
     def __str__(self):
         return f'Factura {self.numeroFactura}'
 
+
 class Inventario(models.Model):
     idInventario = models.AutoField(primary_key=True)
 
@@ -398,3 +399,56 @@ class Material(models.Model):
 
     def __str__(self):
         return self.nombreMaterial
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# MOVIMIENTOS DE STOCK
+# ═══════════════════════════════════════════════════════════════════════
+# CAMBIO EN Inventario (nota): el campo nivelStock se sigue guardando en
+# BD por compatibilidad con devolucion_inventario y salida_devolucion,
+# pero ya NO se muestra en el formulario: las vistas lo calculan con
+# _calcular_nivel_stock(disponible, minimo).
+# ═══════════════════════════════════════════════════════════════════════
+
+class MovimientoStock(models.Model):
+    """
+    Trazabilidad de entradas, salidas y ajustes sobre un registro
+    de inventario de producto terminado.
+
+    Tabla MySQL: movimientos_stock  (managed=False → crear con SQL)
+    """
+
+    TIPO_CHOICES = [
+        ('ENTRADA', 'Entrada'),
+        ('SALIDA',  'Salida'),
+        ('AJUSTE',  'Ajuste'),
+    ]
+
+    idMovimiento   = models.AutoField(primary_key=True)
+    idInventario   = models.ForeignKey(
+        'Inventario',
+        on_delete=models.CASCADE,
+        db_column='idInventario',
+        related_name='movimientos'
+    )
+    tipoMovimiento = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    cantidad       = models.IntegerField(
+        help_text='Positivo para ENTRADA; negativo para SALIDA/AJUSTE'
+    )
+    motivo         = models.CharField(max_length=200, default='', blank=True)
+    usuarioId      = models.ForeignKey(
+        'Usuario',
+        on_delete=models.SET_NULL,
+        db_column='usuarioId',
+        null=True, blank=True,
+        related_name='movimientos_stock'
+    )
+    fecha          = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'movimientos_stock'
+        managed  = False
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f'{self.tipoMovimiento} {abs(self.cantidad)} u. — Inv #{self.idInventario_id}'

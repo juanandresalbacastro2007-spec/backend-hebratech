@@ -4,7 +4,6 @@
 
 const API_BASE = '/produccion';
 let ORDENES_PROD_CACHE = [];
-let ORDENES_CLIENTE_CACHE = [];
 let OPERARIOS_CACHE = [];
 let PRODUCTOS_LISTA_CACHE = [];
 let CLIENTES_CACHE = [];
@@ -80,7 +79,6 @@ function switchTab(nombre, el) {
   el.classList.add('active');
   document.getElementById('tab-' + nombre).classList.add('active');
 
-  if (nombre === 'clientes' && ORDENES_CLIENTE_CACHE.length === 0) cargarOrdenesCliente();
   if (nombre === 'ordenes' && ORDENES_PROD_CACHE.length === 0) cargarOrdenesProduccion();
   if (nombre === 'operarios' && OPERARIOS_CACHE.length === 0) cargarOperarios();
   if (nombre === 'calendario') {
@@ -119,99 +117,6 @@ async function cargarDashboard() {
   }
 }
 
-// ============================================================
-// ÓRDENES DE CLIENTE
-// ============================================================
-async function cargarOrdenesCliente() {
-  try {
-    ORDENES_CLIENTE_CACHE = await apiFetch(`${API_BASE}/ordenes-cliente/`);
-    renderOrdenesCliente(ORDENES_CLIENTE_CACHE);
-    poblarSelectOrdenesCliente();
-  } catch (e) {
-    mostrarToast('No se pudieron cargar las órdenes de clientes.', 'error');
-  }
-}
-
-function renderOrdenesCliente(lista) {
-  const tbody = document.getElementById('tbody-clientes');
-  if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No hay órdenes de clientes.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = lista.map(o => `
-    <tr>
-      <td><strong>#${o.idOrden}</strong></td>
-      <td>${o.cliente}</td>
-      <td>${o.producto || '—'}</td>
-      <td>${formatearFecha(o.fechaPedido)}</td>
-      <td>${o.fechaEntrega ? formatearFecha(o.fechaEntrega) : '—'}</td>
-      <td><span class="badge ${estadoClienteBadge(o.estado)}">${o.estado}</span></td>
-      <td>
-        <button class="action-btn edit" onclick="editarCliente(${o.idOrden})" title="Editar orden">✏️</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function estadoClienteBadge(estado) {
-  const map = {
-    'Pendiente':  'badge-gris',
-    'Procesando': 'badge-azul',
-    'Enviado':    'badge-azul',
-    'Entregado':  'badge-verde',
-    'Cancelado':  'badge-rojo',
-    'Retrasado':  'badge-rojo',
-  };
-  return map[estado] || 'badge-gris';
-}
-
-function filtrarOrdenesCliente() {
-  const texto = (document.getElementById('search-clientes').value || '').toLowerCase();
-  if (!texto) { renderOrdenesCliente(ORDENES_CLIENTE_CACHE); return; }
-  const filtradas = ORDENES_CLIENTE_CACHE.filter(o =>
-    o.cliente.toLowerCase().includes(texto) ||
-    String(o.idOrden).includes(texto)
-  );
-  renderOrdenesCliente(filtradas);
-}
-
-function editarCliente(id) {
-  const o = ORDENES_CLIENTE_CACHE.find(x => x.idOrden === id);
-  if (!o) return;
-  document.getElementById('cliente-id').value = o.idOrden;
-  document.getElementById('c-estado').value = o.estado;
-  document.getElementById('c-fecha-entrega').value = o.fechaEntrega || '';
-  document.getElementById('modal-cliente').classList.add('open');
-}
-
-function cerrarModalCliente() {
-  document.getElementById('modal-cliente').classList.remove('open');
-}
-
-async function guardarCliente() {
-  const id = document.getElementById('cliente-id').value;
-  const estado = document.getElementById('c-estado').value;
-  const fechaEntrega = document.getElementById('c-fecha-entrega').value;
-
-  if (fechaEntrega && fechaEntrega < hoyISO()) {
-    mostrarToast('La fecha de entrega no puede ser anterior a hoy.', 'error');
-    return;
-  }
-
-  try {
-    await apiFetch(`${API_BASE}/ordenes-cliente/${id}/`, {
-      method: 'PUT',
-      body: JSON.stringify({ estado, fechaEntrega })
-    });
-    mostrarToast('Orden de cliente actualizada.');
-    cerrarModalCliente();
-    cargarOrdenesCliente();
-  } catch (e) {
-    mostrarToast(e.message, 'error');
-  }
-}
-
-// ============================================================
 // PRODUCTOS PARA SELECT, CLIENTES
 // ============================================================
 async function cargarProductosLista() {
@@ -247,15 +152,6 @@ function poblarSelectClientes() {
   const seleccionado = select.value;
   select.innerHTML = `<option value="">Seleccionar cliente...</option>` +
     CLIENTES_CACHE.map(c => `<option value="${c.idCliente}">${c.nombre}</option>`).join('');
-  if (seleccionado) select.value = seleccionado;
-}
-
-function poblarSelectOrdenesCliente() {
-  const select = document.getElementById('op-orden-cliente');
-  if (!select) return;
-  const seleccionado = select.value;
-  select.innerHTML = `<option value="">-- Seleccionar orden de cliente --</option>` +
-    ORDENES_CLIENTE_CACHE.map(o => `<option value="${o.idOrden}">#${o.idOrden} - ${o.cliente}</option>`).join('');
   if (seleccionado) select.value = seleccionado;
 }
 
@@ -343,16 +239,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Abrir modal de nueva orden ──────────────────────
-function abrirModalNuevaOrden(idOrden = null) {
+function abrirModalNuevaOrden() {
   limpiarValidacion(['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega']);
   document.getElementById('modal-orden-title').textContent = '🗒 Nueva Orden de Producción';
   document.getElementById('orden-id').value = '';
-  document.getElementById('orden-cliente-id').value = idOrden || '';
 
   // Cargar datos en selects
   poblarSelectProductos();
   poblarSelectClientes();
-  poblarSelectOrdenesCliente();
 
   // Limpiar campos
   document.getElementById('op-producto').value = '';
@@ -364,80 +258,10 @@ function abrirModalNuevaOrden(idOrden = null) {
   document.getElementById('op-prioridad').value = 'Normal';
   document.getElementById('op-estado').value = 'Pendiente';
   document.getElementById('op-observaciones').value = '';
-  document.getElementById('op-orden-cliente').value = '';
-
-  // Si se pasa idOrden, autocompletar
-  if (idOrden) {
-    autocompletarDesdeOrdenCliente(idOrden);
-  }
 
   document.getElementById('modal-orden').classList.add('open');
   enfocarPrimerCampo('op-producto');
 }
-
-// ── Autocompletar desde orden de cliente ────────────
-async function autocompletarDesdeOrdenCliente(idOrden) {
-  try {
-    const data = await apiFetch(`${API_BASE}/orden-cliente/${idOrden}/`);
-    // Cliente
-    if (data.cliente) {
-      const clienteSelect = document.getElementById('op-cliente');
-      const clienteOpt = Array.from(clienteSelect.options).find(opt => opt.text === data.cliente);
-      if (clienteOpt) {
-        clienteSelect.value = clienteOpt.value;
-      } else {
-        const option = document.createElement('option');
-        option.value = data.cliente;
-        option.text = data.cliente;
-        clienteSelect.add(option);
-        clienteSelect.value = data.cliente;
-      }
-    }
-    // Producto
-    if (data.idProducto) {
-      document.getElementById('op-producto').value = data.idProducto;
-    } else if (data.nombreProducto) {
-      const productoSelect = document.getElementById('op-producto');
-      const prodOpt = Array.from(productoSelect.options).find(opt => opt.text === data.nombreProducto);
-      if (prodOpt) {
-        productoSelect.value = prodOpt.value;
-      } else {
-        const option = document.createElement('option');
-        option.value = data.nombreProducto;
-        option.text = data.nombreProducto;
-        productoSelect.add(option);
-        productoSelect.value = data.nombreProducto;
-      }
-    }
-    // Cantidad
-    if (data.cantidad) {
-      document.getElementById('op-cantidad').value = data.cantidad;
-    }
-    // Fecha entrega
-    if (data.fechaEntrega) {
-      document.getElementById('op-fecha-entrega').value = data.fechaEntrega;
-    }
-    if (data.fechaPedido) {
-      document.getElementById('op-fecha-inicio').value = data.fechaPedido;
-    }
-    mostrarToast('Datos de la orden de cliente cargados automáticamente.', 'info');
-  } catch (e) {
-    mostrarToast('Error al cargar datos de la orden de cliente.', 'error');
-  }
-}
-
-// ── Evento change del selector de orden de cliente ──
-document.addEventListener('DOMContentLoaded', () => {
-  const selectOrdenCliente = document.getElementById('op-orden-cliente');
-  if (selectOrdenCliente) {
-    selectOrdenCliente.addEventListener('change', function() {
-      const id = this.value;
-      if (id) {
-        autocompletarDesdeOrdenCliente(id);
-      }
-    });
-  }
-});
 
 // ── Editar orden ──────────────────────────────────────
 function editarOrden(id) {
@@ -446,7 +270,6 @@ function editarOrden(id) {
   limpiarValidacion(['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega']);
   document.getElementById('modal-orden-title').textContent = `✏️ Editar Orden ${o.numero}`;
   document.getElementById('orden-id').value = o.idOrdenProduccion;
-  document.getElementById('orden-cliente-id').value = o.idOrden || '';
 
   poblarSelectProductos();
   poblarSelectClientes();
@@ -470,7 +293,6 @@ function editarOrden(id) {
   document.getElementById('op-prioridad').value = o.prioridad;
   document.getElementById('op-estado').value = o.estado;
   document.getElementById('op-observaciones').value = o.observaciones || '';
-  document.getElementById('op-orden-cliente').value = '';
 
   document.getElementById('modal-orden').classList.add('open');
 }
@@ -491,7 +313,6 @@ async function guardarOrden() {
   const prioridad = document.getElementById('op-prioridad').value;
   const estado = document.getElementById('op-estado').value;
   const observaciones = document.getElementById('op-observaciones').value.trim();
-  const idOrden = document.getElementById('orden-cliente-id').value || null;
 
   const hoy = hoyISO();
   limpiarValidacion(['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega']);
@@ -518,7 +339,6 @@ async function guardarOrden() {
     estado,
     observaciones,
   };
-  if (idOrden) payload.idOrden = parseInt(idOrden, 10);
 
   const url = id ? `${API_BASE}/ordenes-produccion/${id}/` : `${API_BASE}/ordenes-produccion/`;
   const metodo = id ? 'PUT' : 'POST';
@@ -828,7 +648,7 @@ function filtrarOperarios() {
 document.addEventListener('DOMContentLoaded', () => {
   aplicarMinFechaHoy();
   cargarDashboard();
-  cargarOrdenesCliente();
+  cargarOrdenesProduccion();
   cargarProductosLista();
   cargarClientes();
   cargarOperarios();

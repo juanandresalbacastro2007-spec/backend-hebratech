@@ -42,25 +42,6 @@
               </div>
             </div>
 
-            <!-- Orden relacionada -->
-            <div class="col-md-6">
-              <label for="selectOrden" class="form-label fw-medium small">
-                Orden relacionada <span class="text-muted">(opcional)</span>
-              </label>
-              <div class="input-group input-group-sm">
-                <span class="input-group-text bg-light text-muted"><i class="bi bi-bag-fill"></i></span>
-                <select name="orden" id="selectOrden" class="form-select">
-                  <option value="">Sin orden asociada</option>
-                  {% for orden in ordenes %}
-                  <option value="{{ orden.idOrden }}">
-                    #{{ orden.idOrden }} — {{ orden.idCliente }} — {{ orden.nombreProducto|default:"Sin producto" }}
-                  </option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="form-text small">Vincula esta tarea con la orden del cliente que la originó.</div>
-            </div>
-
             <!-- Orden de producción activa -->
             <div class="col-md-6">
               <label for="selectOrdenProduccion" class="form-label fw-medium small">

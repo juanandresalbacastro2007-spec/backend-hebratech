@@ -4,10 +4,11 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 from django.utils import timezone
 import json
+import unicodedata
 from datetime import timedelta
 
 from .models import Producto, OrdenProduccion, Prenda
-from apps.administrador.models import Orden, AsignacionTarea, Tarea
+from apps.administrador.models import AsignacionTarea
 from apps.core.decorators import login_required_rol, login_required_api
 from apps.administrador.models import Usuario
 from apps.operarios.models import Operario
@@ -40,7 +41,6 @@ def orden_produccion_to_dict(o):
     return {
         'idOrdenProduccion': o.idOrdenProduccion,
         'numero':            o.numero,
-        'idOrden':           o.idOrden_id,
         'idProducto':        o.idProducto_id,
         'nombreProducto':    o.idProducto.nombre if o.idProducto else '',
         'cliente':           o.cliente,
@@ -128,29 +128,6 @@ def clientes_lista(request):
     return JsonResponse(data, safe=False)
 
 
-# ── DATOS DE ORDEN DE CLIENTE (para autocompletar) ───
-@admin_required_api
-def orden_cliente_datos(request, id):
-    try:
-        orden = Orden.objects.select_related('idCliente').get(pk=id)
-    except Orden.DoesNotExist:
-        return JsonResponse({'error': 'Orden no encontrada'}, status=404)
-
-    cliente_nombre = orden.idCliente.empresa or orden.idCliente.nombre or 'Sin cliente'
-
-    data = {
-        'idOrden': orden.idOrden,
-        'cliente': cliente_nombre,
-        'idProducto': orden.idProducto_id if orden.idProducto else None,
-        'nombreProducto': orden.nombreProducto or '',
-        'cantidad': orden.cantidad or 0,
-        'fechaEntrega': str(orden.fechaEntregaEstimada) if orden.fechaEntregaEstimada else '',
-        'fechaPedido': str(orden.fechaCreacion),
-        'estado': orden.estado,
-    }
-    return JsonResponse(data)
-
-
 # ── ÓRDENES DE PRODUCCIÓN ────────────────────────────
 @admin_required_api
 @csrf_exempt
@@ -197,7 +174,6 @@ def ordenes_produccion(request):
 
     o = OrdenProduccion.objects.create(
         numero          = numero,
-        idOrden_id      = data.get('idOrden') or None,
         idProducto_id   = data.get('idProducto'),
         cliente         = data.get('cliente', ''),
         cantidad        = data.get('cantidad', 0),
@@ -236,12 +212,10 @@ def orden_produccion_detalle(request, id):
 
         fecha_inicio_anterior = o.fechaInicio
 
-        for campo in ['idOrden', 'idProducto', 'cliente', 'cantidad', 'fechaInicio',
+        for campo in ['idProducto', 'cliente', 'cantidad', 'fechaInicio',
                       'fechaEntrega', 'fechaFinReal', 'prioridad', 'estado', 'observaciones']:
             if campo in data:
-                if campo == 'idOrden':
-                    o.idOrden_id = data[campo] or None
-                elif campo == 'idProducto':
+                if campo == 'idProducto':
                     o.idProducto_id = data[campo]
                 else:
                     setattr(o, campo, data[campo])
@@ -259,55 +233,6 @@ def orden_produccion_detalle(request, id):
 
     o.delete()
     return JsonResponse({'mensaje': 'Orden eliminada'})
-
-
-# ── ÓRDENES DE CLIENTE (solo lectura + edición de estado) ──
-@admin_required_api
-def ordenes_cliente(request):
-    if request.method == 'GET':
-        ordenes = Orden.objects.select_related('idCliente', 'idProducto').all().order_by('-fechaCreacion')
-        data = []
-        for o in ordenes:
-            # nombreProducto casi siempre está vacío; la fuente real es la FK
-            nombre_producto = (
-                o.idProducto.nombre if o.idProducto
-                else o.nombreProducto or ''
-            )
-            data.append({
-                'idOrden': o.idOrden,
-                'cliente': o.idCliente.empresa or o.idCliente.nombre or 'Sin cliente',
-                'producto': nombre_producto,
-                'fechaPedido': str(o.fechaCreacion),
-                'fechaEntrega': str(o.fechaEntregaEstimada) if o.fechaEntregaEstimada else None,
-                'estado': o.estado,
-                'cantidad': o.cantidad or 0,
-            })
-        return JsonResponse(data, safe=False)
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-
-@admin_required_api
-@csrf_exempt
-@require_http_methods(['PUT'])
-def orden_cliente_detalle(request, id):
-    try:
-        o = Orden.objects.get(pk=id)
-    except Orden.DoesNotExist:
-        return JsonResponse({'error': 'Orden de cliente no encontrada'}, status=404)
-
-    data = json.loads(request.body)
-    if 'estado' in data:
-        o.estado = data['estado']
-    if 'fechaEntrega' in data:
-        if data['fechaEntrega'] and str(data['fechaEntrega']) < str(timezone.now().date()):
-            return JsonResponse({'error': 'La fecha de entrega no puede ser anterior a hoy.'}, status=400)
-        o.fechaEntregaEstimada = data['fechaEntrega']
-    o.save()
-    return JsonResponse({
-        'idOrden': o.idOrden,
-        'estado': o.estado,
-        'fechaEntrega': str(o.fechaEntregaEstimada) if o.fechaEntregaEstimada else None,
-    })
 
 
 # ── EVENTOS CALENDARIO ──────────────────────────────
