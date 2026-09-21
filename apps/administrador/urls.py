@@ -38,6 +38,11 @@ urlpatterns = [
     path('facturas/<int:idFactura>/marcar-pagada/', views.factura_marcar_pagada, name='admin_factura_marcar_pagada'),
     path('facturas/<int:idFactura>/descargar/', views.factura_descargar, name='admin_factura_descargar'),
 
+    # Productos (pestaña "Productos" del Inventario): registrar / editar / eliminar
+    path('productos/crear/', views.producto_crear, name='admin_producto_crear'),
+    path('productos/editar/<int:pk>/', views.producto_editar, name='admin_producto_editar'),
+    path('productos/eliminar/<int:pk>/', views.producto_eliminar, name='admin_producto_eliminar'),
+
     # Inventario & Exportaciones de Inventario
     path('inventario/', views.inventario_lista, name='admin_inventario'),
     path('inventario/crear/', views.crear_inventario, name='crear_inventario'),

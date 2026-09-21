@@ -1177,7 +1177,6 @@ def inventario_lista(request):
 
     inventario_list  = Inventario.objects.all().select_related('producto', 'cliente')
     materiales_list  = Material.objects.all().select_related('proveedor')
-    proveedores_list = Proveedor.objects.filter(estado='activo').order_by('nombreEmpresa')
     productos_list   = Producto.objects.all().order_by('nombre')
     clientes_list    = Cliente.objects.all().order_by('nombre')
 
@@ -1210,29 +1209,54 @@ def inventario_lista(request):
     for it in inventario_list:
         it.nivelStock = _calcular_nivel_stock(it.cantidadDisponible, it.minimoDefinido)
 
-    # Para el modal "Registrar producto": categorías existentes y productos
-    # del catálogo que ya tienen registro de inventario (uno por producto)
+    # Para el modal "Agregar al inventario": el inventario se alimenta del
+    # catálogo (módulo Productos). Solo se ofrecen los productos activos que
+    # todavía no tienen registro de inventario (uno por producto).
+    ids_con_inventario = set(Inventario.objects.values_list('producto_id', flat=True))
+    productos_sin_inventario = [
+        p for p in productos_list
+        if p.idProducto not in ids_con_inventario and (p.estado or 'activo') != 'inactivo'
+    ]
+
+    # Pestaña "Productos" (catálogo): categorías y datos para el modal de edición
     categorias_list = sorted({
-        c for c in Producto.objects.values_list('categoria', flat=True)
-        if c and c != 'Sin categoría'
+        p.categoria for p in productos_list
+        if p.categoria and p.categoria != 'Sin categoría'
     })
-    productos_con_inventario = list(
-        Inventario.objects.values_list('producto_id', flat=True)
-    )
+    catalogo_data = {
+        p.idProducto: {
+            'nombre':      p.nombre,
+            'categoria':   p.categoria,
+            'precio':      str(p.precio),
+            'descripcion': p.descripcion,
+            'estado':      p.estado or 'activo',
+        }
+        for p in productos_list
+    }
+    catalogo_sin_precio = sum(1 for p in productos_list if p.precio <= 0)
+
+    # Pestaña "Materias Primas": proveedores para crear (activos) y editar (todos)
+    proveedores_todos = Proveedor.objects.all().order_by('nombreEmpresa')
+    proveedores_list = [p for p in proveedores_todos if (p.estado or 'activo') == 'activo']
 
     context = {
         'usuario':            usuario,
+        'seccion_activa':     'inventario',
         'inventario_list':    inventario_list,
         'total_items':        len(inventario_list),
         'materiales_list':    materiales_list,
         'total_materiales':   materiales_list.count(),
         'productos_list':     productos_list,
+        'productos_sin_inventario': productos_sin_inventario,
+        'ids_con_inventario': ids_con_inventario,
         'categorias_list':    categorias_list,
-        'productos_con_inventario': productos_con_inventario,
+        'catalogo_data':      catalogo_data,
+        'catalogo_sin_precio': catalogo_sin_precio,
+        'proveedores_list':   proveedores_list,
+        'proveedores_todos':  proveedores_todos,
         'clientes_list':      clientes_list,
         'buscar_filtro':      buscar,
         'ubicaciones_predefinidas': UBICACIONES_PREDEFINIDAS,
-        'proveedores_list':   proveedores_list,
         'alertas_stock':      alertas_stock,
         'alertas_materiales': alertas_materiales,
         'today':              timezone.now().date(),
@@ -1242,62 +1266,100 @@ def inventario_lista(request):
 
 # ── CRUD: MATERIALES ─────────────────────────────────────────
 
+# ══════════════════════════════════════════════════════════════
+#  MATERIALES (pestaña "Materias Primas" del Inventario)
+#  Se registran, editan y eliminan desde esa pestaña.
+# ══════════════════════════════════════════════════════════════
+
+def _volver_a_inventario(tab=None):
+    """Redirige a la página de Inventario abriendo la pestaña indicada
+    ('materiales' o 'catalogo'); sin tab abre la última que se usó."""
+    url = reverse('admin_inventario')
+    return redirect(f'{url}?tab={tab}' if tab else url)
+
+
+def _leer_material(request, exigir_stock_valido):
+    """
+    Lee y valida el formulario de material (crear / editar).
+    Devuelve (datos, error). Si hay error, datos es None.
+    """
+    nombre = (request.POST.get('nombreMaterial') or '').strip()
+    if not nombre:
+        return None, "Debes ingresar el nombre del material."
+
+    unidad = (request.POST.get('unidadBase') or '').strip()
+    if not unidad:
+        return None, "Debes seleccionar la unidad base."
+
+    stock_actual = _parse_decimal_es(request.POST.get('stockActual') or 0)
+    stock_minimo = _parse_decimal_es(request.POST.get('stockMinimo') or 0)
+    if stock_actual is None or stock_minimo is None:
+        return None, "El stock actual y el mínimo deben ser números válidos."
+    if stock_actual < 0 or stock_minimo < 0:
+        return None, "Los valores de stock no pueden ser negativos."
+    if exigir_stock_valido and stock_actual < stock_minimo:
+        return None, "El stock actual no puede ser menor al mínimo definido."
+
+    costo = _parse_decimal_es(request.POST.get('costoUnitario'))
+    if costo is None:
+        return None, "El costo unitario no es un número válido."
+    if costo < 0:
+        return None, "El costo unitario no puede ser negativo."
+
+    return {
+        'nombreMaterial': nombre,
+        'descripcion': (request.POST.get('descripcion') or '').strip() or None,
+        'stockActual': stock_actual,
+        'stockMinimo': stock_minimo,
+        'unidadBase': unidad,
+        'costoUnitario': costo,
+    }, None
+
+
 @admin_required
 def crear_material(request):
-    if request.method == 'POST':
-        nombre = request.POST.get('nombreMaterial')
-        descripcion = request.POST.get('descripcion')
-        stock_actual = request.POST.get('stockActual') or 0
-        stock_minimo = request.POST.get('stockMinimo') or 0
-        unidad = request.POST.get('unidadBase')
-        costo = _parse_decimal_es(request.POST.get('costoUnitario'))
-        if costo is None:
-            messages.error(request, "El costo unitario no es un número válido.")
-            return redirect('admin_inventario')
+    if request.method != 'POST':
+        return _volver_a_inventario('materiales')
 
-        # NUEVO: proveedor obligatorio
-        proveedor_id = request.POST.get('proveedor')
-        if not proveedor_id:
-            messages.error(request, "Debes seleccionar el proveedor del material.")
-            return redirect('admin_inventario')
-        proveedor_obj = get_object_or_404(Proveedor, pk=proveedor_id)
+    datos, error = _leer_material(request, exigir_stock_valido=True)
+    if error:
+        messages.error(request, error)
+        return _volver_a_inventario('materiales')
 
-        Material.objects.create(
-            nombreMaterial=nombre,
-            proveedor=proveedor_obj,          # <-- NUEVO
-            descripcion=descripcion,
-            stockActual=stock_actual,
-            stockMinimo=stock_minimo,
-            unidadBase=unidad,
-            costoUnitario=costo
-        )
-        messages.success(
-            request,
-            f"Material '{nombre}' creado con éxito (proveedor: {proveedor_obj.nombreEmpresa})."
-        )
-    return redirect('admin_inventario')
+    proveedor_id = request.POST.get('proveedor')
+    if not proveedor_id:
+        messages.error(request, "Debes seleccionar el proveedor del material.")
+        return _volver_a_inventario('materiales')
+    proveedor_obj = get_object_or_404(Proveedor, pk=proveedor_id)
+
+    Material.objects.create(proveedor=proveedor_obj, **datos)
+    messages.success(
+        request,
+        f"Material '{datos['nombreMaterial']}' registrado (proveedor: {proveedor_obj.nombreEmpresa})."
+    )
+    return _volver_a_inventario('materiales')
+
 
 @admin_required
 def editar_material(request, pk):
     material = get_object_or_404(Material, pk=pk)
-    if request.method == 'POST':
-        material.nombreMaterial = request.POST.get('nombreMaterial')
-        material.descripcion = request.POST.get('descripcion')
-        material.stockActual = request.POST.get('stockActual')
-        material.stockMinimo = request.POST.get('stockMinimo')
-        material.unidadBase = request.POST.get('unidadBase')
-        costo = _parse_decimal_es(request.POST.get('costoUnitario'))
-        if costo is None:
-            messages.error(request, "El costo unitario no es un número válido.")
-            return redirect('admin_inventario')
-        material.costoUnitario = costo
+    if request.method != 'POST':
+        return _volver_a_inventario('materiales')
 
-        proveedor_id = request.POST.get('proveedor')
-        material.proveedor = get_object_or_404(Proveedor, pk=proveedor_id) if proveedor_id else None
+    # Al editar no se exige stock >= mínimo: un material puede estar bajo mínimo
+    datos, error = _leer_material(request, exigir_stock_valido=False)
+    if error:
+        messages.error(request, error)
+        return _volver_a_inventario('materiales')
 
-        material.save()
-        messages.success(request, f"Material '{material.nombreMaterial}' actualizado correctamente.")
-    return redirect('admin_inventario')
+    proveedor_id = request.POST.get('proveedor')
+    material.proveedor = get_object_or_404(Proveedor, pk=proveedor_id) if proveedor_id else None
+    for campo, valor in datos.items():
+        setattr(material, campo, valor)
+    material.save()
+
+    messages.success(request, f"Material '{material.nombreMaterial}' actualizado correctamente.")
+    return _volver_a_inventario('materiales')
 
 
 @admin_required
@@ -1305,9 +1367,18 @@ def eliminar_material(request, pk):
     material = get_object_or_404(Material, pk=pk)
     if request.method == 'POST':
         nombre = material.nombreMaterial
-        material.delete()
-        messages.success(request, f"Material '{nombre}' eliminado correctamente.")
-    return redirect('admin_inventario')
+        try:
+            # DELETE directo: la BD protege los materiales con entradas o usados
+            # en tareas (FK), y evitamos que el ORM borre en cascada otras tablas.
+            with transaction.atomic(), connection.cursor() as cursor:
+                cursor.execute("DELETE FROM materiales WHERE idMaterial = %s", [material.pk])
+            messages.success(request, f"Material '{nombre}' eliminado correctamente.")
+        except IntegrityError:
+            messages.error(
+                request,
+                f"No se puede eliminar '{nombre}': tiene entradas de proveedor o está usado en tareas de producción."
+            )
+    return _volver_a_inventario('materiales')
 
 
 # ── Helper: resolver ubicación (predefinida u "Otro") ────────
@@ -1338,25 +1409,140 @@ def _parse_decimal_es(valor):
         return None
 
 
+# ══════════════════════════════════════════════════════════════
+#  PRODUCTOS (pestaña "Productos" del Inventario)
+#  Aquí se registran los productos (nombre, categoría, precio...).
+#  La pestaña "Productos Terminados" se alimenta de este catálogo.
+# ══════════════════════════════════════════════════════════════
+
+def _leer_producto(request, excluir_pk=None):
+    """
+    Lee y valida el formulario de producto (crear / editar).
+    Devuelve (datos, error). Si hay error, datos es None.
+    """
+    nombre = (request.POST.get('nombre') or '').strip()
+    if not nombre:
+        return None, "Debes ingresar el nombre del producto."
+
+    duplicados = Producto.objects.filter(nombre__iexact=nombre)
+    if excluir_pk:
+        duplicados = duplicados.exclude(pk=excluir_pk)
+    if duplicados.exists():
+        return None, f"Ya existe un producto llamado '{nombre}' en el catálogo."
+
+    precio = _parse_decimal_es(request.POST.get('precio'))
+    if precio is None or precio <= 0:
+        return None, "Ingresa un precio mayor a 0."
+
+    estado = request.POST.get('estado') or 'activo'
+    if estado not in ('activo', 'inactivo'):
+        estado = 'activo'
+
+    return {
+        'nombre': nombre,
+        'categoria': (request.POST.get('categoria') or '').strip() or 'Sin categoría',
+        'descripcion': (request.POST.get('descripcion') or '').strip(),
+        'precio': precio,
+        'estado': estado,
+    }, None
+
+
+@admin_required
+@require_POST
+def producto_crear(request):
+    datos, error = _leer_producto(request)
+    if error:
+        messages.error(request, error)
+        return _volver_a_inventario('catalogo')
+
+    producto = Producto.objects.create(**datos)
+    messages.success(
+        request,
+        f"Producto '{producto.nombre}' registrado en el catálogo. Ya puedes agregarlo al inventario."
+    )
+    return _volver_a_inventario('catalogo')
+
+
+@admin_required
+@require_POST
+def producto_editar(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+
+    datos, error = _leer_producto(request, excluir_pk=producto.pk)
+    if error:
+        messages.error(request, error)
+        return _volver_a_inventario('catalogo')
+
+    for campo, valor in datos.items():
+        setattr(producto, campo, valor)
+    producto.save()
+
+    messages.success(request, f"Producto '{producto.nombre}' actualizado correctamente.")
+    return _volver_a_inventario('catalogo')
+
+
+@admin_required
+@require_POST
+def producto_eliminar(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    nombre = producto.nombre
+
+    if Inventario.objects.filter(producto=producto).exists():
+        messages.error(
+            request,
+            f"'{nombre}' tiene un registro de inventario. Elimínalo primero en Inventario, o desactiva el producto."
+        )
+        return _volver_a_inventario('catalogo')
+
+    if Orden.objects.filter(idProducto=producto).exists():
+        messages.error(
+            request,
+            f"'{nombre}' tiene órdenes asociadas y no se puede eliminar. Puedes desactivarlo."
+        )
+        return _volver_a_inventario('catalogo')
+
+    try:
+        # DELETE directo: el ORM borraría en cascada tablas relacionadas
+        # (p. ej. inventario); aquí lo protegen las FK de la base de datos.
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute("DELETE FROM productos WHERE idProducto = %s", [producto.pk])
+        messages.success(request, f"Producto '{nombre}' eliminado del catálogo.")
+    except IntegrityError:
+        messages.error(
+            request,
+            f"'{nombre}' está en uso (producción u otros registros) y no se puede eliminar. Puedes desactivarlo."
+        )
+    return _volver_a_inventario('catalogo')
+
+
 # ── CRUD: INVENTARIO (PRODUCTOS) ─────────────────────────────
 
 @admin_required
 def crear_inventario(request):
     """
-    Registra un producto terminado: crea el Producto en el catálogo (si el
-    nombre no existe todavía), su registro de inventario y el movimiento
-    inicial de stock.
-
-    Primero se valida TODO y luego se guarda en una sola transacción, para no
-    dejar productos huérfanos (sin inventario) si algo falla a mitad de camino.
+    Agrega un producto del catálogo (módulo Productos) al inventario, con su
+    cliente, stock inicial y ubicación. NO crea productos: eso se hace en
+    Productos. Deja el stock inicial como primer movimiento (ENTRADA).
     """
     if request.method != 'POST':
         return redirect('admin_inventario')
 
-    # ── Producto ─────────────────────────────────────────────
-    nombre_producto = request.POST.get('nombre_producto', '').strip()
-    if not nombre_producto:
-        messages.error(request, "Debes ingresar el nombre del producto.")
+    # ── Producto del catálogo ────────────────────────────────
+    producto_id = request.POST.get('producto')
+    if not producto_id:
+        messages.error(request, "Selecciona un producto del catálogo.")
+        return redirect('admin_inventario')
+
+    producto = Producto.objects.filter(pk=producto_id).first() if str(producto_id).isdigit() else None
+    if producto is None:
+        messages.error(request, "El producto seleccionado no existe en el catálogo.")
+        return redirect('admin_inventario')
+
+    if Inventario.objects.filter(producto=producto).exists():
+        messages.error(
+            request,
+            f"El producto '{producto.nombre}' ya tiene un registro de inventario. Edítalo en lugar de crear uno nuevo."
+        )
         return redirect('admin_inventario')
 
     # ── Cliente (obligatorio) ────────────────────────────────
@@ -1365,26 +1551,6 @@ def crear_inventario(request):
         messages.error(request, "Debes seleccionar un cliente o empresa de manera obligatoria.")
         return redirect('admin_inventario')
     cliente_obj = get_object_or_404(Cliente, pk=cliente_id)
-
-    # Datos del producto: solo se usan si el producto es nuevo
-    categoria = request.POST.get('categoria', '').strip() or 'Sin categoría'
-    descripcion = request.POST.get('descripcion', '').strip()
-    precio = _parse_decimal_es(request.POST.get('precio'))
-
-    # iexact: mismo criterio que el buscador del modal, sin depender de la collation de la BD
-    producto = Producto.objects.filter(nombre__iexact=nombre_producto).first()
-    producto_nuevo = producto is None
-
-    if producto_nuevo:
-        if precio is None or precio <= 0:
-            messages.error(request, "Ingresa un precio mayor a 0 para el producto nuevo.")
-            return redirect('admin_inventario')
-    elif Inventario.objects.filter(producto=producto).exists():
-        messages.error(
-            request,
-            f"Ya existe un registro de inventario para el producto '{producto.nombre}'. Edítalo en lugar de crear uno nuevo."
-        )
-        return redirect('admin_inventario')
 
     # ── Stock inicial ────────────────────────────────────────
     try:
@@ -1409,15 +1575,6 @@ def crear_inventario(request):
     # ── Guardado atómico ─────────────────────────────────────
     try:
         with transaction.atomic():
-            if producto_nuevo:
-                producto = Producto.objects.create(
-                    nombre=nombre_producto,
-                    descripcion=descripcion,
-                    precio=precio,
-                    categoria=categoria,
-                    estado='activo',
-                )
-
             nuevo_item = Inventario.objects.create(
                 producto=producto,
                 cliente=cliente_obj,
@@ -1426,7 +1583,7 @@ def crear_inventario(request):
                 nivelStock=_calcular_nivel_stock(cant_disponible, min_definido),
                 unidades=unidades,
                 ubicacion=ubicacion,
-                # Registro nuevo: todo lo que hay disponible es lo que ingresó,
+                # Registro nuevo: todo lo disponible es lo que ingresó,
                 # así ingresado − egresado siempre cuadra con el disponible.
                 cantidadIngresada=cant_disponible,
                 cantidadEgresada=0,
@@ -1439,28 +1596,20 @@ def crear_inventario(request):
                     idInventario=nuevo_item,
                     tipoMovimiento='ENTRADA',
                     cantidad=cant_disponible,
-                    motivo='Stock inicial al registrar el producto',
+                    motivo='Stock inicial al agregar el producto al inventario',
                     usuarioId_id=request.session.get('usuario_id'),
                 )
     except IntegrityError:
         messages.error(
             request,
-            f"No se pudo registrar: el producto '{nombre_producto}' ya tiene un registro de inventario."
+            f"No se pudo agregar: el producto '{producto.nombre}' ya tiene un registro de inventario."
         )
         return redirect('admin_inventario')
 
-    if producto_nuevo:
-        messages.success(
-            request,
-            f"Producto '{producto.nombre}' registrado y asignado a '{cliente_obj}'."
-        )
-    else:
-        precio_actual = f"${producto.precio:,.0f}".replace(',', '.')
-        messages.success(
-            request,
-            f"Se reutilizó el producto existente '{producto.nombre}' (precio actual {precio_actual}) "
-            f"y se creó su inventario para '{cliente_obj}'."
-        )
+    messages.success(
+        request,
+        f"Producto '{producto.nombre}' agregado al inventario para '{cliente_obj}'."
+    )
     return redirect('admin_inventario')
 
 

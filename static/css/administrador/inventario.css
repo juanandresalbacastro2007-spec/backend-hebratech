@@ -36,7 +36,7 @@
   padding: 2px 7px;
 }
 
-/* ── Modal "Registrar producto" ────────────────────────────── */
+/* ── Modal "Agregar al inventario" ─────────────────────────── */
 .inv-form-section {
   display: flex;
   align-items: center;
@@ -65,13 +65,16 @@
   font-size: .72rem;
   letter-spacing: 0;
 }
-#formCrearInventario input[readonly],
-#formCrearInventario textarea[readonly] {
-  background-color: #f4f7f7;
-  cursor: not-allowed;
-}
 #modalCrearInventario .form-text {
   font-size: .75rem;
+}
+
+/* ── Pestaña Productos (catálogo) ──────────────────────────── */
+.cat-desc {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Modo oscuro ───────────────────────────────────────────── */
@@ -90,8 +93,4 @@
 [data-bs-theme="dark"] .inv-form-section .inv-paso {
   background: #A5C9CA;
   color: #1e2d35;
-}
-[data-bs-theme="dark"] #formCrearInventario input[readonly],
-[data-bs-theme="dark"] #formCrearInventario textarea[readonly] {
-  background-color: rgba(255, 255, 255, .06);
 }

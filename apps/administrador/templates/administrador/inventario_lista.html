@@ -90,6 +90,17 @@
             {% endif %}
           </button>
         </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-semibold d-flex align-items-center gap-2"
+                  id="tab-catalogo" data-bs-toggle="tab" data-bs-target="#panel-catalogo"
+                  type="button" role="tab" aria-selected="false">
+            <i class="bi bi-tags"></i>
+            🏷️ Productos
+            {% if catalogo_sin_precio > 0 %}
+            <span class="badge bg-warning text-dark rounded-pill ms-1" title="Productos sin precio">{{ catalogo_sin_precio }}</span>
+            {% endif %}
+          </button>
+        </li>
       </ul>
 
       <!-- Controles derechos — cambian con la pestaña activa -->
@@ -112,7 +123,7 @@
           <i class="bi bi-box-arrow-up me-1"></i>Egreso masivo
         </button>
         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearInventario">
-          <i class="bi bi-plus-lg me-1"></i>Registrar producto
+          <i class="bi bi-plus-lg me-1"></i>Agregar al inventario
         </button>
       </div>
 
@@ -127,6 +138,16 @@
         </form>
         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearMaterial">
           <i class="bi bi-plus-lg me-1"></i>Nuevo material
+        </button>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 pe-3 py-2 d-none" id="controles-catalogo">
+        <div class="input-group input-group-sm cat-buscador" style="max-width:240px;">
+          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+          <input type="search" id="buscarCatalogo" class="form-control border-start-0 ps-1" placeholder="Buscar producto o categoría...">
+        </div>
+        <button class="btn btn-sm btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#modalProductoCrear">
+          <i class="bi bi-plus-lg me-1"></i>Nuevo producto
         </button>
       </div>
 
@@ -283,7 +304,7 @@
                 <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
                 <p class="mb-1 fw-medium">No hay registros de inventario.</p>
                 <button class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#modalCrearInventario">
-                  <i class="bi bi-plus-lg me-1"></i>Registrar primer producto
+                  <i class="bi bi-plus-lg me-1"></i>Agregar al inventario
                 </button>
               </td>
             </tr>
@@ -416,6 +437,89 @@
       </div>
     </div><!-- /panel-materiales -->
 
+    <!-- ════════════════════════════════════════════════════════
+         PESTAÑA 3: PRODUCTOS (catálogo)
+         Aquí se registran los productos; "Productos Terminados"
+         se alimenta de este catálogo.
+    ════════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="panel-catalogo" role="tabpanel">
+      <div class="table-responsive">
+        <table class="ht-table" id="tablaCatalogo">
+          <thead>
+            <tr>
+              <th class="text-center" style="width:60px">ID</th>
+              <th>Producto</th>
+              <th class="text-center">Categoría</th>
+              <th class="text-end">Precio</th>
+              <th>Descripción</th>
+              <th class="text-center">Estado</th>
+              <th class="text-center">Inventario</th>
+              <th class="text-center" style="width:110px">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in productos_list %}
+            <tr data-buscar="{{ p.nombre|lower }} {{ p.categoria|lower }} {{ p.idProducto }}">
+              <td class="text-center"><strong>#{{ p.idProducto }}</strong></td>
+              <td>
+                <strong class="text-dark">{{ p.nombre }}</strong>
+                {% if p.precio <= 0 %}
+                <span class="badge bg-warning text-dark ms-1" title="Este producto no tiene precio">$0</span>
+                {% endif %}
+              </td>
+              <td class="text-center"><span class="badge-ht badge-pending">{{ p.categoria }}</span></td>
+              <td class="text-end fw-bold text-dark">${{ p.precio|floatformat:0|intcomma }}</td>
+              <td class="cat-desc" title="{{ p.descripcion }}"><small class="text-muted">{{ p.descripcion|default:"—" }}</small></td>
+              <td class="text-center">
+                {% if p.estado == 'inactivo' %}
+                <span class="badge-ht badge-danger">Inactivo</span>
+                {% else %}
+                <span class="badge-ht badge-success">Activo</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if p.idProducto in ids_con_inventario %}
+                <span class="badge-ht badge-info"><i class="bi bi-box-seam me-1"></i>En inventario</span>
+                {% else %}
+                <span class="badge bg-light text-muted border">Sin inventario</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-primary btn-editar-producto" title="Editar"
+                          data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}"
+                          data-bs-toggle="modal" data-bs-target="#modalProductoEditar">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-outline-danger btn-eliminar-producto" title="Eliminar"
+                          data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}"
+                          data-bs-toggle="modal" data-bs-target="#modalProductoEliminar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center text-muted py-5">
+                <i class="bi bi-tags fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                <p class="mb-1 fw-medium">Aún no hay productos registrados.</p>
+                <button class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#modalProductoCrear">
+                  <i class="bi bi-plus-lg me-1"></i>Registrar primer producto
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+            <tr id="filaSinResultadosCatalogo" class="d-none">
+              <td colspan="8" class="text-center text-muted py-4">
+                <i class="bi bi-search d-block fs-3 mb-1 opacity-50"></i>No hay productos que coincidan con la búsqueda.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /panel-catalogo -->
+
   </div><!-- /tab-content -->
 </div><!-- /section-card principal -->
 
@@ -424,7 +528,7 @@
      MODALES GLOBALES (no duplicados por fila)
 ══════════════════════════════════════════════════════════════ -->
 
-<!-- Modal: Registrar producto (datos del producto + stock inicial) -->
+<!-- Modal: Agregar al inventario (el producto viene del catálogo de Productos) -->
 <div class="modal fade" id="modalCrearInventario" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
@@ -432,8 +536,8 @@
         {% csrf_token %}
         <div class="modal-header">
           <div>
-            <h5 class="modal-title"><i class="bi bi-box-seam me-2 text-primary"></i>Registrar producto</h5>
-            <div class="small text-muted">Datos del producto y su stock inicial</div>
+            <h5 class="modal-title"><i class="bi bi-box-seam me-2 text-primary"></i>Agregar al inventario</h5>
+            <div class="small text-muted">Elige un producto del catálogo y define su stock inicial</div>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
@@ -444,57 +548,41 @@
             <span id="alertErrorInventarioTexto"></span>
           </div>
 
-          <!-- ── 1. Datos del producto ── -->
-          <div class="inv-form-section"><span class="inv-paso">1</span>Datos del producto</div>
+          <!-- ── 1. Producto del catálogo ── -->
+          <div class="inv-form-section"><span class="inv-paso">1</span>Producto del catálogo</div>
+          {% if productos_sin_inventario %}
           <div class="row g-3">
-            <div class="col-md-8">
-              <label class="form-label fw-semibold">Nombre del producto <span class="text-danger">*</span></label>
-              <input type="text" name="nombre_producto" id="nombreProductoInv" class="form-control"
-                     list="listaProductosExistentes" autocomplete="off" maxlength="150"
-                     placeholder="Ej: Camiseta Básica" required>
-              <datalist id="listaProductosExistentes">
-                {% for p in productos_list %}
-                <option value="{{ p.nombre }}"
-                        data-categoria="{{ p.categoria }}"
-                        data-descripcion="{{ p.descripcion }}"
-                        data-precio="{{ p.precio|unlocalize }}"
-                        data-inv="{% if p.idProducto in productos_con_inventario %}1{% else %}0{% endif %}"></option>
-                {% endfor %}
-              </datalist>
-              <div class="form-text">Si el nombre ya existe en el catálogo, se reutiliza ese producto.</div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">Categoría</label>
-              <input type="text" name="categoria" id="categoriaProductoInv" class="form-control"
-                     list="listaCategoriasInv" autocomplete="off" maxlength="100" placeholder="Ej: Camisetas">
-              <datalist id="listaCategoriasInv">
-                {% for c in categorias_list %}<option value="{{ c }}"></option>{% endfor %}
-              </datalist>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">Precio unitario <span class="text-danger">*</span></label>
-              <div class="input-group">
-                <span class="input-group-text">$</span>
-                <input type="text" id="precioProductoDisplay" class="form-control" inputmode="numeric"
-                       placeholder="0" autocomplete="off" data-miles-target="precioProductoHidden" required>
-                <input type="hidden" name="precio" id="precioProductoHidden">
-                <div class="invalid-feedback">Ingresa un precio mayor a 0.</div>
-              </div>
-            </div>
-            <div class="col-md-8">
-              <label class="form-label fw-semibold">Descripción</label>
-              <textarea name="descripcion" id="descripcionProductoInv" class="form-control" rows="2"
-                        maxlength="500" placeholder="Material, corte, tallas, colores..."></textarea>
-            </div>
             <div class="col-12">
-              <div id="avisoProductoExistente" class="alert alert-info py-2 small mb-0 d-none">
-                <i class="bi bi-info-circle me-1"></i>Este producto ya existe en el catálogo: se reutiliza con su precio y datos actuales.
+              <label class="form-label fw-semibold">Producto <span class="text-danger">*</span></label>
+              <select name="producto" id="productoInv" class="form-select" required>
+                <option value="">-- Seleccionar producto --</option>
+                {% for p in productos_sin_inventario %}
+                <option value="{{ p.idProducto }}"
+                        data-categoria="{{ p.categoria }}"
+                        data-precio="{{ p.precio|floatformat:0|intcomma }}"
+                        data-descripcion="{{ p.descripcion }}">{{ p.nombre }} — ${{ p.precio|floatformat:0|intcomma }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">
+                Solo aparecen los productos activos que aún no están en el inventario.
+                ¿Falta alguno? <a href="#" data-ir-catalogo>Regístralo en la pestaña Productos</a>.
               </div>
-              <div id="avisoProductoConInventario" class="alert alert-warning py-2 small mb-0 mt-2 d-none">
-                <i class="bi bi-exclamation-triangle me-1"></i>Este producto ya tiene un registro de inventario. Edítalo en la tabla en lugar de crear uno nuevo.
+            </div>
+            <div class="col-12 d-none" id="previewProducto">
+              <div class="alert alert-info py-2 small mb-0">
+                <div><span class="badge bg-secondary me-1" id="previewCategoria"></span>
+                     <strong id="previewPrecio"></strong></div>
+                <div class="text-muted mt-1" id="previewDescripcion"></div>
               </div>
             </div>
           </div>
+          {% else %}
+          <div class="alert alert-warning mb-0">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            No hay productos disponibles para agregar: todos los del catálogo ya tienen inventario, o aún no has registrado ninguno.
+            <a href="#" data-ir-catalogo class="alert-link">Ir a la pestaña Productos</a>.
+          </div>
+          {% endif %}
 
           <!-- ── 2. Cliente y stock inicial ── -->
           <div class="inv-form-section"><span class="inv-paso">2</span>Cliente y stock inicial</div>
@@ -555,8 +643,8 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btnRegistrarProducto">
-            <i class="bi bi-check-lg me-1"></i>Registrar producto
+          <button type="submit" class="btn btn-primary" id="btnRegistrarProducto"{% if not productos_sin_inventario %} disabled{% endif %}>
+            <i class="bi bi-check-lg me-1"></i>Agregar al inventario
           </button>
         </div>
       </form>
@@ -791,6 +879,155 @@
 </div>
 
 
+<!-- Modal: Nuevo producto (catálogo) -->
+<div class="modal fade" id="modalProductoCrear" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{% url 'admin_producto_crear' %}" id="formProductoCrear" data-catalogo-form>
+        {% csrf_token %}
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title"><i class="bi bi-tags-fill me-2 text-primary"></i>Nuevo producto</h5>
+            <div class="small text-muted">Solo datos del producto. El stock se agrega en "Productos Terminados".</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger alert-form d-none">
+            <i class="bi bi-exclamation-triangle me-2"></i><span class="alert-form-texto"></span>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Nombre del producto <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control" maxlength="150" placeholder="Ej: Camiseta Básica" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Categoría</label>
+              <input type="text" name="categoria" class="form-control" list="listaCategorias" maxlength="100"
+                     autocomplete="off" placeholder="Ej: Camisetas">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Precio unitario <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="text" id="precioProductoCrearDisplay" class="form-control" inputmode="numeric" placeholder="0"
+                       autocomplete="off" data-miles-target="precioProductoCrearHidden" data-requerido-positivo required>
+                <input type="hidden" name="precio" id="precioProductoCrearHidden">
+                <div class="invalid-feedback">Ingresa un precio mayor a 0.</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Estado</label>
+              <select name="estado" class="form-select">
+                <option value="activo" selected>Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea name="descripcion" class="form-control" rows="3" maxlength="500"
+                        placeholder="Material, corte, tallas, colores..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Registrar producto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editar producto (catálogo) — se rellena con JS según la fila -->
+<div class="modal fade" id="modalProductoEditar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="" id="formProductoEditar" data-catalogo-form>
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil me-2 text-primary"></i>Editar producto <span id="productoEditarTitulo" class="text-muted"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger alert-form d-none">
+            <i class="bi bi-exclamation-triangle me-2"></i><span class="alert-form-texto"></span>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Nombre del producto <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control" maxlength="150" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Categoría</label>
+              <input type="text" name="categoria" class="form-control" list="listaCategorias" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Precio unitario <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="text" id="precioProductoEditarDisplay" class="form-control" inputmode="numeric" placeholder="0"
+                       autocomplete="off" data-miles-target="precioProductoEditarHidden" data-requerido-positivo required>
+                <input type="hidden" name="precio" id="precioProductoEditarHidden">
+                <div class="invalid-feedback">Ingresa un precio mayor a 0.</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Estado</label>
+              <select name="estado" class="form-select">
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descripción</label>
+              <textarea name="descripcion" class="form-control" rows="3" maxlength="500"></textarea>
+            </div>
+          </div>
+          <div class="form-text mt-3">
+            <i class="bi bi-info-circle me-1"></i>Cambiar el precio no modifica las órdenes ya creadas.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Eliminar producto (catálogo) -->
+<div class="modal fade" id="modalProductoEliminar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="" id="formProductoEliminar">
+        {% csrf_token %}
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar producto</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>¿Eliminar el producto <strong id="productoEliminarNombre"></strong> del catálogo?</p>
+          <p class="text-muted small mb-0">
+            <i class="bi bi-info-circle me-1"></i>Solo se puede eliminar si no tiene inventario ni órdenes.
+            En ese caso, puedes marcarlo como <strong>Inactivo</strong> en lugar de eliminarlo.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<datalist id="listaCategorias">
+  {% for c in categorias_list %}<option value="{{ c }}"></option>{% endfor %}
+</datalist>
+
+
 <!-- ══════════════════════════════════════════════════════════════
      MODALES POR FILA: Editar y Eliminar Inventario
 ══════════════════════════════════════════════════════════════ -->
@@ -939,10 +1176,10 @@
               <label class="form-label fw-semibold">Proveedor</label>
               <select name="proveedor" class="form-select">
                 <option value="">-- Sin proveedor --</option>
-                {% for prov in proveedores_list %}
+                {% for prov in proveedores_todos %}
                 <option value="{{ prov.idProveedor }}"
                   {% if mat.proveedor and prov.idProveedor == mat.proveedor.idProveedor %}selected{% endif %}>
-                  {{ prov.nombreEmpresa }}
+                  {{ prov.nombreEmpresa }}{% if prov.estado == 'inactivo' %} (inactivo){% endif %}
                 </option>
                 {% endfor %}
               </select>
@@ -1025,8 +1262,10 @@
      data-url-ajustar-stock="{% url 'ajustar_stock' pk=0 %}"
      data-url-historial="{% url 'historial_movimientos' pk=0 %}"
      data-url-ajustar-material="{% url 'ajustar_stock_material' pk=0 %}"
-     data-reabrir-inventario="{% if error_inventario %}1{% endif %}"
-     data-reabrir-material="{% if error_material %}1{% endif %}"></div>
+     data-url-producto-editar="{% url 'admin_producto_editar' pk=0 %}"
+     data-url-producto-eliminar="{% url 'admin_producto_eliminar' pk=0 %}"
+     data-reabrir-inventario="{% if error_inventario %}1{% endif %}"></div>
+{{ catalogo_data|json_script:"catalogoData" }}
 {% endblock %}
 
 {% block extra_js %}

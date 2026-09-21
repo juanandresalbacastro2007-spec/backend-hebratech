@@ -5,6 +5,12 @@
 
    Los valores que vienen de Django (URLs, token CSRF, flags) se
    leen del <div id="inventarioConfig"> que está en la plantilla.
+
+   Pestañas de la página:
+   - Productos Terminados: stock (agregar al inventario, +/-, historial, egresos)
+   - Materias Primas: materiales (registro, edición, +/-)
+   - Productos: catálogo (registrar / editar / eliminar productos);
+     "Productos Terminados" se alimenta de este catálogo.
    ============================================================ */
 (function () {
   'use strict';
@@ -134,19 +140,27 @@
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
 
+    const TABS = {
+      productos:  'tab-productos',     // Productos Terminados (stock)
+      materiales: 'tab-materiales',    // Materias Primas
+      catalogo:   'tab-catalogo',      // Productos (catálogo)
+    };
+    const guardada = localStorage.getItem(TAB_KEY);
     const tabToActivate = tabParam
-      ? (tabParam === 'materiales' ? 'tab-materiales' : 'tab-productos')
-      : (localStorage.getItem(TAB_KEY) || 'tab-productos');
+      ? (TABS[tabParam] || 'tab-productos')
+      : (document.getElementById(guardada) ? guardada : 'tab-productos');
 
     const tabEl = document.getElementById(tabToActivate);
     if (tabEl) bootstrap.Tab.getOrCreateInstance(tabEl).show();
 
     const ctrlProd = document.getElementById('controles-productos');
     const ctrlMat  = document.getElementById('controles-materiales');
+    const ctrlCat  = document.getElementById('controles-catalogo');
 
     function aplicarControles(id) {
       ctrlProd?.classList.toggle('d-none', id !== 'tab-productos');
       ctrlMat?.classList.toggle('d-none', id !== 'tab-materiales');
+      ctrlCat?.classList.toggle('d-none', id !== 'tab-catalogo');
     }
 
     $$('#inventarioTabs button[data-bs-toggle="tab"]').forEach(btn => {
@@ -229,13 +243,6 @@
   }
 
   /* ── Historial de movimientos ───────────────────────────── */
-  function celda(texto, clases) {
-    const td = document.createElement('td');
-    if (clases) td.className = clases;
-    td.textContent = texto;
-    return td;
-  }
-
   function initHistorial() {
     $$('.btn-historial').forEach(btn => {
       btn.addEventListener('click', function () {
@@ -321,99 +328,37 @@
     });
   }
 
-  /* ── Campos de dinero con separador de miles ────────────────
-     <input data-miles-target="idDelHidden"> guarda solo los dígitos
-     en el hidden y muestra el número formateado (es-CO).          */
-  function initMiles() {
-    $$('[data-miles-target]').forEach(input => {
-      input.addEventListener('input', function () {
-        const hidden = document.getElementById(this.dataset.milesTarget);
-        if (hidden) hidden.value = soloDigitos(this.value);
-        this.value = formatearMiles(this.value);
-      });
-    });
-  }
-
-  /* ── Modal "Registrar producto" ─────────────────────────────
-     - Si el nombre coincide con un producto del catálogo, se reutiliza:
-       sus datos se muestran bloqueados.
-     - Si ese producto ya tiene inventario, se avisa y se bloquea el envío.
-     - Si es nuevo, exige precio > 0.                                     */
-  function initFormProducto() {
+  /* ── Modal "Agregar al inventario" ──────────────────────────
+     El producto viene del catálogo (módulo Productos): al elegirlo se
+     muestra su categoría, precio y descripción. Valida el stock antes
+     de enviar y deja el formulario limpio al cerrar el modal.        */
+  function initFormAgregar() {
     const form = document.getElementById('formCrearInventario');
     if (!form) return;
 
-    const inpNombre  = document.getElementById('nombreProductoInv');
-    const inpCat     = document.getElementById('categoriaProductoInv');
-    const inpPrecio  = document.getElementById('precioProductoDisplay');
-    const hidPrecio  = document.getElementById('precioProductoHidden');
-    const inpDesc    = document.getElementById('descripcionProductoInv');
-    const inpMin     = document.getElementById('minimoDefinidoInv');
-    const inpDisp    = document.getElementById('cantidadDisponibleInv');
-    const lista      = document.getElementById('listaProductosExistentes');
-    const avisoExiste = document.getElementById('avisoProductoExistente');
-    const avisoConInv = document.getElementById('avisoProductoConInventario');
+    const selProducto = document.getElementById('productoInv');
+    const preview     = document.getElementById('previewProducto');
+    const inpMin      = document.getElementById('minimoDefinidoInv');
+    const inpDisp     = document.getElementById('cantidadDisponibleInv');
     const alertaForm  = document.getElementById('alertErrorInventario');
     const alertaTexto = document.getElementById('alertErrorInventarioTexto');
-    const btnGuardar  = document.getElementById('btnRegistrarProducto');
 
-    const camposProducto = [inpCat, inpPrecio, inpDesc];
-    let rellenadoDesdeCatalogo = false;
-
-    function buscarEnCatalogo(nombre) {
-      const n = nombre.trim().toLowerCase();
-      if (!n || !lista) return null;
-      return Array.from(lista.options).find(o => o.value.trim().toLowerCase() === n) || null;
-    }
-
-    function bloquearCampos(bloquear) {
-      camposProducto.forEach(c => { c.readOnly = bloquear; });
-    }
-
-    function limpiarCamposProducto() {
-      inpCat.value = '';
-      inpDesc.value = '';
-      inpPrecio.value = '';
-      hidPrecio.value = '';
-      inpPrecio.classList.remove('is-invalid');
-    }
-
-    function alNombreCambiar() {
-      const opt = buscarEnCatalogo(inpNombre.value);
-      avisoConInv.classList.add('d-none');
-      btnGuardar.disabled = false;
-
-      if (opt) {
-        inpCat.value    = opt.dataset.categoria || '';
-        inpDesc.value   = opt.dataset.descripcion || '';
-        const precioCat = Math.round(parseFloat(opt.dataset.precio) || 0);   // "35000.00" -> 35000
-        hidPrecio.value = precioCat ? String(precioCat) : '';
-        inpPrecio.value = precioCat ? formatearMiles(precioCat) : '';
-        inpPrecio.classList.remove('is-invalid');
-        bloquearCampos(true);
-        rellenadoDesdeCatalogo = true;
-        avisoExiste.classList.remove('d-none');
-
-        if (opt.dataset.inv === '1') {
-          avisoConInv.classList.remove('d-none');
-          btnGuardar.disabled = true;
-        }
-      } else {
-        avisoExiste.classList.add('d-none');
-        bloquearCampos(false);
-        if (rellenadoDesdeCatalogo) {
-          limpiarCamposProducto();
-          rellenadoDesdeCatalogo = false;
-        }
+    function mostrarPreview() {
+      if (!selProducto || !preview) return;
+      const opt = selProducto.options[selProducto.selectedIndex];
+      if (!opt || !opt.value) {
+        preview.classList.add('d-none');
+        return;
       }
+      document.getElementById('previewCategoria').textContent   = opt.dataset.categoria || 'Sin categoría';
+      document.getElementById('previewPrecio').textContent      = `$${opt.dataset.precio || '0'}`;
+      document.getElementById('previewDescripcion').textContent = opt.dataset.descripcion || '';
+      preview.classList.remove('d-none');
     }
-
-    inpNombre.addEventListener('input', alNombreCambiar);
-    inpNombre.addEventListener('change', alNombreCambiar);
 
     function validarStock() {
-      const min  = parseInt(inpMin?.value, 10) || 0;
-      const disp = parseInt(inpDisp?.value, 10) || 0;
+      const min  = parseInt(inpMin.value, 10) || 0;
+      const disp = parseInt(inpDisp.value, 10) || 0;
       const fb   = document.getElementById('feedbackDisponibleInv');
       if (disp < 0) {
         inpDisp.classList.add('is-invalid');
@@ -429,23 +374,14 @@
       return true;
     }
 
-    function validarPrecio() {
-      if (inpPrecio.readOnly) return true;          // producto existente: no aplica
-      const precio = parseInt(hidPrecio.value, 10) || 0;
-      inpPrecio.classList.toggle('is-invalid', precio <= 0);
-      return precio > 0;
-    }
-
     function mostrarError(texto) {
       alertaTexto.textContent = texto;
       alertaForm.classList.remove('d-none');
     }
 
-    if (inpMin && inpDisp) {
-      inpMin.addEventListener('input', validarStock);
-      inpDisp.addEventListener('input', validarStock);
-    }
-    inpPrecio.addEventListener('input', validarPrecio);
+    selProducto?.addEventListener('change', mostrarPreview);
+    inpMin.addEventListener('input', validarStock);
+    inpDisp.addEventListener('input', validarStock);
 
     form.addEventListener('submit', function (e) {
       alertaForm.classList.add('d-none');
@@ -455,11 +391,6 @@
         mostrarError('El stock actual no puede ser menor al mínimo.');
         return;
       }
-      if (!validarPrecio()) {
-        e.preventDefault(); e.stopPropagation();
-        mostrarError('Ingresa un precio mayor a 0 para el producto nuevo.');
-        return;
-      }
       if (!this.checkValidity()) {
         e.preventDefault(); e.stopPropagation();
         mostrarError('Completa todos los campos requeridos.');
@@ -467,23 +398,52 @@
       this.classList.add('was-validated');
     });
 
-    // Al cerrar el modal el formulario vuelve a su estado inicial
     document.getElementById('modalCrearInventario')?.addEventListener('hidden.bs.modal', function () {
       form.reset();
       form.classList.remove('was-validated');
-      limpiarCamposProducto();
-      bloquearCampos(false);
-      rellenadoDesdeCatalogo = false;
-      avisoExiste.classList.add('d-none');
-      avisoConInv.classList.add('d-none');
+      preview?.classList.add('d-none');
       alertaForm.classList.add('d-none');
       inpDisp.classList.remove('is-invalid');
-      btnGuardar.disabled = false;
       document.getElementById('ubicacionOtroWrapNuevo')?.classList.add('d-none');
     });
   }
 
-  /* ── Modal "Nuevo material": validaciones ───────────────── */
+  /* ── Campos de dinero con separador de miles ────────────────
+     <input data-miles-target="idDelHidden"> muestra 125.000 y deja
+     125000 en el hidden que se envía al servidor.                */
+  function initMiles() {
+    $$('[data-miles-target]').forEach(input => {
+      input.addEventListener('input', function () {
+        const hidden = document.getElementById(this.dataset.milesTarget);
+        if (hidden) hidden.value = soloDigitos(this.value);
+        this.value = formatearMiles(this.value);
+      });
+    });
+  }
+
+  // Tras rellenar un formulario: el display se muestra con puntos y el hidden
+  // conserva el valor original (un costo como 1250.50 no se redondea si no se toca).
+  function sincronizarMiles(form) {
+    $$('[data-miles-target]', form).forEach(input => {
+      const hidden = document.getElementById(input.dataset.milesTarget);
+      if (!hidden) return;
+      const valor = parseFloat(hidden.value) || 0;             // "35000.00" -> 35000
+      if (valor > 0) {
+        input.value = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 }).format(valor);
+      } else {
+        input.value = '';
+        hidden.value = '';
+      }
+    });
+  }
+
+  function limpiarValidacion(form) {
+    form.classList.remove('was-validated');
+    $$('.is-invalid', form).forEach(el => el.classList.remove('is-invalid'));
+    $('.alert-form', form)?.classList.add('d-none');
+  }
+
+  /* ── Materias Primas: modal "Nuevo material" ────────────── */
   function initFormMaterial() {
     const form  = document.getElementById('formCrearMaterial');
     const minEl = document.getElementById('stockMinimoMat');
@@ -531,13 +491,114 @@
     });
   }
 
+  /* ── Pestaña Productos (catálogo) ───────────────────────────
+     Un solo modal de edición y uno de eliminar, que se rellenan con
+     los datos de la fila (JSON en <script id="catalogoData">).      */
+  function initCatalogo() {
+    const formCrear    = document.getElementById('formProductoCrear');
+    const formEditar   = document.getElementById('formProductoEditar');
+    const formEliminar = document.getElementById('formProductoEliminar');
+    if (!formEditar) return;
+
+    const dataEl = document.getElementById('catalogoData');
+    const DATOS  = dataEl ? JSON.parse(dataEl.textContent) : {};
+
+    // Editar
+    $$('.btn-editar-producto').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const id = this.dataset.id;
+        const datos = DATOS[id];
+        if (!datos) return;
+
+        limpiarValidacion(formEditar);
+        formEditar.action = urlConPk(cfgEl.dataset.urlProductoEditar, id);
+        document.getElementById('productoEditarTitulo').textContent = `#${id} — ${this.dataset.nombre || ''}`;
+
+        Object.entries(datos).forEach(([campo, valor]) => {
+          const el = formEditar.elements[campo];
+          if (el) el.value = valor === null || valor === undefined ? '' : valor;
+        });
+        sincronizarMiles(formEditar);
+      });
+    });
+
+    // Eliminar
+    $$('.btn-eliminar-producto').forEach(btn => {
+      btn.addEventListener('click', function () {
+        formEliminar.action = urlConPk(cfgEl.dataset.urlProductoEliminar, this.dataset.id);
+        document.getElementById('productoEliminarNombre').textContent = this.dataset.nombre || '';
+      });
+    });
+
+    // Buscador (en el navegador)
+    const buscador = document.getElementById('buscarCatalogo');
+    const sinResultados = document.getElementById('filaSinResultadosCatalogo');
+    buscador?.addEventListener('input', function () {
+      const t = this.value.toLowerCase().trim();
+      let visibles = 0;
+      $$('#tablaCatalogo tbody tr[data-buscar]').forEach(fila => {
+        const ok = fila.dataset.buscar.includes(t);
+        fila.classList.toggle('d-none', !ok);
+        if (ok) visibles++;
+      });
+      sinResultados?.classList.toggle('d-none', visibles > 0);
+    });
+
+    // Validaciones: precio mayor a 0 y campos requeridos
+    function mostrarError(form, texto) {
+      const alerta = $('.alert-form', form);
+      if (!alerta) return;
+      $('.alert-form-texto', alerta).textContent = texto;
+      alerta.classList.remove('d-none');
+    }
+
+    [formCrear, formEditar].filter(Boolean).forEach(form => {
+      form.addEventListener('submit', function (e) {
+        $('.alert-form', form)?.classList.add('d-none');
+
+        for (const input of $$('[data-requerido-positivo]', form)) {
+          const hidden = document.getElementById(input.dataset.milesTarget);
+          const valor = parseFloat(hidden && hidden.value) || 0;
+          input.classList.toggle('is-invalid', valor <= 0);
+          if (valor <= 0) {
+            e.preventDefault(); e.stopPropagation();
+            mostrarError(form, 'Ingresa un precio mayor a 0.');
+            form.classList.add('was-validated');
+            return;
+          }
+        }
+
+        if (!form.checkValidity()) {
+          e.preventDefault(); e.stopPropagation();
+          mostrarError(form, 'Completa todos los campos requeridos.');
+        }
+        form.classList.add('was-validated');
+      });
+    });
+
+    // El modal de crear vuelve a su estado inicial al cerrarse
+    document.getElementById('modalProductoCrear')?.addEventListener('hidden.bs.modal', function () {
+      formCrear.reset();
+      limpiarValidacion(formCrear);
+    });
+  }
+
+  /* ── Enlaces "ir a la pestaña Productos" (desde el modal Agregar) ── */
+  function initIrCatalogo() {
+    $$('[data-ir-catalogo]').forEach(a => {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        bootstrap.Modal.getInstance(document.getElementById('modalCrearInventario'))?.hide();
+        const tab = document.getElementById('tab-catalogo');
+        if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+      });
+    });
+  }
+
   /* ── Reabrir modales si el servidor devolvió un error ───── */
   function reabrirModales() {
     if (cfgEl.dataset.reabrirInventario === '1') {
       bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCrearInventario')).show();
-    }
-    if (cfgEl.dataset.reabrirMaterial === '1') {
-      bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCrearMaterial')).show();
     }
   }
 
@@ -549,9 +610,11 @@
     initAjustesProducto();
     initHistorial();
     initAjustesMaterial();
+    initFormAgregar();
     initMiles();
-    initFormProducto();
     initFormMaterial();
+    initCatalogo();
+    initIrCatalogo();
     reabrirModales();
   }
 
