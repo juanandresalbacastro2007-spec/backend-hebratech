@@ -13,7 +13,6 @@ from django_fsm import FSMField, transition
 from simple_history.models import HistoricalRecords
 
 
-
 class Usuario(models.Model):
     ROL_CHOICES = [
         ('administrador', 'Administrador'),
@@ -37,7 +36,6 @@ class Usuario(models.Model):
     direccion = models.CharField(max_length=255, null=True, blank=True)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='sin_asignar')
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
-    # Antes solo estaba en apps.operarios.models — la columna sí existe en 'usuarios'.
     fotoPerfil = models.ImageField(
         upload_to='perfiles/', null=True, blank=True, db_column='fotoPerfil'
     )
@@ -67,7 +65,6 @@ class Cliente(models.Model):
         on_delete=models.CASCADE,
         db_column='idUsuario'
     )
-    # Antes solo estaban en apps.clientes.models — las columnas sí existen en 'clientes'.
     tipoCliente = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Natural')
     empresa = models.CharField(max_length=150, null=True, blank=True)
     nombre = models.CharField(max_length=150, null=True, blank=True)
@@ -113,9 +110,6 @@ class Tarea(models.Model):
     ]
 
     idTarea = models.AutoField(primary_key=True)
-    # La columna existe en la tabla real 'tareas' pero ningún modelo la
-    # tenía mapeada. Queda disponible como segundo posible camino de
-    # conexión Tarea → Produccion (a definir cuál usamos como fuente).
     idProduccion = models.IntegerField(null=True, blank=True, db_column='idProduccion')
     nombreTarea = models.CharField(max_length=150)
     descripcionTarea = models.TextField()
@@ -152,6 +146,18 @@ class AsignacionTarea(models.Model):
         on_delete=models.CASCADE,
         db_column='idTarea'
     )
+
+    # ── VÍNCULO REAL con la orden de producción ────────────────────
+    # Vive en la ASIGNACIÓN (no en el catálogo de Tarea), así que
+    # reutilizar la misma tarea en varias OP es seguro.
+    idOrdenProduccion = models.ForeignKey(
+        'produccion.OrdenProduccion',
+        on_delete=models.SET_NULL,
+        db_column='idOrdenProduccion',
+        null=True, blank=True,
+        related_name='asignaciones_tareas',
+    )
+
     idOperario = models.ForeignKey(
         Operario,
         on_delete=models.CASCADE,
@@ -173,10 +179,6 @@ class AsignacionTarea(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
     prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='Media')
     horasEstimadas = models.DecimalField(max_digits=5, decimal_places=2)
-    # La columna 'tipoPrenda' sí existe en la tabla real 'asignacion_tareas'
-    # pero no estaba mapeada acá; apps/operarios/views.py la lee (a.tipoPrenda)
-    # y eso rompía api_tareas con AttributeError, dejando el tablero del
-    # operario colgado en "Cargando tareas…".
     tipoPrenda = models.CharField(max_length=50, null=True, blank=True)
     cantidadPrendas = models.IntegerField(null=True, blank=True)
     horasReales = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -194,7 +196,7 @@ class Producto(models.Model):
     nombre = models.CharField(max_length=150, db_column='nombre')
     descripcion = models.TextField()
     precio = models.DecimalField(max_digits=10, decimal_places=2)
-    categoria = models.CharField(max_length=100)  # texto libre en BD real, sin choices
+    categoria = models.CharField(max_length=100)
     estado = models.CharField(max_length=20, null=True, blank=True, default='activo')
 
     class Meta:
@@ -249,7 +251,6 @@ class Orden(models.Model):
     def __str__(self):
         return f'Orden #{self.idOrden} — {self.estado}'
 
-    # ── Transiciones normales, disparadas por producción ──────────
     @transition(field=estado, source='Pendiente', target='Procesando')
     def marcar_en_produccion(self):
         pass
@@ -270,11 +271,6 @@ class Orden(models.Model):
     def cancelar(self):
         pass
 
-    # NOTA: 'Retrasado' no es una transición manual — lo aplica el
-    # management command de detección de atrasos vía queryset.update(),
-    # que no pasa por el FSMField. Al avanzar de estado normalmente,
-    # la orden sale de 'Retrasado' sin necesidad de una transición extra.
-
 
 class Incidencia(models.Model):
     ESTADO_CHOICES = [
@@ -287,7 +283,7 @@ class Incidencia(models.Model):
     idOperario = models.ForeignKey(
         Operario,
         on_delete=models.CASCADE,
-        db_column='idUsuario'   # la columna real en MySQL es idUsuario, no idOperario
+        db_column='idUsuario'
     )
     tipoIncidencia = models.CharField(max_length=50)
     descripcion = models.TextField()
@@ -379,7 +375,7 @@ class Material(models.Model):
     nombreMaterial = models.CharField(max_length=150)
 
     proveedor = models.ForeignKey(
-        'proveedores.Proveedor',        # <-- referencia cruzada a la otra app
+        'proveedores.Proveedor',
         on_delete=models.SET_NULL,
         db_column='idProveedor',
         null=True, blank=True,
@@ -392,7 +388,7 @@ class Material(models.Model):
     unidadBase = models.CharField(max_length=20, default='unidad')
     costoUnitario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     fechaActualizacion = models.DateField(auto_now=True)
-   
+
     class Meta:
         db_table = 'materiales'
         managed = False
@@ -401,23 +397,7 @@ class Material(models.Model):
         return self.nombreMaterial
 
 
-# ═══════════════════════════════════════════════════════════════════════
-# MOVIMIENTOS DE STOCK
-# ═══════════════════════════════════════════════════════════════════════
-# CAMBIO EN Inventario (nota): el campo nivelStock se sigue guardando en
-# BD por compatibilidad con devolucion_inventario y salida_devolucion,
-# pero ya NO se muestra en el formulario: las vistas lo calculan con
-# _calcular_nivel_stock(disponible, minimo).
-# ═══════════════════════════════════════════════════════════════════════
-
 class MovimientoStock(models.Model):
-    """
-    Trazabilidad de entradas, salidas y ajustes sobre un registro
-    de inventario de producto terminado.
-
-    Tabla MySQL: movimientos_stock  (managed=False → crear con SQL)
-    """
-
     TIPO_CHOICES = [
         ('ENTRADA', 'Entrada'),
         ('SALIDA',  'Salida'),

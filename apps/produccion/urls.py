@@ -14,6 +14,9 @@ urlpatterns = [
     # Clientes (para select)
     path('clientes/', views.clientes_lista, name='clientes-lista'),
 
+    # Órdenes de cliente disponibles para vincular a una orden de producción
+    path('ordenes-cliente/', views.ordenes_cliente_lista, name='ordenes-cliente-lista'),
+
     # Órdenes de producción
     path('ordenes-produccion/',          views.ordenes_produccion,        name='ordenes-produccion'),
     path('ordenes-produccion/<int:id>/', views.orden_produccion_detalle, name='orden-produccion-detalle'),

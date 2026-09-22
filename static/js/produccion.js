@@ -7,8 +7,15 @@ let ORDENES_PROD_CACHE = [];
 let OPERARIOS_CACHE = [];
 let PRODUCTOS_LISTA_CACHE = [];
 let CLIENTES_CACHE = [];
+let ORDENES_CLIENTE_CACHE = [];
 let FILTRO_ACTUAL = '';
 let calendar = null;
+
+// Cuando se edita una orden antigua cuya fecha de entrega ya pasó,
+// guardamos aquí el valor original para:
+//   1) No borrarlo silenciosamente al abrir el modal.
+//   2) Permitir guardar sin cambios aunque la fecha sea pasada.
+let _entregaHistoricaOriginal = null;
 
 // ── Utilidades ─────────────────────────────
 function mostrarToast(mensaje, tipo = 'success') {
@@ -16,7 +23,7 @@ function mostrarToast(mensaje, tipo = 'success') {
   if (!toast) return;
   toast.textContent = mensaje;
   toast.className = `toast show ${tipo}`;
-  setTimeout(() => { toast.className = 'toast'; }, 3500);
+  setTimeout(() => { toast.className = 'toast'; }, 4000);
 }
 
 function limpiarValidacion(ids) {
@@ -69,8 +76,118 @@ function aplicarMinFechaHoy() {
   const hoy = hoyISO();
   ['op-fecha-inicio', 'op-fecha-entrega', 'op-fecha-fin-real', 'c-fecha-entrega'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.min = hoy;
+    if (el) {
+      el.min = hoy;
+      el.setAttribute('min', hoy);
+    }
   });
+}
+
+// ── Sincroniza el min de "Fecha Entrega" con hoy y con "Fecha Inicio" ──
+// Opciones:
+//   conservarHistorico: si true y el valor actual es una fecha pasada
+//     (orden antigua), NO se aplica `min` para que el navegador no la
+//     marque como inválida. El min real queda guardado en data-min-real
+//     y se aplicará en cuanto el usuario interactúe con el campo.
+function sincronizarMinFechaEntrega(opts = {}) {
+  const { conservarHistorico = false } = opts;
+  const inicioInput  = document.getElementById('op-fecha-inicio');
+  const entregaInput = document.getElementById('op-fecha-entrega');
+  if (!entregaInput) return;
+
+  const hoy = hoyISO();
+  const inicioVal = (inicioInput?.value || '').slice(0, 10);
+  const nuevoMin = (inicioVal && inicioVal > hoy) ? inicioVal : hoy;
+
+  // Guardamos el min "real" siempre, para poder aplicarlo después.
+  entregaInput.dataset.minReal = nuevoMin;
+
+  // ¿El valor actual es una fecha histórica que queremos conservar?
+  const esHistorico = (
+    conservarHistorico &&
+    entregaInput.value &&
+    entregaInput.value < nuevoMin
+  );
+
+  if (esHistorico) {
+    // No aplicamos `min` al DOM → el input no queda :invalid
+    entregaInput.removeAttribute('min');
+    entregaInput.min = '';
+    entregaInput.setCustomValidity('');
+    entregaInput.classList.add('campo-historico');
+    return;
+  }
+
+  // Modo normal: min aplicado por ambos métodos (compatibilidad)
+  entregaInput.classList.remove('campo-historico');
+  entregaInput.min = nuevoMin;
+  entregaInput.setAttribute('min', nuevoMin);
+
+  // Si el valor quedó fuera de rango, limpiar
+  if (entregaInput.value && entregaInput.value < nuevoMin) {
+    entregaInput.value = '';
+    entregaInput.setCustomValidity('');
+  }
+}
+
+// Reaplica el min un instante después (por si el navegador cacheó el
+// estado del picker mientras el modal estaba oculto).
+function reforzarMinFechaEntrega(opts = {}) {
+  setTimeout(() => {
+    sincronizarMinFechaEntrega(opts);
+    const entregaInput = document.getElementById('op-fecha-entrega');
+    if (entregaInput && !opts.conservarHistorico) {
+      const min = entregaInput.getAttribute('min');
+      if (min) {
+        entregaInput.min = min;
+        entregaInput.setAttribute('min', min);
+      }
+    }
+  }, 60);
+}
+
+// Fuerza el min REAL aunque el input esté en "modo histórico". Se llama
+// en cuanto el usuario toca el campo, para que el picker nativo bloquee
+// las fechas pasadas.
+function _aplicarMinRealAlInteractuar() {
+  const el = document.getElementById('op-fecha-entrega');
+  if (!el) return;
+  const minReal = el.dataset.minReal;
+  if (!minReal) return;
+  if (el.min !== minReal) {
+    el.min = minReal;
+    el.setAttribute('min', minReal);
+  }
+  el.classList.remove('campo-historico');
+}
+
+// Devuelve true si el valor actual del input de entrega es válido.
+// Si `permitirHistorico` es true y el valor coincide con el original
+// (una orden antigua que no se ha tocado), se considera válido.
+function _validarEntregaActual(opts = {}) {
+  const { permitirHistorico = false } = opts;
+  const el = document.getElementById('op-fecha-entrega');
+  if (!el) return true;
+
+  const min = el.dataset.minReal || el.min || el.getAttribute('min');
+  if (!el.value || !min) {
+    el.setCustomValidity('');
+    return true;
+  }
+
+  const esHistorico = (
+    permitirHistorico &&
+    _entregaHistoricaOriginal !== null &&
+    el.value === _entregaHistoricaOriginal
+  );
+
+  if (el.value < min && !esHistorico) {
+    el.setCustomValidity('La fecha de entrega debe ser hoy o posterior.');
+    return false;
+  }
+
+  el.setCustomValidity('');
+  return true;
 }
 
 function switchTab(nombre, el) {
@@ -155,6 +272,108 @@ function poblarSelectClientes() {
   if (seleccionado) select.value = seleccionado;
 }
 
+// ── Órdenes de cliente (para vincular y autocompletar la orden de producción) ──
+async function cargarOrdenesCliente() {
+  try {
+    ORDENES_CLIENTE_CACHE = await apiFetch(`${API_BASE}/ordenes-cliente/`);
+  } catch (e) {
+    console.error('Error cargando órdenes de cliente:', e);
+    ORDENES_CLIENTE_CACHE = [];
+  }
+  poblarSelectOrdenesCliente();
+}
+
+function poblarSelectOrdenesCliente() {
+  const select = document.getElementById('op-orden-cliente');
+  if (!select) return;
+  select.innerHTML = `<option value="">Sin vincular (orden manual)</option>` +
+    ORDENES_CLIENTE_CACHE.map(o => `
+      <option value="${o.idOrden}">
+        Orden #${o.idOrden} — ${o.cliente} (${o.nombreProducto || 'sin producto'}, ${o.cantidad || 0} u.)
+      </option>
+    `).join('');
+  select.value = '';
+}
+
+const CAMPOS_DESDE_ORDEN_CLIENTE = ['op-cantidad', 'op-cliente'];
+const CAMPOS_FECHA_SUGERIDOS_DESDE_ORDEN_CLIENTE = ['op-fecha-inicio', 'op-fecha-entrega'];
+
+function aplicarOrdenCliente() {
+  const select = document.getElementById('op-orden-cliente');
+  const hint = document.getElementById('hint-op-orden-cliente');
+  const idOrden = select.value;
+
+  // Al cambiar de orden de cliente, olvidamos la marca de "histórico":
+  // los valores que se carguen a continuación son frescos.
+  _entregaHistoricaOriginal = null;
+
+  if (!idOrden) {
+    CAMPOS_DESDE_ORDEN_CLIENTE.forEach(id => { document.getElementById(id).disabled = false; });
+    document.getElementById('op-producto').disabled = false;
+    hint.style.display = 'none';
+    return;
+  }
+
+  const orden = ORDENES_CLIENTE_CACHE.find(o => String(o.idOrden) === String(idOrden));
+  if (!orden) return;
+
+  const prodSelect = document.getElementById('op-producto');
+  if (orden.idProducto) {
+    prodSelect.value = orden.idProducto;
+    prodSelect.disabled = true;
+  } else {
+    prodSelect.value = '';
+    prodSelect.disabled = false;
+  }
+
+  document.getElementById('op-cantidad').value = orden.cantidad || 1;
+
+  const clienteSelect = document.getElementById('op-cliente');
+  let opt = Array.from(clienteSelect.options).find(o2 => o2.text === orden.cliente);
+  if (!opt) {
+    opt = document.createElement('option');
+    opt.value = orden.cliente;
+    opt.text = orden.cliente;
+    clienteSelect.add(opt);
+  }
+  clienteSelect.value = opt.value;
+
+  const inicioInput = document.getElementById('op-fecha-inicio');
+  if (!inicioInput.value) inicioInput.value = hoyISO();
+
+  const entregaInput = document.getElementById('op-fecha-entrega');
+  const fechaEstimada = orden.fechaEntregaEstimada || '';
+  const hoy = hoyISO();
+
+  if (fechaEstimada && fechaEstimada >= hoy) {
+    entregaInput.value = fechaEstimada;
+  } else {
+    entregaInput.value = '';
+    if (fechaEstimada) {
+      mostrarToast(
+        'La fecha estimada del cliente ya pasó. Selecciona una nueva fecha de entrega.',
+        'error'
+      );
+    } else {
+      mostrarToast(
+        'Esta orden de cliente aún no tiene fecha de entrega estimada. Selecciónala manualmente.',
+        'error'
+      );
+    }
+  }
+
+  document.getElementById('op-prioridad').value = orden.prioridad || 'Normal';
+  if (orden.instrucciones) {
+    document.getElementById('op-observaciones').value = orden.instrucciones;
+  }
+
+  CAMPOS_DESDE_ORDEN_CLIENTE.forEach(id => { document.getElementById(id).disabled = true; });
+  hint.style.display = 'block';
+
+  sincronizarMinFechaEntrega();
+  reforzarMinFechaEntrega();
+}
+
 // ============================================================
 // ÓRDENES DE PRODUCCIÓN
 // ============================================================
@@ -174,7 +393,7 @@ function badgeEstado(estado) {
     'Pendiente':   'badge-gris',
     'En Progreso': 'badge-azul',
     'Completado':  'badge-verde',
-    'Atrasada':    'badge-rojo',
+    'Fuera de Plazo': 'badge-rojo',
     'Cancelada':   'badge-rojo',
   };
   return `<span class="badge ${map[estado] || 'badge-gris'}">${estado.toUpperCase()}</span>`;
@@ -190,7 +409,7 @@ function renderOrdenesGrid(lista) {
   cont.innerHTML = lista.map(o => {
     const avance = o.progreso || 0;
     return `
-    <div class="orden-card ${o.estado === 'Atrasada' ? 'orden-card-atrasada' : ''}" onclick="abrirModalDetalle(${o.idOrdenProduccion})">
+    <div class="orden-card ${o.estado === 'Fuera de Plazo' ? 'orden-card-atrasada' : ''}" onclick="abrirModalDetalle(${o.idOrdenProduccion})">
       <div class="orden-card-header">
         <span class="orden-card-id">${o.numero}</span>
         ${badgeEstado(o.estado)}
@@ -240,15 +459,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Abrir modal de nueva orden ──────────────────────
 function abrirModalNuevaOrden() {
+  _entregaHistoricaOriginal = null;
   limpiarValidacion(['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega']);
   document.getElementById('modal-orden-title').textContent = '🗒 Nueva Orden de Producción';
   document.getElementById('orden-id').value = '';
 
-  // Cargar datos en selects
   poblarSelectProductos();
   poblarSelectClientes();
 
-  // Limpiar campos
+  const orderSelect = document.getElementById('op-orden-cliente');
+  orderSelect.disabled = false;
+  orderSelect.innerHTML = `<option value="">Sin vincular (orden manual)</option>`;
+  document.getElementById('hint-op-orden-cliente').style.display = 'none';
+  ['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega'].forEach(id => {
+    document.getElementById(id).disabled = false;
+  });
+
   document.getElementById('op-producto').value = '';
   document.getElementById('op-cantidad').value = 1;
   document.getElementById('op-cliente').value = '';
@@ -259,20 +485,35 @@ function abrirModalNuevaOrden() {
   document.getElementById('op-estado').value = 'Pendiente';
   document.getElementById('op-observaciones').value = '';
 
+  const entregaInput = document.getElementById('op-fecha-entrega');
+  entregaInput.classList.remove('campo-historico');
+  entregaInput.setCustomValidity('');
+
+  aplicarMinFechaHoy();
+  sincronizarMinFechaEntrega();
+  reforzarMinFechaEntrega();
+
   document.getElementById('modal-orden').classList.add('open');
-  enfocarPrimerCampo('op-producto');
+  enfocarPrimerCampo('op-orden-cliente');
+
+  cargarOrdenesCliente();
 }
 
 // ── Editar orden ──────────────────────────────────────
 function editarOrden(id) {
   const o = ORDENES_PROD_CACHE.find(x => x.idOrdenProduccion === id);
   if (!o) return;
+
   limpiarValidacion(['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega']);
   document.getElementById('modal-orden-title').textContent = `✏️ Editar Orden ${o.numero}`;
   document.getElementById('orden-id').value = o.idOrdenProduccion;
 
   poblarSelectProductos();
   poblarSelectClientes();
+
+  ['op-producto', 'op-cantidad', 'op-cliente', 'op-fecha-inicio', 'op-fecha-entrega'].forEach(id => {
+    document.getElementById(id).disabled = false;
+  });
 
   document.getElementById('op-producto').value = o.idProducto || '';
   document.getElementById('op-cantidad').value = o.cantidad;
@@ -287,22 +528,66 @@ function editarOrden(id) {
     clienteSelect.add(option);
     clienteSelect.value = o.cliente;
   }
+
   document.getElementById('op-fecha-inicio').value = o.fechaInicio;
-  document.getElementById('op-fecha-entrega').value = o.fechaEntrega;
+
+  // ── BUG FIX ──
+  // Aquí es donde se vaciaba la fecha histórica. Guardamos el original,
+  // y si es una fecha pasada la conservamos visible con estilo ámbar.
+  const entregaInput = document.getElementById('op-fecha-entrega');
+  entregaInput.value = o.fechaEntrega;
+  _entregaHistoricaOriginal = o.fechaEntrega;
+
+  const hoy = hoyISO();
+  const esHistorico = !!(o.fechaEntrega && o.fechaEntrega < hoy);
+
   document.getElementById('op-fecha-fin-real').value = o.fechaFinReal || '';
   document.getElementById('op-prioridad').value = o.prioridad;
   document.getElementById('op-estado').value = o.estado;
   document.getElementById('op-observaciones').value = o.observaciones || '';
+
+  const ordenSelect = document.getElementById('op-orden-cliente');
+  const hint = document.getElementById('hint-op-orden-cliente');
+  if (o.idOrden) {
+    ordenSelect.innerHTML = `<option value="${o.idOrden}" selected>Vinculada a orden de cliente #${o.idOrden}</option>`;
+    ordenSelect.value = o.idOrden;
+    ordenSelect.disabled = true;
+    hint.style.display = 'block';
+  } else {
+    ordenSelect.disabled = false;
+    ordenSelect.innerHTML = `<option value="" selected>Sin vincular (orden manual)</option>`;
+    hint.style.display = 'none';
+  }
+
+  // Aplicar min solo si NO es histórico; si lo es, se preserva el valor
+  // y se le pone la clase ámbar.
+  aplicarMinFechaHoy();
+  sincronizarMinFechaEntrega({ conservarHistorico: esHistorico });
+  reforzarMinFechaEntrega({ conservarHistorico: esHistorico });
+
+  if (esHistorico) {
+    // Aviso visual: la fecha está en el pasado y se conserva por
+    // tratarse de una orden antigua.
+    setTimeout(() => {
+      mostrarToast(
+        `⚠️ Esta orden tiene fecha de entrega vencida (${formatearFecha(o.fechaEntrega)}). ` +
+        `Se conserva tal cual, pero si la cambias debe ser hoy o posterior.`,
+        'error'
+      );
+    }, 200);
+  }
 
   document.getElementById('modal-orden').classList.add('open');
 }
 
 function cerrarModalOrden() {
   document.getElementById('modal-orden').classList.remove('open');
+  _entregaHistoricaOriginal = null;
 }
 
 async function guardarOrden() {
   const id = document.getElementById('orden-id').value;
+  const idOrdenCliente = document.getElementById('op-orden-cliente').value || null;
   const idProducto = document.getElementById('op-producto').value;
   const cantidad = parseInt(document.getElementById('op-cantidad').value, 10);
   const clienteSelect = document.getElementById('op-cliente');
@@ -321,14 +606,38 @@ async function guardarOrden() {
   if (!cantidad || cantidad < 1) { marcarError('op-cantidad'); valido = false; }
   if (!clienteNombre) { marcarError('op-cliente'); valido = false; }
   if (!fechaInicio) { marcarError('op-fecha-inicio'); valido = false; }
-  else if (fechaInicio < hoy) { marcarError('op-fecha-inicio'); mostrarToast('La fecha de inicio no puede ser anterior a hoy.', 'error'); valido = false; }
   if (!fechaEntrega) { marcarError('op-fecha-entrega'); valido = false; }
-  else if (fechaEntrega < hoy) { marcarError('op-fecha-entrega'); mostrarToast('La fecha de entrega no puede ser anterior a hoy.', 'error'); valido = false; }
-  else if (fechaInicio && fechaEntrega < fechaInicio) { marcarError('op-fecha-entrega'); mostrarToast('La fecha de entrega no puede ser anterior a la fecha de inicio.', 'error'); valido = false; }
-  if (fechaFinReal && fechaFinReal < hoy) { mostrarToast('La fecha fin real no puede ser anterior a hoy.', 'error'); valido = false; }
+  else if (fechaInicio && fechaEntrega < fechaInicio) {
+    marcarError('op-fecha-entrega');
+    mostrarToast('La fecha de entrega no puede ser anterior a la fecha de inicio.', 'error');
+    valido = false;
+  }
+
+  // Fecha entrega: nunca antes de hoy, SALVO si es una orden antigua cuya
+  // fecha no se ha tocado (mismo valor con el que se abrió el modal).
+  const esHistorico = (
+    _entregaHistoricaOriginal !== null &&
+    fechaEntrega === _entregaHistoricaOriginal
+  );
+  if (fechaEntrega && fechaEntrega < hoy && !esHistorico) {
+    marcarError('op-fecha-entrega');
+    mostrarToast('La fecha de entrega no puede ser anterior a hoy.', 'error');
+    valido = false;
+  }
+  if (!idOrdenCliente && fechaInicio && fechaInicio < hoy) {
+    marcarError('op-fecha-inicio');
+    mostrarToast('La fecha de inicio no puede ser anterior a hoy.', 'error');
+    valido = false;
+  }
+  if (fechaFinReal && fechaFinReal < hoy) {
+    mostrarToast('La fecha fin real no puede ser anterior a hoy.', 'error');
+    valido = false;
+  }
+
   if (!valido) return;
 
   const payload = {
+    idOrden: idOrdenCliente ? parseInt(idOrdenCliente, 10) : null,
     idProducto: parseInt(idProducto, 10),
     cantidad,
     cliente: clienteNombre,
@@ -647,6 +956,53 @@ function filtrarOperarios() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   aplicarMinFechaHoy();
+
+  const inicioInput  = document.getElementById('op-fecha-inicio');
+  const entregaInput = document.getElementById('op-fecha-entrega');
+
+  // Fecha inicio: la fecha entrega se re-sincroniza cuando cambia el inicio
+  inicioInput?.addEventListener('change', () => sincronizarMinFechaEntrega());
+  inicioInput?.addEventListener('input',  () => sincronizarMinFechaEntrega());
+
+  if (entregaInput) {
+    // Al recibir foco, forzamos el min real (por si estaba suavizado por
+    // una fecha histórica). El picker nativo bloqueará fechas pasadas.
+    entregaInput.addEventListener('focus', () => {
+      _aplicarMinRealAlInteractuar();
+    });
+
+    // Mientras escribe/pega: validación en vivo con mensaje nativo del
+    // navegador (reportValidity) sin esperar a blur.
+    const validarEnVivo = () => {
+      _aplicarMinRealAlInteractuar();
+      const ok = _validarEntregaActual({ permitirHistorico: false });
+      if (!ok) {
+        // El navegador muestra su burbuja de "valor inválido"
+        entregaInput.reportValidity();
+      }
+    };
+    entregaInput.addEventListener('input',  validarEnVivo);
+    entregaInput.addEventListener('change', validarEnVivo);
+
+    // Al salir del campo: si el valor quedó inválido y NO es la fecha
+    // histórica original, lo limpiamos y avisamos.
+    entregaInput.addEventListener('blur', () => {
+      _aplicarMinRealAlInteractuar();
+      const ok = _validarEntregaActual({ permitirHistorico: true });
+      if (!ok) {
+        const esHistoricoOriginal = (
+          _entregaHistoricaOriginal !== null &&
+          entregaInput.value === _entregaHistoricaOriginal
+        );
+        if (!esHistoricoOriginal) {
+          entregaInput.value = '';
+          entregaInput.setCustomValidity('');
+          mostrarToast('La fecha de entrega no puede ser anterior a hoy.', 'error');
+        }
+      }
+    });
+  }
+
   cargarDashboard();
   cargarOrdenesProduccion();
   cargarProductosLista();

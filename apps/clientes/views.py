@@ -36,6 +36,46 @@ cliente_required = login_required_rol(
 
 
 # ============================================================
+# PARSEO DE FECHA ENTREGA (desde el rango que envía el cliente)
+# ============================================================
+
+def _parsear_fecha_entrega_desde_rango(fecha_rango):
+    """
+    El campo 'fecha_rango' viene del DateRangePicker del portal del
+    cliente como un texto tipo 'DD/MM/YYYY - DD/MM/YYYY'.
+
+    Esta función toma la fecha FINAL del rango (la fecha límite que
+    el cliente indicó) y la devuelve como date para guardarla en
+    Orden.fechaEntregaEstimada. Si no se puede interpretar, devuelve
+    None y la orden queda sin fecha estimada (a definir por
+    producción), igual que antes.
+    """
+
+    if not fecha_rango or fecha_rango == 'Sin definir':
+        return None
+
+    # Nos quedamos con la segunda fecha del rango si viene con '-';
+    # si solo viene una fecha, se usa esa.
+    partes = [p.strip() for p in fecha_rango.split('-')]
+    texto_fecha = partes[-1] if partes else fecha_rango.strip()
+
+    formatos_posibles = (
+        '%d/%m/%Y',
+        '%m/%d/%Y',
+        '%Y-%m-%d',
+        '%d-%m-%Y',
+    )
+
+    for formato in formatos_posibles:
+        try:
+            return datetime.strptime(texto_fecha, formato).date()
+        except ValueError:
+            continue
+
+    return None
+
+
+# ============================================================
 # GENERAR FACTURA PDF
 # ============================================================
 
@@ -528,6 +568,14 @@ def registrar_orden(request):
     if not fecha_rango:
         fecha_rango = "Sin definir"
 
+    # Se interpreta la fecha límite que el cliente eligió en el
+    # rango del formulario. Si no se puede interpretar, queda en
+    # None y producción/administración la define después (igual
+    # que el comportamiento anterior).
+    fecha_entrega_estimada = _parsear_fecha_entrega_desde_rango(
+        fecha_rango
+    )
+
     # --------------------------------------------------------
     # CREAR ORDEN
     # --------------------------------------------------------
@@ -544,9 +592,10 @@ def registrar_orden(request):
 
             precioUnitario=producto.precio,
 
-            # Producción/administración define
-            # posteriormente esta fecha.
-            fechaEntregaEstimada=None,
+            # Se guarda la fecha límite indicada por el cliente en
+            # el selector de rango. Producción/administración puede
+            # ajustarla luego si hace falta.
+            fechaEntregaEstimada=fecha_entrega_estimada,
 
             instrucciones=(
                 instrucciones
@@ -805,6 +854,11 @@ def editar_orden(request, idOrden):
             ''
         ).strip()
 
+        fecha_rango = request.POST.get(
+            'fecha_rango',
+            ''
+        ).strip()
+
         try:
 
             producto = Producto.objects.get(
@@ -826,6 +880,18 @@ def editar_orden(request, idOrden):
                 instrucciones
                 or 'Sin instrucciones'
             )
+
+            # Si el cliente cambió el rango de fechas en el modal de
+            # edición, se actualiza la fecha estimada. Si el campo
+            # viene vacío (formulario sin ese campo, u orden que aún
+            # no tiene rango definido), se deja el valor existente
+            # tal cual para no borrar una fecha ya asignada.
+            if fecha_rango:
+                fecha_entrega_estimada = (
+                    _parsear_fecha_entrega_desde_rango(fecha_rango)
+                )
+                if fecha_entrega_estimada:
+                    orden.fechaEntregaEstimada = fecha_entrega_estimada
 
             orden.save()
 

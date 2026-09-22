@@ -11,6 +11,7 @@ from django.views.decorators.http import require_http_methods
 
 from .models import AsignacionTarea, Incidencia, Operario
 
+
 # ─────────────────────────────────────────────────────────────────
 # HELPER: obtener operario de la sesión
 # ─────────────────────────────────────────────────────────────────
@@ -111,11 +112,8 @@ def api_tareas(request):
     """
     Devuelve las asignaciones del operario logueado.
 
-    Campos que el JS espera por cada tarea:
-        idAsignacion, nombreTarea, descripcionTarea, proceso,
-        complejidad, prioridad, estado, horasEstimadas, horasReales,
-        tipoPrenda, cantidadPrendas, maquina,
-        fechaInicio, fechaFinalizacion, fechaInicioTs
+    Incluye fechaLimite para que el frontend pueda mostrar el deadline
+    real (que la OP propaga automáticamente).
     """
     operario = _get_operario(request)
     if not operario:
@@ -155,6 +153,7 @@ def api_tareas(request):
             'cantidadPrendas': a.cantidadPrendas or 0,
             'maquina':         tarea.proceso or 'Planta General',
             'fechaInicio':     str(a.fechaInicio) if a.fechaInicio else None,
+            'fechaLimite':     str(a.fechaLimite) if a.fechaLimite else None,   # ← NUEVO
             'fechaFinalizacion': str(a.fechaFinalizacion) if a.fechaFinalizacion else None,
             'fechaInicioTs':   fecha_inicio_ts,
         })
@@ -199,12 +198,17 @@ def api_actualizar_estado(request, id_asignacion):
 
     asignacion.save()
 
-    # ── Conexión con Producción: si esta tarea pertenece a un lote de
-    # producción (Tarea.idProduccion), recalculamos el avance de esa
-    # Produccion y dejamos que dispare sus propias transiciones FSM
-    # (iniciar()/completar()), que a su vez sincronizan el Orden del
-    # cliente. Import local para evitar ciclo de imports entre apps.
-    id_produccion = asignacion.idTarea.idProduccion
+    # ── Conexión con Producción ─────────────────────────────────
+    # Ahora preferimos el FK nuevo (idOrdenProduccion_id) que vive en la
+    # propia asignación, y caemos al viejo (Tarea.idProduccion) solo si
+    # la asignación es histórica y no tiene vínculo nuevo.
+    id_produccion = asignacion.idOrdenProduccion_id
+    if id_produccion is None:
+        try:
+            id_produccion = asignacion.idTarea.idProduccion if asignacion.idTarea else None
+        except Exception:
+            id_produccion = None
+
     if id_produccion:
         from apps.produccion.services import recalcular_produccion_desde_tareas
         recalcular_produccion_desde_tareas(id_produccion)

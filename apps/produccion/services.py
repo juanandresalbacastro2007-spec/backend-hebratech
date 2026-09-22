@@ -1,27 +1,16 @@
 # apps/produccion/services.py
+import logging
 from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
 from django_fsm import can_proceed
 
-from apps.administrador.models import Orden
+from apps.administrador.models import Orden, AsignacionTarea
 from .models import OrdenProduccion
 
-# Cuánto tiempo mínimo debe quedar una orden en "Procesando" (En Progreso en
-# Produccion) antes de poder pasar a "Enviado", aunque el 100% de las tareas
-# ya esté completo. Es una regla de negocio, no técnica — ajustable en
-# settings.py sin tocar este archivo:
-#     PRODUCCION_MINUTOS_MINIMOS_EN_PROCESO = 30
-#
-# NOTA: esta regla dependía de un modelo `Produccion` con FSMField +
-# django-simple-history (`produccion.history`) que ya no existe — el modelo
-# real es `OrdenProduccion`, con `estado` como CharField normal y sin
-# historial. Por eso, por ahora, el avance a 'Completado' es inmediato en
-# cuanto el 100% de las tareas activas están completas (sin esperar este
-# mínimo). Si quieres reactivar el mínimo de tiempo, hay que agregar una
-# columna que registre cuándo pasó a 'En Progreso' (o simple-history real
-# sobre OrdenProduccion) — avísame y lo dejamos funcionando de nuevo.
+logger = logging.getLogger(__name__)
+
 MINUTOS_MINIMOS_EN_PROCESO = getattr(settings, 'PRODUCCION_MINUTOS_MINIMOS_EN_PROCESO', 30)
 
 TRANSICION_CLIENTE_MAP = {
@@ -30,9 +19,16 @@ TRANSICION_CLIENTE_MAP = {
 }
 
 
+# ═══════════════════════════════════════════════════════════════════
+# SINCRONIZACIÓN Orden de Producción → Orden de Cliente
+# ═══════════════════════════════════════════════════════════════════
+
 def sincronizar_estado_cliente(produccion):
-    """Traduce el estado interno de Produccion al estado del Orden del cliente."""
-    if not produccion.idOrden:
+    """
+    Aplica al Orden de cliente la transición FSM equivalente al nuevo
+    estado de la OrdenProduccion.
+    """
+    if not produccion.idOrden_id:
         return None
 
     metodo_nombre = TRANSICION_CLIENTE_MAP.get(produccion.estado)
@@ -40,16 +36,24 @@ def sincronizar_estado_cliente(produccion):
         return None
 
     try:
-        orden = Orden.objects.get(pk=produccion.idOrden)
+        orden = Orden.objects.get(pk=produccion.idOrden_id)
     except Orden.DoesNotExist:
         return None
 
     metodo = getattr(orden, metodo_nombre, None)
-    if metodo and can_proceed(metodo):
-        metodo()
-        orden.save(update_fields=['estado'])
-        registrar_evento(produccion, orden)
+    if not metodo:
+        return orden
 
+    if not can_proceed(metodo):
+        logger.info(
+            'Sincronización omitida: %s no procede sobre Orden #%s (estado: %s)',
+            metodo_nombre, orden.pk, orden.estado,
+        )
+        return orden
+
+    metodo()
+    orden.save(update_fields=['estado'])
+    registrar_evento(produccion, orden)
     return orden
 
 
@@ -60,9 +64,8 @@ def registrar_evento(produccion, orden):
 
 def intentar_completar_produccion(produccion):
     """
-    Completa 'produccion' (OrdenProduccion) si está 'En Progreso'.
-    La regla del tiempo mínimo quedó desactivada (ver nota arriba) hasta que
-    haya una forma real de medir cuánto lleva en ese estado.
+    Marca la OrdenProduccion como Completado si está En Progreso,
+    sincroniza con la Orden del cliente y propaga el estado a sus tareas.
     """
     if produccion.estado != 'En Progreso':
         return False
@@ -71,24 +74,23 @@ def intentar_completar_produccion(produccion):
     produccion.fechaFinReal = timezone.now().date()
     produccion.save(update_fields=['estado', 'fechaFinReal'])
     sincronizar_estado_cliente(produccion)
+    propagar_estado_a_tareas(produccion)
     return True
 
 
-# ── Recalculo de avance a partir del trabajo real de los operarios ────
+# ═══════════════════════════════════════════════════════════════════
+# AUTOMATIZACIÓN: Tareas → Producción (avance)
+# ═══════════════════════════════════════════════════════════════════
 
 def recalcular_produccion_desde_tareas(id_produccion):
     """
-    Se llama cada vez que una AsignacionTarea cambia de estado.
-    Recorre las AsignacionTarea cuya Tarea apunta a esta OrdenProduccion
-    (Tarea.idProduccion) y calcula el % de avance.
+    Recalcula el % de avance de una OrdenProduccion a partir del estado
+    de sus AsignacionTarea vinculadas (idOrdenProduccion_id).
 
-    - 0%         -> no hace nada (sigue Pendiente)
-    - 0% - 100%  -> pasa a 'En Progreso' de inmediato (el cliente ve
-                    "Procesando" ya)
-    - 100%       -> pasa a 'Completado' de inmediato y registra fechaFinReal
+      - 0%         -> no cambia (sigue Pendiente)
+      - 0% - 100%  -> pasa a 'En Progreso'
+      - 100%       -> pasa a 'Completado' + fechaFinReal
     """
-    from apps.administrador.models import AsignacionTarea  # import local: evita ciclo
-
     if not id_produccion:
         return None
 
@@ -97,7 +99,7 @@ def recalcular_produccion_desde_tareas(id_produccion):
     except OrdenProduccion.DoesNotExist:
         return None
 
-    asignaciones = AsignacionTarea.objects.filter(idTarea__idProduccion=id_produccion)
+    asignaciones = AsignacionTarea.objects.filter(idOrdenProduccion_id=id_produccion)
     activas = asignaciones.exclude(estado='Cancelada')
     total = activas.count()
     if total == 0:
@@ -125,28 +127,62 @@ def recalcular_produccion_desde_tareas(id_produccion):
     return produccion
 
 
-# ── Reprogramación en cascada: mover la orden mueve las tareas ────────
+# ═══════════════════════════════════════════════════════════════════
+# AUTOMATIZACIÓN: Producción → Tareas (estado y fechas)
+# ═══════════════════════════════════════════════════════════════════
+
+def propagar_estado_a_tareas(produccion):
+    """
+    Cuando la OrdenProduccion cambia de estado, mueve las tareas vinculadas:
+
+      - Completado -> Pendiente / En Progreso pasan a Completada
+      - Cancelada  -> Pendiente / En Progreso pasan a Cancelada
+      - Otros      -> no se tocan (el operario las gestiona)
+    """
+    if produccion.estado == 'Completado':
+        AsignacionTarea.objects.filter(
+            idOrdenProduccion_id=produccion.pk,
+            estado__in=['Pendiente', 'En Progreso'],
+        ).update(
+            estado='Completada',
+            fechaFinalizacion=timezone.now().date(),
+        )
+    elif produccion.estado == 'Cancelada':
+        AsignacionTarea.objects.filter(
+            idOrdenProduccion_id=produccion.pk,
+            estado__in=['Pendiente', 'En Progreso'],
+        ).update(estado='Cancelada')
+
+
+def sincronizar_fechas_tareas_con_produccion(produccion):
+    """
+    Fuerza que las tareas no finalizadas tengan EXACTAMENTE el rango
+    de fechas de la orden:
+        fechaInicio = orden.fechaInicio
+        fechaLimite = orden.fechaEntrega
+    """
+    AsignacionTarea.objects.filter(
+        idOrdenProduccion_id=produccion.pk,
+        estado__in=['Pendiente', 'En Progreso'],
+    ).update(
+        fechaInicio=produccion.fechaInicio,
+        fechaLimite=produccion.fechaEntrega,
+    )
+
 
 def desplazar_tareas_por_cambio_fecha(id_produccion, delta_dias):
     """
-    Cuando se adelanta o atrasa la fechaInicio de una OrdenProduccion,
-    corre por el mismo número de días las tareas de operarios que todavía
-    no terminaron (Pendiente / En Progreso), para que el cronograma de
-    producción y el de los operarios queden sincronizados.
+    Corre fechaInicio y fechaLimite de las tareas no terminadas el mismo
+    número de días que se movió la fechaInicio de la orden de producción.
 
-    No toca tareas 'Completada' ni 'Cancelada' — esas ya pasaron y no se
-    reprograman.
-
-    delta_dias puede ser negativo (adelantar) o positivo (atrasar).
-    Devuelve cuántas asignaciones se movieron.
+    Se llama cuando cambia `fechaInicio` de la OP. Como el lote empieza
+    más tarde (o más temprano), todas las tareas se reprograman.
     """
-    from apps.administrador.models import AsignacionTarea  # import local: evita ciclo
-
     if not id_produccion or not delta_dias:
         return 0
 
     asignaciones = AsignacionTarea.objects.filter(
-        idTarea__idProduccion=id_produccion,
+        idOrdenProduccion_id=id_produccion,
         estado__in=['Pendiente', 'En Progreso'],
     )
 
@@ -162,5 +198,29 @@ def desplazar_tareas_por_cambio_fecha(id_produccion, delta_dias):
         if cambios:
             asignacion.save(update_fields=cambios)
             movidas += 1
+    return movidas
 
+
+def desplazar_fechaLimite_por_cambio_entrega(id_produccion, delta_dias):
+    """
+    Corre SOLO fechaLimite de las tareas no terminadas cuando se movió
+    fechaEntrega de la orden de producción. No toca fechaInicio.
+
+    Se llama cuando cambia `fechaEntrega` de la OP: el operario sigue
+    empezando el mismo día, solo tiene más (o menos) plazo para terminar.
+    """
+    if not id_produccion or not delta_dias:
+        return 0
+
+    asignaciones = AsignacionTarea.objects.filter(
+        idOrdenProduccion_id=id_produccion,
+        estado__in=['Pendiente', 'En Progreso'],
+        fechaLimite__isnull=False,
+    )
+
+    movidas = 0
+    for asignacion in asignaciones:
+        asignacion.fechaLimite += timedelta(days=delta_dias)
+        asignacion.save(update_fields=['fechaLimite'])
+        movidas += 1
     return movidas

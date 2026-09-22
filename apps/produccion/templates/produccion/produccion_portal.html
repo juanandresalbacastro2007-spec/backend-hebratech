@@ -1,337 +1,389 @@
-{% extends "administrador/admin_base.html" %}
+{% extends 'administrador/admin_base.html' %}
 {% load static %}
 
-{% block titulo %}Producción{% endblock %}
-{% block topbar_titulo %}Centro de Control de Producción{% endblock %}
-{% block topbar_sub %}Productos, órdenes, etapas y avance de operarios — todo conectado{% endblock %}
+{% block titulo %}
+  Producción
+{% endblock %}
+{% block topbar_titulo %}
+  Centro de Control de Producción
+{% endblock %}
+{% block topbar_sub %}
+  Productos, órdenes, etapas y avance de operarios — todo conectado
+{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" />
-<link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}?v={% now 'U' %}" />
-<link rel="stylesheet" href="{% static 'css/produccion/produccion_control.css' %}?v={% now 'U' %}" />
-<style>
-  /* Estilos para el timeline */
-  .timeline-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 20px 0;
-    position: relative;
-  }
-  .timeline-container::before {
-    content: '';
-    position: absolute;
-    top: 12px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #d1d5db;
-    z-index: 0;
-  }
-  .timeline-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    z-index: 1;
-    flex: 1;
-  }
-  .timeline-dot {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid #d1d5db;
-    background: #fff;
-    margin-bottom: 6px;
-  }
-  .timeline-step.completed .timeline-dot {
-    background: #198754;
-    border-color: #198754;
-  }
-  .timeline-step.active .timeline-dot {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 4px rgba(59,130,246,0.3);
-  }
-  .timeline-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
-  }
-  .timeline-step.active .timeline-label {
-    color: #3b82f6;
-  }
-  .timeline-step.completed .timeline-label {
-    color: #198754;
-  }
-</style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" />
+  <link rel="stylesheet" href="{% static 'css/produccion/produccion.css' %}?v={% now 'U' %}" />
+  <link rel="stylesheet" href="{% static 'css/produccion/produccion_control.css' %}?v={% now 'U' %}" />
+  <style>
+    /* ── Estilos para el timeline ──────────────────────────────── */
+    .timeline-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 20px 0;
+      position: relative;
+    }
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      top: 12px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #d1d5db;
+      z-index: 0;
+    }
+    .timeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+      flex: 1;
+    }
+    .timeline-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #d1d5db;
+      background: #fff;
+      margin-bottom: 6px;
+    }
+    .timeline-step.completed .timeline-dot {
+      background: #198754;
+      border-color: #198754;
+    }
+    .timeline-step.active .timeline-dot {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+    }
+    .timeline-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+    }
+    .timeline-step.active .timeline-label {
+      color: #3b82f6;
+    }
+    .timeline-step.completed .timeline-label {
+      color: #198754;
+    }
+    
+    /* ── Validación visual de inputs de fecha ─────────────────── */
+    /* Fecha inválida: el navegador marca :invalid cuando el valor
+                           está por debajo del `min`. Estilo rojo bien visible. */
+    input[type='date']:invalid {
+      border-color: #dc3545 !important;
+      box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.18) !important;
+      background-color: rgba(220, 53, 69, 0.05);
+    }
+    
+    /* Fecha histórica: una orden vieja con fecha de entrega ya vencida.
+                           Se conserva visible pero marcada en ámbar para que el admin sepa
+                           que es una fecha pasada y solo se validará si la cambia. */
+    input[type='date'].campo-historico {
+      border-color: #f59e0b !important;
+      background-color: rgba(245, 158, 11, 0.08);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14) !important;
+    }
+    
+    /* Pequeña insignia junto al label cuando el valor es histórico */
+    .label-historico-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      color: #92400e;
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      padding: 1px 6px;
+      border-radius: 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+  </style>
 {% endblock %}
 
 {% block contenido %}
-<div class="produccion-page">
+  <div class="produccion-page">
+    <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
-  <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-
-  <!-- DASHBOARD KPI -->
-  <div id="dashboard-alertas" class="dashboard-alertas"></div>
-  <div class="kpi-grid" id="kpi-grid">
-    <div class="kpi-card kpi-total">
-      <span class="kpi-icono">📦</span>
-      <div class="kpi-valor" id="kpi-total">—</div>
-      <div class="kpi-label">Total órdenes prod.</div>
-    </div>
-    <div class="kpi-card kpi-gris">
-      <span class="kpi-icono">⏳</span>
-      <div class="kpi-valor" id="kpi-pendientes">—</div>
-      <div class="kpi-label">Pendientes</div>
-    </div>
-    <div class="kpi-card kpi-azul">
-      <span class="kpi-icono">⚙️</span>
-      <div class="kpi-valor" id="kpi-en-progreso">—</div>
-      <div class="kpi-label">En producción</div>
-    </div>
-    <div class="kpi-card kpi-verde">
-      <span class="kpi-icono">✅</span>
-      <div class="kpi-valor" id="kpi-completadas">—</div>
-      <div class="kpi-label">Completadas</div>
-    </div>
-    <div class="kpi-card kpi-rojo">
-      <span class="kpi-icono">🔴</span>
-      <div class="kpi-valor" id="kpi-atrasadas">—</div>
-      <div class="kpi-label">Atrasadas</div>
-    </div>
-    <div class="kpi-card kpi-amarillo">
-      <span class="kpi-icono">📅</span>
-      <div class="kpi-valor" id="kpi-hoy">—</div>
-      <div class="kpi-label">Programadas hoy</div>
-    </div>
-  </div>
-
-  <div class="progreso-general-card">
-    <div class="progreso-general-header">
-      <span>Progreso general de producción</span>
-      <span id="progreso-general-pct">—%</span>
-    </div>
-    <div class="progress-bar-track">
-      <div class="progress-bar-fill" id="progreso-general-fill" style="width:0%"></div>
-    </div>
-  </div>
-
-  <!-- TABS -->
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab('ordenes', this)">🏭 Órdenes Producción</div>
-    <div class="tab" onclick="switchTab('calendario', this)">📅 Calendario</div>
-    <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance Operarios</div>
-  </div>
-
-  <!-- TAB: Órdenes Producción -->
-  <div id="tab-ordenes" class="tab-content active">
-    <div class="table-card">
-      <div class="table-toolbar">
-        <h3>Órdenes de Producción</h3>
-        <div class="toolbar-right">
-          <button class="btn btn-primary" onclick="abrirModalNuevaOrden()">➕ Nueva Orden</button>
-          <div class="search-wrap">
-            <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input id="search-ordenes" type="text" placeholder="Buscar orden prod..." oninput="filtrarOrdenes()" />
-          </div>
-        </div>
+    <!-- DASHBOARD KPI -->
+    <div id="dashboard-alertas" class="dashboard-alertas"></div>
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card kpi-total">
+        <span class="kpi-icono">📦</span>
+        <div class="kpi-valor" id="kpi-total">—</div>
+        <div class="kpi-label">Total órdenes prod.</div>
       </div>
-
-      <div class="filtros-rapidos" id="filtros-rapidos">
-        <button class="chip-filtro active" data-filtro="">Todas</button>
-        <button class="chip-filtro" data-filtro="hoy">Hoy</button>
-        <button class="chip-filtro" data-filtro="semana">Esta semana</button>
-        <button class="chip-filtro" data-filtro="atrasadas">🔴 Atrasadas</button>
-        <button class="chip-filtro" data-filtro="en_produccion">⚙️ En producción</button>
-        <button class="chip-filtro" data-filtro="terminadas">✅ Terminadas</button>
+      <div class="kpi-card kpi-gris">
+        <span class="kpi-icono">⏳</span>
+        <div class="kpi-valor" id="kpi-pendientes">—</div>
+        <div class="kpi-label">Pendientes</div>
       </div>
-
-      <div id="ordenes-grid" class="ordenes-grid">
-        <div class="empty-state"><span class="spinner"></span></div>
+      <div class="kpi-card kpi-azul">
+        <span class="kpi-icono">⚙️</span>
+        <div class="kpi-valor" id="kpi-en-progreso">—</div>
+        <div class="kpi-label">En producción</div>
+      </div>
+      <div class="kpi-card kpi-verde">
+        <span class="kpi-icono">✅</span>
+        <div class="kpi-valor" id="kpi-completadas">—</div>
+        <div class="kpi-label">Completadas</div>
+      </div>
+      <div class="kpi-card kpi-rojo">
+        <span class="kpi-icono">🔴</span>
+        <div class="kpi-valor" id="kpi-atrasadas">—</div>
+        <div class="kpi-label">Fuera de plazo</div>
+      </div>
+      <div class="kpi-card kpi-amarillo">
+        <span class="kpi-icono">📅</span>
+        <div class="kpi-valor" id="kpi-hoy">—</div>
+        <div class="kpi-label">Programadas hoy</div>
       </div>
     </div>
-  </div>
 
-  <!-- TAB: Calendario -->
-  <div id="tab-calendario" class="tab-content">
-    <div class="table-card">
-      <div class="table-toolbar">
-        <h3>Calendario de Producción</h3>
-        <div class="toolbar-right">
-          <span style="font-size:13px;color:var(--muted);">Arrastra los eventos para cambiar fechas</span>
-        </div>
+    <div class="progreso-general-card">
+      <div class="progreso-general-header">
+        <span>Progreso general de producción</span>
+        <span id="progreso-general-pct">—%</span>
       </div>
-      <div id="calendar" style="padding:16px;"></div>
-    </div>
-  </div>
-
-  <!-- TAB: Avance Operarios -->
-  <div id="tab-operarios" class="tab-content">
-    <div class="table-card">
-      <div class="table-toolbar">
-        <h3>Proceso de Confección por Operario</h3>
-        <div class="toolbar-right">
-          <div class="search-wrap">
-            <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input id="search-operarios" type="text" placeholder="Buscar operario..." oninput="filtrarOperarios()" />
-          </div>
-          <select id="filter-estado-tarea" class="filter-select" onchange="filtrarOperarios()">
-            <option value="">Todos los estados</option>
-            <option>Pendiente</option>
-            <option>En Progreso</option>
-            <option>Completada</option>
-            <option>Cancelada</option>
-          </select>
-        </div>
-      </div>
-      <div id="operarios-grid" class="operarios-grid">
-        <div class="empty-state"><span class="spinner"></span></div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progreso-general-fill" style="width:0%"></div>
       </div>
     </div>
-  </div>
 
-  <!-- ==================== MODALES ==================== -->
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('ordenes', this)">🏭 Órdenes Producción</div>
+      <div class="tab" onclick="switchTab('calendario', this)">📅 Calendario</div>
+      <div class="tab" onclick="switchTab('operarios', this)">🧵 Avance Operarios</div>
+    </div>
 
-  <!-- MODAL: Nueva/Editar Orden Producción -->
-  <div class="prod-modal-backdrop" id="modal-orden">
-    <div class="prod-modal">
-      <div class="prod-modal-header">
-        <h3 id="modal-orden-title">🗒 Nueva Orden de Producción</h3>
-        <button class="prod-modal-close" onclick="cerrarModalOrden()">×</button>
-      </div>
-      <div class="prod-modal-body">
-        <input type="hidden" id="orden-id" />
-        <div class="form-row">
-          <div class="form-group">
-            <label>Producto *</label>
-            <select id="op-producto">
-              <option value="">Seleccionar producto...</option>
-            </select>
-            <span class="campo-error-msg" id="err-op-producto">Selecciona un producto.</span>
-          </div>
-          <div class="form-group">
-            <label>Cantidad *</label>
-            <input id="op-cantidad" type="number" min="1" step="1" />
-            <span class="campo-error-msg" id="err-op-cantidad">Ingresa una cantidad válida.</span>
+    <!-- TAB: Órdenes Producción -->
+    <div id="tab-ordenes" class="tab-content active">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Órdenes de Producción</h3>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="abrirModalNuevaOrden()">➕ Nueva Registro De Producción</button>
+            <div class="search-wrap">
+              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input id="search-ordenes" type="text" placeholder="Buscar orden prod..." oninput="filtrarOrdenes()" />
+            </div>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Cliente *</label>
-            <select id="op-cliente">
-              <option value="">Seleccionar cliente...</option>
-            </select>
-            <span class="campo-error-msg" id="err-op-cliente">Selecciona un cliente.</span>
+        <div class="filtros-rapidos" id="filtros-rapidos">
+          <button class="chip-filtro active" data-filtro="">Todas</button>
+          <button class="chip-filtro" data-filtro="hoy">Hoy</button>
+          <button class="chip-filtro" data-filtro="semana">Esta semana</button>
+          <button class="chip-filtro" data-filtro="atrasadas">🔴 Fuera de plazo</button>
+          <button class="chip-filtro" data-filtro="en_produccion">⚙️ En producción</button>
+          <button class="chip-filtro" data-filtro="terminadas">✅ Terminadas</button>
+        </div>
+
+        <div id="ordenes-grid" class="ordenes-grid">
+          <div class="empty-state">
+            <span class="spinner"></span>
           </div>
-          <div class="form-group">
-            <label>Prioridad</label>
-            <select id="op-prioridad">
-              <option value="Normal">Normal</option>
-              <option value="Urgente">Urgente</option>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Calendario -->
+    <div id="tab-calendario" class="tab-content">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Calendario de Producción</h3>
+          <div class="toolbar-right">
+            <span style="font-size:13px;color:var(--muted);">Arrastra los eventos para cambiar fechas</span>
+          </div>
+        </div>
+        <div id="calendar" style="padding:16px;"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Avance Operarios -->
+    <div id="tab-operarios" class="tab-content">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Proceso de Confección por Operario</h3>
+          <div class="toolbar-right">
+            <div class="search-wrap">
+              <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input id="search-operarios" type="text" placeholder="Buscar operario..." oninput="filtrarOperarios()" />
+            </div>
+            <select id="filter-estado-tarea" class="filter-select" onchange="filtrarOperarios()">
+              <option value="">Todos los estados</option>
+              <option>Pendiente</option>
+              <option>En Progreso</option>
+              <option>Completada</option>
+              <option>Cancelada</option>
             </select>
           </div>
         </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Fecha Inicio *</label>
-            <input id="op-fecha-inicio" type="date" />
-            <span class="campo-error-msg" id="err-op-fecha-inicio">Selecciona la fecha de inicio.</span>
-          </div>
-          <div class="form-group">
-            <label>Fecha Entrega *</label>
-            <input id="op-fecha-entrega" type="date" />
-            <span class="campo-error-msg" id="err-op-fecha-entrega">Selecciona la fecha de entrega.</span>
+        <div id="operarios-grid" class="operarios-grid">
+          <div class="empty-state">
+            <span class="spinner"></span>
           </div>
         </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Fecha Fin Real</label>
-            <input id="op-fecha-fin-real" type="date" />
-          </div>
-          <div class="form-group">
-            <label>Estado</label>
-            <select id="op-estado">
-              <option value="Pendiente">Pendiente</option>
-              <option value="En Progreso">En Progreso</option>
-              <option value="Completado">Completado</option>
-              <option value="Atrasada">Atrasada</option>
-              <option value="Cancelada">Cancelada</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group full">
-            <label>Observaciones</label>
-            <input id="op-observaciones" type="text" placeholder="Observaciones..." />
-          </div>
-        </div>
-      </div>
-      <div class="prod-modal-footer">
-        <button class="btn btn-outline" onclick="cerrarModalOrden()">Cancelar</button>
-        <button class="btn btn-primary" onclick="guardarOrden()">💾 Guardar</button>
       </div>
     </div>
-  </div>
 
-  <!-- MODAL: Detalle Orden Producción -->
-  <div class="prod-modal-backdrop" id="modal-detalle-orden">
-    <div class="prod-modal prod-modal-grande">
-      <div class="prod-modal-header detalle-header" id="detalle-header">
-        <div>
-          <h3 id="detalle-titulo">ORD-000</h3>
-          <span id="detalle-subtitulo" class="detalle-subtitulo"></span>
+    <!-- ==================== MODALES ==================== -->
+
+    <!-- MODAL: Nueva/Editar Orden Producción -->
+    <div class="prod-modal-backdrop" id="modal-orden">
+      <div class="prod-modal">
+        <div class="prod-modal-header">
+          <h3 id="modal-orden-title">🗒 Nuevo Registro de Producción</h3>
+          <button class="prod-modal-close" onclick="cerrarModalOrden()">×</button>
         </div>
-        <button class="prod-modal-close" onclick="cerrarModalDetalle()">×</button>
-      </div>
+        <div class="prod-modal-body">
+          <input type="hidden" id="orden-id" />
 
-      <div class="detalle-progreso-wrap">
-        <div class="progress-bar-track">
-          <div class="progress-bar-fill" id="detalle-progress-fill" style="width:0%"></div>
+          <div class="form-row">
+            <div class="form-group full">
+              <label>Orden de Cliente</label>
+              <select id="op-orden-cliente" onchange="aplicarOrdenCliente()">
+                <option value="">Sin vincular (orden manual)</option>
+              </select>
+              <span class="campo-hint" id="hint-op-orden-cliente" style="display:none;font-size:12px;color:var(--muted);margin-top:4px;">Los datos de esta orden de cliente se cargaron automáticamente y no son editables. Para cambiarlos, desvincula la orden de cliente.</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Producto *</label>
+              <select id="op-producto">
+                <option value="">Seleccionar producto...</option>
+              </select>
+              <span class="campo-error-msg" id="err-op-producto">Selecciona un producto.</span>
+            </div>
+            <div class="form-group">
+              <label>Cantidad *</label>
+              <input id="op-cantidad" type="number" min="1" step="1" />
+              <span class="campo-error-msg" id="err-op-cantidad">Ingresa una cantidad válida.</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cliente *</label>
+              <select id="op-cliente">
+                <option value="">Seleccionar cliente...</option>
+              </select>
+              <span class="campo-error-msg" id="err-op-cliente">Selecciona un cliente.</span>
+            </div>
+            <div class="form-group">
+              <label>Prioridad</label>
+              <select id="op-prioridad">
+                <option value="Normal">Normal</option>
+                <option value="Urgente">Urgente</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Fecha Inicio *</label>
+              <input id="op-fecha-inicio" type="date" min="{% now 'Y-m-d' %}" />
+              <span class="campo-error-msg" id="err-op-fecha-inicio">Selecciona la fecha de inicio.</span>
+            </div>
+            <div class="form-group">
+              <label>
+                Fecha Entrega *
+                <span class="label-historico-badge" id="badge-fecha-entrega-historica" style="display:none;">Histórica</span>
+              </label>
+              <input id="op-fecha-entrega" type="date" min="{% now 'Y-m-d' %}" />
+              <span class="campo-error-msg" id="err-op-fecha-entrega">Selecciona la fecha de entrega.</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Fecha Fin Real</label>
+              <input id="op-fecha-fin-real" type="date" min="{% now 'Y-m-d' %}" />
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="op-estado">
+                <option value="Pendiente">Pendiente</option>
+                <option value="En Progreso">En producción</option>
+                <option value="Completado">Completado</option>
+                <option value="Fuera de Plazo">Fuera de Plazo</option>
+                <option value="Cancelada">Cancelada</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full">
+              <label>Observaciones</label>
+              <input id="op-observaciones" type="text" placeholder="Observaciones..." />
+            </div>
+          </div>
         </div>
-        <span id="detalle-progress-pct">0%</span>
-      </div>
-
-      <div class="detalle-tabs">
-        <button class="detalle-tab active" data-tab="resumen" onclick="cambiarTabDetalle('resumen')">Resumen</button>
-        <button class="detalle-tab" data-tab="historial" onclick="cambiarTabDetalle('historial')">Historial</button>
-      </div>
-
-      <div class="detalle-body">
-        <div class="detalle-panel active" id="panel-resumen"></div>
-        <div class="detalle-panel" id="panel-historial"></div>
-      </div>
-
-      <div class="prod-modal-footer">
-        <button class="btn btn-outline" onclick="cerrarModalDetalle()">Cerrar</button>
-        <button class="btn btn-primary" id="btn-editar-desde-detalle">✏️ Editar orden</button>
+        <div class="prod-modal-footer">
+          <button class="btn btn-outline" onclick="cerrarModalOrden()">Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarOrden()">💾 Guardar</button>
+        </div>
       </div>
     </div>
+
+    <!-- MODAL: Detalle Orden Producción -->
+    <div class="prod-modal-backdrop" id="modal-detalle-orden">
+      <div class="prod-modal prod-modal-grande">
+        <div class="prod-modal-header detalle-header" id="detalle-header">
+          <div>
+            <h3 id="detalle-titulo">ORD-000</h3>
+            <span id="detalle-subtitulo" class="detalle-subtitulo"></span>
+          </div>
+          <button class="prod-modal-close" onclick="cerrarModalDetalle()">×</button>
+        </div>
+
+        <div class="detalle-progreso-wrap">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="detalle-progress-fill" style="width:0%"></div>
+          </div>
+          <span id="detalle-progress-pct">0%</span>
+        </div>
+
+        <div class="detalle-tabs">
+          <button class="detalle-tab active" data-tab="resumen" onclick="cambiarTabDetalle('resumen')">Resumen</button>
+          <button class="detalle-tab" data-tab="historial" onclick="cambiarTabDetalle('historial')">Historial</button>
+        </div>
+
+        <div class="detalle-body">
+          <div class="detalle-panel active" id="panel-resumen"></div>
+          <div class="detalle-panel" id="panel-historial"></div>
+        </div>
+
+        <div class="prod-modal-footer">
+          <button class="btn btn-outline" onclick="cerrarModalDetalle()">Cerrar</button>
+          <button class="btn btn-primary" id="btn-editar-desde-detalle">✏️ Editar orden</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
   </div>
-
-  <div class="toast" id="toast"></div>
-
-</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-<script src="{% static 'js/produccion.js' %}?v={% now 'U' %}"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (document.querySelector('#tab-calendario.active')) {
-      iniciarCalendario();
-    }
-  });
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+  <script src="{% static 'js/produccion.js' %}?v={% now 'U' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (document.querySelector('#tab-calendario.active')) {
+        iniciarCalendario()
+      }
+    })
+  </script>
 {% endblock %}

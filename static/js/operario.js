@@ -386,12 +386,28 @@ document.addEventListener('DOMContentLoaded', () => {
     function abrirDetalleTarea(t) {
         document.getElementById('dtlTaskTitle').textContent = t.nombreTarea;
 
-        const diasEst = Math.ceil((t.horasEstimadas || 0) / 10);
+        // "Fin estimado" = fechaLimite real (si existe).
+        // Fallback: si la tarea es antigua y no tiene fechaLimite, se
+        // calcula un aproximado con fechaInicio + horasEstimadas/10.
         let fechaFinStr = '—';
-        if (t.fechaInicio) {
-            const d = new Date(t.fechaInicio);
+        let diasEst = null;
+
+        if (t.fechaLimite) {
+            const fin = new Date(t.fechaLimite + 'T00:00:00');
+            fechaFinStr = fin.toLocaleDateString('es-CO', {
+                day: '2-digit', month: 'short', year: 'numeric',
+            });
+            if (t.fechaInicio) {
+                const ini = new Date(t.fechaInicio + 'T00:00:00');
+                diasEst = Math.max(1, Math.round((fin - ini) / 86400000));
+            }
+        } else if (t.fechaInicio) {
+            diasEst = Math.ceil((t.horasEstimadas || 0) / 10) || 1;
+            const d = new Date(t.fechaInicio + 'T00:00:00');
             d.setDate(d.getDate() + diasEst);
-            fechaFinStr = d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+            fechaFinStr = d.toLocaleDateString('es-CO', {
+                day: '2-digit', month: 'short', year: 'numeric',
+            });
         }
 
         document.getElementById('taskDetailBody').innerHTML = `
@@ -429,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="ht-detail-item">
                     <div class="ht-detail-label"><i class="bi bi-calendar3"></i> Días estimados</div>
-                    <div class="ht-detail-value">${diasEst} día${diasEst !== 1 ? 's' : ''}</div>
+                    <div class="ht-detail-value">${diasEst != null ? diasEst + ' día' + (diasEst !== 1 ? 's' : '') : '—'}</div>
                 </div>
             </div>
         `;

@@ -4,21 +4,72 @@ from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 from django.utils import timezone
 import json
-import unicodedata
-from datetime import timedelta
+import logging
+from datetime import timedelta, date as date_type
 
 from .models import Producto, OrdenProduccion, Prenda
 from apps.administrador.models import AsignacionTarea
 from apps.core.decorators import login_required_rol, login_required_api
-from apps.administrador.models import Usuario
+from apps.administrador.models import Usuario, Orden
 from apps.operarios.models import Operario
 from apps.clientes.models import Cliente
+
+logger = logging.getLogger(__name__)
 
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
 admin_required_api = login_required_api(rol_esperado='administrador', session_key='usuario_id')
 
 
-# ── PORTAL (Template HTML) ───────────────────────────
+# ── AUTOMATIZACIÓN: estado de producción → estado de la orden de cliente ──
+MAPA_ESTADO_PRODUCCION_A_CLIENTE = {
+    'En Progreso': 'marcar_en_produccion',   # Pendiente -> Procesando
+    'Completado':  'marcar_enviado',         # Procesando -> Enviado
+    'Cancelada':   'cancelar',               # Pendiente/Procesando -> Cancelado
+}
+
+
+def sincronizar_estado_cliente(orden_produccion):
+    """Aplica al Orden de cliente vinculado la transición FSM que
+    corresponde al nuevo estado de la OrdenProduccion, si existe una."""
+    if not orden_produccion.idOrden_id:
+        return
+    metodo = MAPA_ESTADO_PRODUCCION_A_CLIENTE.get(orden_produccion.estado)
+    if not metodo:
+        return
+    try:
+        orden = Orden.objects.get(pk=orden_produccion.idOrden_id)
+        getattr(orden, metodo)()
+        orden.save()
+    except Orden.DoesNotExist:
+        pass
+    except Exception:
+        pass
+
+
+# ── UTILIDADES DE FECHAS ─────────────────────────────
+CAMPOS_FECHA = {'fechaInicio', 'fechaEntrega', 'fechaFinReal'}
+
+
+def _parse_fecha(valor):
+    """Normaliza un valor JSON a datetime.date (o None)."""
+    if valor in (None, '', 'null'):
+        return None
+    if isinstance(valor, date_type):
+        return valor
+    return date_type.fromisoformat(str(valor))
+
+
+def _parse_body_json(request):
+    """Parsea el body como JSON. Devuelve (data, error_response)."""
+    try:
+        return json.loads(request.body or '{}'), None
+    except json.JSONDecodeError:
+        return None, JsonResponse(
+            {'error': 'Body inválido: se esperaba JSON.'}, status=400
+        )
+
+
+# ── PORTAL ───────────────────────────────────────────
 @admin_required
 def produccion_portal(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
@@ -30,17 +81,17 @@ def produccion_portal(request):
 
 # ── UTILIDADES ───────────────────────────────────────
 def orden_produccion_to_dict(o):
-    # Calcular progreso basado en estado
     progreso = 0
     if o.estado == 'Completado':
         progreso = 100
     elif o.estado == 'En Progreso':
         progreso = 50
-    elif o.estado == 'Atrasada':
+    elif o.estado == 'Fuera de Plazo':
         progreso = 30
     return {
         'idOrdenProduccion': o.idOrdenProduccion,
         'numero':            o.numero,
+        'idOrden':           o.idOrden_id,
         'idProducto':        o.idProducto_id,
         'nombreProducto':    o.idProducto.nombre if o.idProducto else '',
         'cliente':           o.cliente,
@@ -67,7 +118,7 @@ def dashboard(request):
     pendientes = todas.filter(estado='Pendiente').count()
     en_progreso = todas.filter(estado='En Progreso').count()
     completadas = todas.filter(estado='Completado').count()
-    atrasadas = todas.filter(estado='Atrasada').count()
+    atrasadas = todas.filter(estado='Fuera de Plazo').count()
     programadas_hoy = todas.filter(fechaInicio=hoy).count()
 
     avances = []
@@ -76,7 +127,7 @@ def dashboard(request):
             avances.append(100)
         elif o.estado == 'En Progreso':
             avances.append(50)
-        elif o.estado == 'Atrasada':
+        elif o.estado == 'Fuera de Plazo':
             avances.append(30)
         else:
             avances.append(0)
@@ -84,7 +135,7 @@ def dashboard(request):
 
     alertas = []
     if atrasadas:
-        alertas.append({'tipo': 'danger', 'icono': '🔴', 'texto': f'{atrasadas} orden(es) de producción atrasada(s)'})
+        alertas.append({'tipo': 'danger', 'icono': '🔴', 'texto': f'{atrasadas} orden(es) de producción fuera de plazo'})
     proximas_vencer = todas.filter(
         estado__in=['Pendiente', 'En Progreso'],
         fechaEntrega__gte=hoy,
@@ -106,7 +157,7 @@ def dashboard(request):
     })
 
 
-# ── PRODUCTOS (para el select en órdenes) ────────────
+# ── PRODUCTOS ────────────────────────────────────────
 @admin_required_api
 def productos_lista(request):
     productos = Producto.objects.filter(estado='activo')
@@ -114,16 +165,43 @@ def productos_lista(request):
     return JsonResponse(data, safe=False)
 
 
-# ── CLIENTES (para desplegable) ──────────────────────
+# ── CLIENTES ────────────────────────────────────────
 @admin_required_api
 def clientes_lista(request):
     clientes = Cliente.objects.select_related('idUsuario').all()
     data = []
     for c in clientes:
         nombre = c.empresa or c.nombre or f"Cliente {c.idCliente}"
+        data.append({'idCliente': c.idCliente, 'nombre': nombre})
+    return JsonResponse(data, safe=False)
+
+
+# ── ÓRDENES DE CLIENTE ────────────────────────────────
+@admin_required_api
+def ordenes_cliente_lista(request):
+    ya_usadas = OrdenProduccion.objects.exclude(idOrden__isnull=True).values_list('idOrden_id', flat=True)
+
+    ordenes = (
+        Orden.objects
+        .select_related('idCliente', 'idProducto')
+        .exclude(idOrden__in=ya_usadas)
+        .exclude(estado__in=['Cancelado', 'Entregado'])
+        .order_by('-fechaCreacion')
+    )
+
+    data = []
+    for o in ordenes:
+        cliente_nombre = o.idCliente.empresa or o.idCliente.nombre or f"Cliente {o.idCliente.idCliente}"
         data.append({
-            'idCliente': c.idCliente,
-            'nombre': nombre,
+            'idOrden':              o.idOrden,
+            'cliente':              cliente_nombre,
+            'idProducto':           o.idProducto_id,
+            'nombreProducto':       o.idProducto.nombre if o.idProducto else (o.nombreProducto or ''),
+            'cantidad':             o.cantidad,
+            'fechaCreacion':        str(o.fechaCreacion),
+            'fechaEntregaEstimada': str(o.fechaEntregaEstimada) if o.fechaEntregaEstimada else None,
+            'prioridad':            o.prioridad,
+            'instrucciones':        o.instrucciones,
         })
     return JsonResponse(data, safe=False)
 
@@ -148,23 +226,39 @@ def ordenes_produccion(request):
         elif filtro == 'terminadas':
             lista = lista.filter(estado='Completado')
         elif filtro == 'atrasadas':
-            lista = lista.filter(estado='Atrasada')
+            lista = lista.filter(estado='Fuera de Plazo')
 
         data = [orden_produccion_to_dict(o) for o in lista]
         return JsonResponse(data, safe=False)
 
     # POST: Crear nueva orden
-    data = json.loads(request.body)
+    data, error = _parse_body_json(request)
+    if error:
+        return error
 
-    hoy = timezone.now().date()
-    fecha_inicio = data.get('fechaInicio')
-    fecha_entrega = data.get('fechaEntrega')
-    if fecha_inicio and str(fecha_inicio) < str(hoy):
-        return JsonResponse({'error': 'La fecha de inicio no puede ser anterior a hoy.'}, status=400)
-    if fecha_entrega and str(fecha_entrega) < str(hoy):
-        return JsonResponse({'error': 'La fecha de entrega no puede ser anterior a hoy.'}, status=400)
+    id_orden_cliente = data.get('idOrden') or None
 
-    # Generar número automático
+    try:
+        fecha_inicio = _parse_fecha(data.get('fechaInicio'))
+        fecha_entrega = _parse_fecha(data.get('fechaEntrega'))
+        fecha_fin_real = _parse_fecha(data.get('fechaFinReal'))
+    except (ValueError, TypeError):
+        return JsonResponse(
+            {'error': 'Alguna fecha no tiene formato válido (usa YYYY-MM-DD).'},
+            status=400,
+        )
+
+    if not id_orden_cliente:
+        hoy = timezone.now().date()
+        if fecha_inicio and fecha_inicio < hoy:
+            return JsonResponse({'error': 'La fecha de inicio no puede ser anterior a hoy.'}, status=400)
+        if fecha_entrega and fecha_entrega < hoy:
+            return JsonResponse({'error': 'La fecha de entrega no puede ser anterior a hoy.'}, status=400)
+
+    if id_orden_cliente:
+        if OrdenProduccion.objects.filter(idOrden_id=id_orden_cliente).exists():
+            return JsonResponse({'error': 'Esta orden de cliente ya tiene una orden de producción asociada.'}, status=400)
+
     ultimo = OrdenProduccion.objects.order_by('-idOrdenProduccion').first()
     if ultimo:
         num = int(ultimo.numero.split('-')[1]) + 1
@@ -174,16 +268,18 @@ def ordenes_produccion(request):
 
     o = OrdenProduccion.objects.create(
         numero          = numero,
+        idOrden_id      = id_orden_cliente,
         idProducto_id   = data.get('idProducto'),
         cliente         = data.get('cliente', ''),
         cantidad        = data.get('cantidad', 0),
-        fechaInicio     = data.get('fechaInicio'),
-        fechaEntrega    = data.get('fechaEntrega'),
-        fechaFinReal    = data.get('fechaFinReal') or None,
+        fechaInicio     = fecha_inicio,
+        fechaEntrega    = fecha_entrega,
+        fechaFinReal    = fecha_fin_real,
         prioridad       = data.get('prioridad', 'Normal'),
         estado          = data.get('estado', 'Pendiente'),
         observaciones   = data.get('observaciones', ''),
     )
+    sincronizar_estado_cliente(o)
     return JsonResponse(orden_produccion_to_dict(o), status=201)
 
 
@@ -200,34 +296,95 @@ def orden_produccion_detalle(request, id):
         return JsonResponse(orden_produccion_to_dict(o))
 
     if request.method == 'PUT':
-        data = json.loads(request.body)
+        data, error = _parse_body_json(request)
+        if error:
+            return error
 
-        hoy = timezone.now().date()
-        for campo_fecha in ('fechaInicio', 'fechaEntrega'):
-            if campo_fecha in data and data[campo_fecha] and str(data[campo_fecha]) < str(hoy):
-                return JsonResponse(
-                    {'error': f'La {"fecha de inicio" if campo_fecha == "fechaInicio" else "fecha de entrega"} no puede ser anterior a hoy.'},
-                    status=400,
-                )
+        # Validación de fechas en pasado (solo órdenes manuales)
+        if not o.idOrden_id:
+            hoy = timezone.now().date()
+            valores_actuales = {'fechaInicio': str(o.fechaInicio), 'fechaEntrega': str(o.fechaEntrega)}
+            for campo_fecha in ('fechaInicio', 'fechaEntrega'):
+                nuevo_valor = data.get(campo_fecha)
+                if (
+                    campo_fecha in data
+                    and nuevo_valor
+                    and str(nuevo_valor) != valores_actuales[campo_fecha]
+                    and str(nuevo_valor) < str(hoy)
+                ):
+                    return JsonResponse(
+                        {'error': f'La {"fecha de inicio" if campo_fecha == "fechaInicio" else "fecha de entrega"} no puede ser anterior a hoy.'},
+                        status=400,
+                    )
 
+        # Guardamos los valores ANTERIORES para calcular deltas después
         fecha_inicio_anterior = o.fechaInicio
+        fecha_entrega_anterior = o.fechaEntrega    # ← NUEVO
+        estado_anterior = o.estado
 
         for campo in ['idProducto', 'cliente', 'cantidad', 'fechaInicio',
                       'fechaEntrega', 'fechaFinReal', 'prioridad', 'estado', 'observaciones']:
-            if campo in data:
-                if campo == 'idProducto':
-                    o.idProducto_id = data[campo]
-                else:
-                    setattr(o, campo, data[campo])
+            if campo not in data:
+                continue
+
+            valor = data[campo]
+
+            # Convertir strings ISO a datetime.date ANTES de asignar
+            if campo in CAMPOS_FECHA:
+                try:
+                    valor = _parse_fecha(valor)
+                except (ValueError, TypeError):
+                    return JsonResponse(
+                        {'error': f'{campo} no es una fecha válida (usa YYYY-MM-DD).'},
+                        status=400,
+                    )
+                if valor is None and campo in ('fechaInicio', 'fechaEntrega'):
+                    return JsonResponse(
+                        {'error': f'{campo} no puede quedar vacío.'},
+                        status=400,
+                    )
+
+            if campo == 'idProducto':
+                o.idProducto_id = valor
+            else:
+                setattr(o, campo, valor)
+
         o.save()
 
-        # Si se movió la fecha de inicio de la orden, se corren también las
-        # tareas de los operarios que aún no terminaron, el mismo número de días.
+        # ── 1. Cambió el estado → sincronizar cliente y propagar a tareas ──
+        if 'estado' in data and o.estado != estado_anterior:
+            sincronizar_estado_cliente(o)
+            try:
+                from .services import propagar_estado_a_tareas
+                propagar_estado_a_tareas(o)
+            except Exception:
+                logger.exception('Error propagando estado a tareas de OP %s', o.pk)
+
+        # ── 2. Cambió fechaInicio → correr TODAS las fechas de las tareas ──
         if 'fechaInicio' in data and o.fechaInicio and fecha_inicio_anterior:
             delta_dias = (o.fechaInicio - fecha_inicio_anterior).days
             if delta_dias:
-                from .services import desplazar_tareas_por_cambio_fecha
-                desplazar_tareas_por_cambio_fecha(o.idOrdenProduccion, delta_dias)
+                try:
+                    from .services import desplazar_tareas_por_cambio_fecha
+                    desplazar_tareas_por_cambio_fecha(o.idOrdenProduccion, delta_dias)
+                except Exception as e:
+                    logger.exception(
+                        'Error desplazando tareas de OP %s: %s',
+                        o.idOrdenProduccion, e,
+                    )
+
+        # ── 3. Cambió fechaEntrega → correr SOLO fechaLimite de tareas ──
+        if 'fechaEntrega' in data and o.fechaEntrega and fecha_entrega_anterior:
+            delta_dias = (o.fechaEntrega - fecha_entrega_anterior).days
+            if delta_dias:
+                try:
+                    from .services import desplazar_fechaLimite_por_cambio_entrega
+                    desplazar_fechaLimite_por_cambio_entrega(o.idOrdenProduccion, delta_dias)
+                except Exception as e:
+                    logger.exception(
+                        'Error moviendo fechaLimite de tareas de OP %s: %s',
+                        o.idOrdenProduccion, e,
+                    )
 
         return JsonResponse(orden_produccion_to_dict(o))
 
@@ -248,7 +405,7 @@ def eventos_calendario(request):
             color = '#A5C9CA'
         elif o.estado == 'Completado':
             color = '#198754'
-        elif o.estado == 'Atrasada':
+        elif o.estado == 'Fuera de Plazo':
             color = '#dc3545'
 
         eventos.append({
@@ -311,7 +468,8 @@ def avance_operarios(request):
                     'idAsignacion':      t.idAsignacion,
                     'nombreTarea':       t.idTarea.nombreTarea,
                     'proceso':           t.idTarea.proceso,
-                    'idProduccion':      t.idTarea.idProduccion,
+                    # ← CAMBIÓ: ahora lee del FK nuevo, con fallback al viejo
+                    'idProduccion':      t.idOrdenProduccion_id or t.idTarea.idProduccion,
                     'cantidadPrendas':   t.cantidadPrendas,
                     'estado':            t.estado,
                     'prioridad':         t.prioridad,
