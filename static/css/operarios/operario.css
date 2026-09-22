@@ -435,11 +435,11 @@ html, body {
 .ht-search-input:focus { border-color: var(--hi2); }
 
 .ht-filter-select {
-  background: var(--surface);
+  background: var(--primary);
   border: 1px solid var(--border-md);
   border-radius: var(--radius-xs);
   padding: 8px 14px;
-  color: var(--text);
+  color: white !important;
   font-family: 'Roboto', sans-serif;
   font-size: 0.95rem;
   cursor: pointer;
@@ -447,7 +447,14 @@ html, body {
   transition: border-color .15s;
   height: 42px;
 }
-.ht-filter-select:focus { border-color: var(--hi2); }
+
+.ht-filter-select:focus { border-color: var(--hi2); 
+}
+
+
+.ht-filter-select option {
+  background-color: var(--border);
+}
 
 /* ================================================================ MAIN */
 .ht-main {
@@ -1503,6 +1510,11 @@ html, body {
 [data-bs-theme="dark"] .dropdown-menu .px-3.py-2 {
   background: var(--surface2) !important;
   border-radius: 8px 8px 0 0;
+}
+
+[data-bs-theme="dark"] .ht-filter-select option {
+  background: #2c2d33;
+  color: white;
 }
 
 
