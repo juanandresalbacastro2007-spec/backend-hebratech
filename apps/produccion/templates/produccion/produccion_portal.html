@@ -83,7 +83,8 @@
     /* Fecha histórica: una orden vieja con fecha de entrega ya vencida.
                            Se conserva visible pero marcada en ámbar para que el admin sepa
                            que es una fecha pasada y solo se validará si la cambia. */
-    input[type='date'].campo-historico {
+    input[type='date'].campo-historico,
+    input[type='date'].campo-historico:invalid {
       border-color: #f59e0b !important;
       background-color: rgba(245, 158, 11, 0.08);
       box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14) !important;

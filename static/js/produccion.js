@@ -110,9 +110,17 @@ function sincronizarMinFechaEntrega(opts = {}) {
   );
 
   if (esHistorico) {
-    // No aplicamos `min` al DOM → el input no queda :invalid
-    entregaInput.removeAttribute('min');
-    entregaInput.min = '';
+    // OJO: antes esta rama quitaba el atributo `min` por completo para
+    // que el valor antiguo no quedara marcado como :invalid. Ese era el
+    // bug real: al no existir `min`, el calendario nativo dejaba de
+    // restringir cualquier selección y el usuario podía elegir CUALQUIER
+    // fecha pasada, no solo conservar la original de la orden.
+    // Ahora `min` = hoy queda siempre aplicado (el calendario sigue
+    // bloqueando fechas pasadas para cualquier selección nueva) y solo
+    // suavizamos el estilo rojo de :invalid del valor histórico ya
+    // guardado con la clase `campo-historico` (ver CSS).
+    entregaInput.min = hoy;
+    entregaInput.setAttribute('min', hoy);
     entregaInput.setCustomValidity('');
     entregaInput.classList.add('campo-historico');
     return;
