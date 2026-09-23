@@ -1334,7 +1334,7 @@ html, body {
 .ht-kpi-chip:hover {
   transform: translateY(-1px);
   border-color: var(--primary);
-  color: var(--primary-dark);
+  color: var(--accent2);
 }
 
 .ht-kpi-chip--pending  .ht-kpi-dot  { background: var(--text-muted); }
@@ -1461,7 +1461,9 @@ html, body {
   cursor: pointer;
   font-family: 'Roboto', sans-serif;
   transition: background .15s, color .15s;
+  
 }
+
 
 .ht-mobile-tab.active {
   background: var(--primary);
@@ -1520,7 +1522,10 @@ html, body {
 
 [data-bs-theme="dark"] .top-clock {
   background: var(--border) !important;
+}
 
+.ht-kpi-chip:hover{
+  color: lightcyan;
 }
 
 [data-bs-theme="dark"] .nombre{
