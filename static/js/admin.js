@@ -5,7 +5,7 @@
 // ── Reloj en topbar ──────────────────────────────────────
 function updateClock() {
   const el = document.getElementById('topClock');
-  if (!el) return;
+  if (!el || document.getElementById('clockText')) return;   // el dashboard maneja su propio reloj
   const now = new Date();
   const hora = now.toLocaleTimeString('es-CO');
   const fecha = now.toLocaleDateString('es-CO', {
@@ -18,6 +18,7 @@ updateClock();
 
 // ── Marcar nav-item activo según URL actual ──────────────
 document.addEventListener('DOMContentLoaded', function () {
+  if (document.querySelector('.nav-item.active')) return;   // Django ya marcó la sección activa
   const currentPath = window.location.pathname;
   document.querySelectorAll('.nav-item').forEach(function (item) {
     const href = item.getAttribute('href');
@@ -156,432 +157,303 @@ document.addEventListener("DOMContentLoaded", function () {
 // ============================================================
 // MÓDULO DE NOTIFICACIONES — HebraTech
 // ============================================================
-// Funciona en todas las páginas del panel porque vive en admin.js.
-// produccion.js solo necesita llamar a window.HT_Notif.procesar(alertas)
-// cuando recibe los datos del dashboard.
+// Campana + panel con pestañas Nuevas/Leídas, marcar una/todas.
+// Dashboard:  HT_Notif.procesar(alertas)
+// Otras páginas: <div id="notifMount" data-url="{% url 'api_alertas' %}"></div>
 // ============================================================
 
 window.HT_Notif = (function () {
+  'use strict';
 
-  // ── Claves de almacenamiento ──────────────────────────────
-  const BASE_KEY = 'ht_notif_leidas';
+  const BASE_KEY = 'ht_notif_leidas';          // mismo formato que antes (array de ids)
+  const MAX_LEIDAS = 200;                      // límite para no crecer sin fin
+  const POLL_MS = 60000;
 
-  function getUserId() {
-    return document.body.dataset.userId || 'default';
+  const TIPOS = {
+    danger:  { icon: 'bi-exclamation-octagon-fill',  label: 'Crítico',     orden: 0 },
+    warning: { icon: 'bi-exclamation-triangle-fill', label: 'Advertencia', orden: 1 },
+    info:    { icon: 'bi-info-circle-fill',          label: 'Información', orden: 2 },
+    success: { icon: 'bi-check-circle-fill',         label: 'OK',          orden: 3 },
+  };
+
+  const RUTAS = {
+    admin_ordenes: '/administrador/ordenes/',
+    ordenes: '/administrador/ordenes/',
+    admin_usuarios: '/administrador/usuarios/',
+    admin_tareas: '/administrador/tareas/',
+    admin_incidencias: '/administrador/incidencias/',
+    admin_inventario: '/administrador/inventario/',
+  };
+
+  let alertas = [];
+  let tab = 'nuevas';
+  let vistas = null;            // ids ya vistos (para detectar nuevas tras el primer load)
+  let onNueva = null;           // callback(alerta) cuando aparece una no leída nueva
+  let ui = null;                // referencias al DOM
+  let pollTimer = null;
+
+  // ── Utilidades ────────────────────────────────────────────
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // Id estable: ignora los números del texto, así "5 incidencia(s)" y "6 incidencia(s)"
+  // son la misma alerta y, una vez leída, no vuelve a aparecer aunque cambie el conteo.
+  const idDe = a => a.id ? String(a.id)
+    : `${a.tipo}::${a.modulo || ''}::${String(a.texto || '').replace(/\d+/g, '#').trim()}`;
+  const idLegacy = a => `${a.tipo}::${a.texto}`;          // formato anterior (compatibilidad)
+  const esLeida = (set, a) => set.has(idDe(a)) || set.has(idLegacy(a));
+  const tipoDe = a => TIPOS[a.tipo] || TIPOS.info;
+
+  function urlDe(a) {
+    if (a.url) return a.url;
+    const m = a.modulo;
+    if (!m) return '';
+    if (m.startsWith('/')) return m;
+    return RUTAS[m] || `/administrador/${m}/`;
   }
 
-  function storageKey() {
-    return `${BASE_KEY}_${getUserId()}`;
-  }
+  // ── Persistencia ──────────────────────────────────────────
+  const storageKey = () => `${BASE_KEY}_${document.body.dataset.userId || 'default'}`;
 
-  // ── Persistencia de leídas ────────────────────────────────
   function getLeidas() {
     try {
-      return new Set(JSON.parse(localStorage.getItem(storageKey())) || []);
-    } catch {
-      return new Set();
-    }
+      const arr = JSON.parse(localStorage.getItem(storageKey()));
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch { return new Set(); }
   }
 
   function saveLeidas(set) {
-    localStorage.setItem(storageKey(), JSON.stringify([...set]));
+    try { localStorage.setItem(storageKey(), JSON.stringify([...set].slice(-MAX_LEIDAS))); }
+    catch { /* almacenamiento lleno o bloqueado: seguimos sin persistir */ }
   }
 
-  // Genera un ID estable por alerta basado en tipo + texto.
-  // Si el backend cambia el texto de una alerta, se trata como nueva.
-  function alertaId(a) {
-    return `${a.tipo}::${a.texto}`;
+  // ── Acciones ──────────────────────────────────────────────
+  function marcar(id, leida) {
+    const set = getLeidas();
+    leida ? set.add(id) : set.delete(id);
+    saveLeidas(set);
+    render();
   }
 
-  // ── Caché interna de alertas recibidas ────────────────────
-  let _alertasActuales = [];
-
-  // ── Badge ─────────────────────────────────────────────────
-  function setBadge(count) {
-    const badge = document.getElementById('notif-badge');
-    if (!badge) return;
-    if (count > 0) {
-      badge.textContent = count > 9 ? '9+' : count;
-      badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
+  function marcarTodas() {
+    const set = getLeidas();
+    alertas.forEach(a => set.add(idDe(a)));
+    saveLeidas(set);
+    render();
   }
 
-  // ── Panel lateral ─────────────────────────────────────────
-  function abrirPanel() {
-    document.getElementById('notif-panel')?.classList.add('open');
-    document.getElementById('notif-overlay')?.classList.add('open');
-  }
+  // ── Render ────────────────────────────────────────────────
+  function render() {
+    if (!ui) return;
+    const leidas = getLeidas();
+    const porTipo = (a, b) => tipoDe(a).orden - tipoDe(b).orden;
+    const nuevas = alertas.filter(a => !esLeida(leidas, a)).sort(porTipo);
+    const viejas = alertas.filter(a => esLeida(leidas, a)).sort(porTipo);
 
-  function cerrarPanel() {
-    document.getElementById('notif-panel')?.classList.remove('open');
-    document.getElementById('notif-overlay')?.classList.remove('open');
-  }
+    // Badge + accesibilidad del botón
+    const n = nuevas.length;
+    ui.badge.hidden = n === 0;
+    ui.badge.textContent = n > 9 ? '9+' : n;
+    ui.btn.setAttribute('aria-label', n ? `Notificaciones, ${n} sin leer` : 'Notificaciones, sin novedades');
+    ui.btn.classList.toggle('has-unread', n > 0);
 
-  // ── Render de items dentro del panel ─────────────────────
-  const ICONO_MAP = {
-    danger:  { bi: 'bi-exclamation-octagon-fill', label: 'Crítico'      },
-    warning: { bi: 'bi-exclamation-triangle-fill', label: 'Advertencia' },
-    info:    { bi: 'bi-info-circle-fill',          label: 'Información'  },
-    success: { bi: 'bi-check-circle-fill',         label: 'OK'           },
-  };
+    // Pestañas
+    ui.tabNuevas.querySelector('span').textContent = n;
+    ui.tabLeidas.querySelector('span').textContent = viejas.length;
+    ui.tabNuevas.classList.toggle('active', tab === 'nuevas');
+    ui.tabLeidas.classList.toggle('active', tab === 'leidas');
+    ui.tabNuevas.setAttribute('aria-selected', tab === 'nuevas');
+    ui.tabLeidas.setAttribute('aria-selected', tab === 'leidas');
+    ui.marcarTodas.hidden = n === 0;
 
-  function renderPanel(noLeidas) {
-    const lista        = document.getElementById('notif-lista');
-    const empty        = document.getElementById('notif-empty');
-    const btnTodas     = document.getElementById('notif-btn-marcar-todas');
-    const countEl      = document.getElementById('notif-panel-count');
-    if (!lista) return;
-
-    if (countEl) {
-      countEl.textContent = noLeidas.length
-        ? `${noLeidas.length} sin leer`
-        : '';
-    }
-
-    if (!noLeidas.length) {
-      lista.innerHTML = '';
-      empty?.style.setProperty('display', 'flex');
-      if (btnTodas) btnTodas.style.display = 'none';
-      return;
-    }
-
-    empty?.style.setProperty('display', 'none');
-    if (btnTodas) btnTodas.style.display = 'inline-flex';
-
-    lista.innerHTML = noLeidas.map(a => {
-      const id   = alertaId(a);
-      const meta = ICONO_MAP[a.tipo] || ICONO_MAP.info;
-      // Escapar comillas simples para el atributo onclick
-      const idEsc = id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    // Lista
+    const lista = tab === 'nuevas' ? nuevas : viejas;
+    ui.empty.hidden = lista.length > 0;
+    ui.emptyTxt.textContent = tab === 'nuevas' ? 'Todo al día, sin notificaciones nuevas' : 'Aún no hay notificaciones leídas';
+    ui.list.innerHTML = lista.map(a => {
+      const id = esc(idDe(a));
+      const t = tipoDe(a);
+      const url = urlDe(a);
+      const leida = tab === 'leidas';
       return `
-        <div class="notif-item notif-item--${a.tipo}" data-notif-id="${id.replace(/"/g, '&quot;')}">
-          <div class="notif-item-icon">
-            <i class="bi ${meta.bi}"></i>
-          </div>
-          <div class="notif-item-body">
-            <span class="notif-item-texto">${a.texto}</span>
-            <span class="notif-item-etiqueta">${a.icono || ''} ${meta.label}</span>
-          </div>
-          <button class="notif-item-cerrar" title="Marcar como leída"
-                  onclick="HT_Notif.marcarUna('${idEsc}')">
-            <i class="bi bi-x-lg"></i>
+        <li class="ht-notif-item ht-notif--${esc(a.tipo || 'info')} ${leida ? 'is-read' : ''}" data-id="${id}">
+          <button type="button" class="ht-notif-main" data-action="abrir" data-url="${esc(url)}">
+            <span class="ht-notif-ico"><i class="bi ${t.icon}"></i></span>
+            <span class="ht-notif-body">
+              <span class="ht-notif-txt">${esc(a.texto)}</span>
+              <span class="ht-notif-meta">${esc(a.icono || '')} ${t.label}${url ? ' · <b>Ver detalle →</b>' : ''}</span>
+            </span>
           </button>
-        </div>
-      `;
+          <button type="button" class="ht-notif-toggle" data-action="${leida ? 'no-leida' : 'leida'}"
+                  title="${leida ? 'Marcar como no leída' : 'Marcar como leída'}"
+                  aria-label="${leida ? 'Marcar como no leída' : 'Marcar como leída'}">
+            <i class="bi ${leida ? 'bi-arrow-counterclockwise' : 'bi-check2'}"></i>
+          </button>
+        </li>`;
     }).join('');
   }
 
-  // ── Marcar una notificación como leída ────────────────────
-  function marcarUna(id) {
-    const leidas = getLeidas();
-    leidas.add(id);
-    saveLeidas(leidas);
+  // ── Panel ─────────────────────────────────────────────────
+  function abrir() {
+    ui.panel.hidden = false;
+    ui.btn.setAttribute('aria-expanded', 'true');
+  }
 
-    // Animación de salida
-    const item = document.querySelector(`.notif-item[data-notif-id="${id.replace(/"/g, '\\"')}"]`);
-    if (item) {
-      item.style.transition = 'opacity .22s ease, transform .22s ease';
-      item.style.opacity    = '0';
-      item.style.transform  = 'translateX(14px)';
-      setTimeout(() => {
-        item.remove();
-        // Si ya no quedan items, mostrar empty state
-        const lista = document.getElementById('notif-lista');
-        if (lista && lista.children.length === 0) {
-          document.getElementById('notif-empty')?.style.setProperty('display', 'flex');
-          const btn = document.getElementById('notif-btn-marcar-todas');
-          if (btn) btn.style.display = 'none';
-          const countEl = document.getElementById('notif-panel-count');
-          if (countEl) countEl.textContent = '';
-        }
-      }, 240);
+  function cerrar(devolverFoco) {
+    if (ui.panel.hidden) return;
+    ui.panel.hidden = true;
+    ui.btn.setAttribute('aria-expanded', 'false');
+    if (devolverFoco) ui.btn.focus();
+  }
+
+  // ── Entrada de datos ──────────────────────────────────────
+  function procesar(lista) {
+    alertas = Array.isArray(lista) ? lista : [];
+    const leidas = getLeidas();
+
+    // Detectar no leídas que no habíamos visto (solo después de la primera carga)
+    if (vistas !== null && onNueva) {
+      paraToast(alertas.filter(a => !vistas.has(idDe(a)))).forEach(onNueva);
     }
+    vistas = new Set(alertas.map(idDe));
 
-    // Actualizar badge
-    const badge = document.getElementById('notif-badge');
-    const actual = parseInt(badge?.textContent || '0', 10);
-    setBadge(Math.max(0, actual - 1));
-  }
-
-  // ── Marcar todas como leídas ──────────────────────────────
-  function marcarTodas() {
-    const leidas = getLeidas();
-    _alertasActuales.forEach(a => leidas.add(alertaId(a)));
-    saveLeidas(leidas);
-    cerrarPanel();
-    setBadge(0);
-    renderPanel([]);
-    // Limpiar también el bloque de alertas del dashboard si existe
-    const dashAlertas = document.getElementById('dashboard-alertas');
-    if (dashAlertas) dashAlertas.innerHTML = '';
-  }
-
-  // ── Punto de entrada público: procesar alertas del API ───
-  function procesar(alertas) {
-    _alertasActuales = alertas || [];
-    const leidas     = getLeidas();
-    const noLeidas   = _alertasActuales.filter(a => !leidas.has(alertaId(a)));
-
-    setBadge(noLeidas.length);
-    renderPanel(noLeidas);
-
-    // Zona de alertas inline del dashboard (solo las no leídas)
+    // Compatibilidad con el bloque inline del dashboard
     const cont = document.getElementById('dashboard-alertas');
     if (cont) {
-      cont.innerHTML = noLeidas.map(a => `
-        <div class="alerta-banner alerta-${a.tipo}">
-          <span>${a.icono}</span> ${a.texto}
-        </div>
-      `).join('');
+      cont.innerHTML = alertas.filter(a => !esLeida(leidas, a)).map(a =>
+        `<div class="alerta-banner alerta-${esc(a.tipo)}"><span>${esc(a.icono)}</span> ${esc(a.texto)}</div>`).join('');
+    }
+    render();
+  }
+
+  // Toasts: solo alertas no leídas y que no se hayan mostrado antes (persistente)
+  function paraToast(lista) {
+    const key = `ht_notif_toasts_${document.body.dataset.userId || 'default'}`;
+    let vistasT;
+    try { vistasT = new Set(JSON.parse(localStorage.getItem(key)) || []); } catch { vistasT = new Set(); }
+    const leidas = getLeidas();
+    const salida = (lista || []).filter(a => !esLeida(leidas, a) && !vistasT.has(idDe(a)));
+    salida.forEach(a => vistasT.add(idDe(a)));
+    try { localStorage.setItem(key, JSON.stringify([...vistasT].slice(-MAX_LEIDAS))); } catch {}
+    return salida;
+  }
+
+  async function cargar() {
+    const url = ui && ui.mount.dataset.url;
+    if (!url) return;
+    try {
+      const r = await fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!r.ok) throw new Error(r.status);
+      const data = await r.json();
+      procesar(data.alertas);
+    } catch (e) {
+      console.warn('[HT_Notif] no se pudo actualizar:', e);
     }
   }
 
-  // ── Construcción del DOM del panel ───────────────────────
-  function buildPanel() {
-    if (document.getElementById('notif-panel')) return;
-
-    // Overlay
-    const overlay = document.createElement('div');
-    overlay.id        = 'notif-overlay';
-    overlay.className = 'notif-overlay';
-    overlay.addEventListener('click', cerrarPanel);
-    document.body.appendChild(overlay);
-
-    // Panel
-    const panel = document.createElement('div');
-    panel.id        = 'notif-panel';
-    panel.className = 'notif-panel';
-    panel.innerHTML = `
-      <div class="notif-panel-header">
-        <div class="notif-panel-titulo">
-          <i class="bi bi-bell-fill"></i>
-          <span>Notificaciones</span>
-          <span id="notif-panel-count" class="notif-panel-count"></span>
-        </div>
-        <div class="notif-panel-acciones">
-          <button id="notif-btn-marcar-todas" class="notif-btn-texto" style="display:none;"
-                  onclick="HT_Notif.marcarTodas()">
-            Marcar todas como leídas
-          </button>
-          <button class="notif-panel-cerrar" onclick="HT_Notif.cerrarPanel()" title="Cerrar">
-            <i class="bi bi-x-lg"></i>
-          </button>
-        </div>
-      </div>
-      <div id="notif-lista" class="notif-lista"></div>
-      <div id="notif-empty" class="notif-empty" style="display:none;">
-        <i class="bi bi-bell-slash"></i>
-        <span>Todo al día — sin notificaciones</span>
-      </div>
-    `;
-    document.body.appendChild(panel);
-
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') cerrarPanel();
-    });
-  }
-
-  // ── Botón 🔔 en el topbar ─────────────────────────────────
-  function buildTrigger() {
-    if (document.getElementById('notif-trigger')) return;
-    const topbar = document.querySelector('.topbar');
-    if (!topbar) return;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'notif-trigger-wrapper ms-auto';
-    wrapper.innerHTML = `
-      <button id="notif-trigger" class="notif-trigger" title="Notificaciones"
-              onclick="HT_Notif.abrirPanel()">
+  // ── Construcción del DOM ──────────────────────────────────
+  function build() {
+    if (ui) return;
+    let mount = document.getElementById('notifMount');
+    if (!mount) {
+      const topbar = document.querySelector('.topbar');
+      if (!topbar) return;
+      // Las páginas con botones propios en el topbar (topbar_extra) ya los empujan a la
+      // derecha con margin auto; un segundo margin auto los dejaba en el centro.
+      // Solución: mover esos botones a un grupo a la derecha y poner la campana al final.
+      const grupo = document.createElement('div');
+      grupo.className = 'ht-topbar-right ms-auto d-flex align-items-center gap-3';
+      const bloqueTitulo = [...topbar.children].find(c => c.querySelector('.topbar-title'));
+      let n = bloqueTitulo ? bloqueTitulo.nextSibling : null;
+      while (n) {
+        const sig = n.nextSibling;
+        grupo.appendChild(n);
+        n = sig;
+      }
+      mount = document.createElement('div');
+      mount.id = 'notifMount';
+      grupo.appendChild(mount);
+      topbar.appendChild(grupo);
+    }
+    mount.classList.add('ht-notif');
+    mount.innerHTML = `
+      <button type="button" class="ht-notif-btn" id="htNotifBtn" aria-haspopup="dialog"
+              aria-expanded="false" aria-controls="htNotifPanel" aria-label="Notificaciones">
         <i class="bi bi-bell-fill"></i>
-        <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
+        <span class="ht-notif-badge" hidden>0</span>
       </button>
-    `;
-    topbar.appendChild(wrapper);
+      <div class="ht-notif-panel" id="htNotifPanel" role="dialog" aria-label="Notificaciones" hidden>
+        <div class="ht-notif-head">
+          <strong>Notificaciones</strong>
+          <button type="button" class="ht-notif-link" data-action="todas" hidden>
+            <i class="bi bi-check2-all"></i> Marcar todas como leídas
+          </button>
+        </div>
+        <div class="ht-notif-tabs" role="tablist">
+          <button type="button" role="tab" data-tab="nuevas" class="active">Nuevas <span>0</span></button>
+          <button type="button" role="tab" data-tab="leidas">Leídas <span>0</span></button>
+        </div>
+        <ul class="ht-notif-list"></ul>
+        <div class="ht-notif-empty" hidden><i class="bi bi-bell-slash"></i><span></span></div>
+      </div>`;
+
+    ui = {
+      mount,
+      btn: mount.querySelector('.ht-notif-btn'),
+      badge: mount.querySelector('.ht-notif-badge'),
+      panel: mount.querySelector('.ht-notif-panel'),
+      list: mount.querySelector('.ht-notif-list'),
+      empty: mount.querySelector('.ht-notif-empty'),
+      emptyTxt: mount.querySelector('.ht-notif-empty span'),
+      marcarTodas: mount.querySelector('[data-action="todas"]'),
+      tabNuevas: mount.querySelector('[data-tab="nuevas"]'),
+      tabLeidas: mount.querySelector('[data-tab="leidas"]'),
+    };
+
+    ui.btn.addEventListener('click', e => {
+      e.stopPropagation();
+      ui.panel.hidden ? abrir() : cerrar();
+    });
+    ui.panel.addEventListener('click', e => {
+      e.stopPropagation();
+      const tabBtn = e.target.closest('[data-tab]');
+      if (tabBtn) { tab = tabBtn.dataset.tab; render(); return; }
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const item = el.closest('.ht-notif-item');
+      const id = item && item.dataset.id;
+      switch (el.dataset.action) {
+        case 'todas':    marcarTodas(); break;
+        case 'leida':    marcar(id, true); break;
+        case 'no-leida': marcar(id, false); break;
+        case 'abrir': {
+          marcar(id, true);                       // abrir = leer
+          const url = el.dataset.url;
+          if (url) window.location.href = url;
+          break;
+        }
+      }
+    });
+    document.addEventListener('click', () => cerrar());
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(true); });
+    // Si otra pestaña marca como leída, sincronizamos
+    window.addEventListener('storage', e => { if (e.key === storageKey()) render(); });
+
+    render();
+
+    if (mount.dataset.url) {
+      cargar();
+      pollTimer = setInterval(cargar, POLL_MS);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) cargar(); });
+    }
   }
 
-  // ── Estilos CSS ───────────────────────────────────────────
-  function buildStyles() {
-    if (document.getElementById('notif-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'notif-styles';
-    style.textContent = `
-      /* ── Trigger ── */
-      .notif-trigger-wrapper { display:flex; align-items:center; }
-      .notif-trigger {
-        position:relative; background:none; border:none; cursor:pointer;
-        width:40px; height:40px; border-radius:50%;
-        display:flex; align-items:center; justify-content:center;
-        font-size:1.15rem; color:var(--primary,#395B64);
-        transition:background .18s;
-      }
-      .notif-trigger:hover { background:rgba(57,91,100,.10); }
-      [data-bs-theme="dark"] .notif-trigger { color:#e2e8f0; }
-      [data-bs-theme="dark"] .notif-trigger:hover { background:rgba(255,255,255,.08); }
-
-      /* ── Badge ── */
-      .notif-badge {
-        position:absolute; top:4px; right:4px;
-        background:#ef4444; color:#fff;
-        font-size:10px; font-weight:700;
-        min-width:17px; height:17px; border-radius:999px;
-        display:flex; align-items:center; justify-content:center;
-        padding:0 3px; border:2px solid #fff;
-        pointer-events:none; line-height:1;
-        animation:notif-pop .28s ease;
-      }
-      [data-bs-theme="dark"] .notif-badge { border-color:#1e293b; }
-      @keyframes notif-pop {
-        0%  { transform:scale(.4); opacity:0; }
-        65% { transform:scale(1.2); }
-        100%{ transform:scale(1);  opacity:1; }
-      }
-
-      /* ── Overlay ── */
-      .notif-overlay {
-        display:none; position:fixed; inset:0;
-        background:rgba(0,0,0,.22); z-index:1300;
-        backdrop-filter:blur(1px);
-      }
-      .notif-overlay.open { display:block; }
-
-      /* ── Panel ── */
-      .notif-panel {
-        position:fixed; top:0; right:0;
-        width:360px; max-width:95vw; height:100%;
-        background:#fff; z-index:1400;
-        display:flex; flex-direction:column;
-        transform:translateX(100%);
-        transition:transform .28s cubic-bezier(.4,0,.2,1);
-        box-shadow:-4px 0 32px rgba(0,0,0,.12);
-        border-left:1px solid #e5e7eb;
-      }
-      .notif-panel.open { transform:translateX(0); }
-      [data-bs-theme="dark"] .notif-panel {
-        background:#1e293b; border-left-color:#334155;
-      }
-
-      /* ── Panel header ── */
-      .notif-panel-header {
-        display:flex; align-items:center; justify-content:space-between;
-        padding:18px 16px 14px; border-bottom:1px solid #e5e7eb;
-        gap:8px; flex-shrink:0;
-      }
-      [data-bs-theme="dark"] .notif-panel-header { border-bottom-color:#334155; }
-      .notif-panel-titulo {
-        display:flex; align-items:center; gap:8px;
-        font-size:.95rem; font-weight:700;
-        color:var(--primary,#395B64);
-      }
-      [data-bs-theme="dark"] .notif-panel-titulo { color:#7dd3fc; }
-      .notif-panel-count {
-        font-size:.72rem; font-weight:700;
-        background:rgba(239,68,68,.12); color:#ef4444;
-        padding:2px 8px; border-radius:999px;
-      }
-      .notif-panel-acciones { display:flex; align-items:center; gap:6px; }
-      .notif-btn-texto {
-        background:none; border:none; cursor:pointer;
-        font-size:.75rem; font-weight:600;
-        color:#6b7280; text-decoration:underline;
-        padding:4px 6px; border-radius:4px;
-        transition:color .15s;
-      }
-      .notif-btn-texto:hover { color:var(--primary,#395B64); }
-      .notif-panel-cerrar {
-        background:none; border:none; cursor:pointer;
-        width:30px; height:30px; border-radius:50%;
-        display:flex; align-items:center; justify-content:center;
-        font-size:.9rem; color:#9ca3af;
-        transition:background .15s, color .15s;
-      }
-      .notif-panel-cerrar:hover { background:#f3f4f6; color:#374151; }
-      [data-bs-theme="dark"] .notif-panel-cerrar:hover { background:#334155; color:#e2e8f0; }
-
-      /* ── Lista ── */
-      .notif-lista {
-        flex:1; overflow-y:auto;
-        padding:10px 12px;
-        display:flex; flex-direction:column; gap:8px;
-        scroll-behavior:smooth;
-      }
-
-      /* ── Item ── */
-      .notif-item {
-        display:flex; align-items:flex-start; gap:10px;
-        padding:12px 10px; border-radius:10px;
-        border-left:3px solid transparent;
-        background:#f8fafc; transition:background .15s;
-      }
-      [data-bs-theme="dark"] .notif-item { background:#0f172a; }
-      .notif-item:hover { background:#f1f5f9; }
-      [data-bs-theme="dark"] .notif-item:hover { background:#1e293b; }
-      .notif-item--danger  { border-left-color:#ef4444; }
-      .notif-item--warning { border-left-color:#f59e0b; }
-      .notif-item--info    { border-left-color:#3b82f6; }
-      .notif-item--success { border-left-color:#22c55e; }
-
-      .notif-item-icon {
-        flex-shrink:0; width:32px; height:32px; border-radius:50%;
-        display:flex; align-items:center; justify-content:center;
-        font-size:.9rem;
-      }
-      .notif-item--danger  .notif-item-icon { background:#fef2f2; color:#ef4444; }
-      .notif-item--warning .notif-item-icon { background:#fffbeb; color:#f59e0b; }
-      .notif-item--info    .notif-item-icon { background:#eff6ff; color:#3b82f6; }
-      .notif-item--success .notif-item-icon { background:#f0fdf4; color:#22c55e; }
-      [data-bs-theme="dark"] .notif-item--danger  .notif-item-icon { background:rgba(239,68,68,.15); }
-      [data-bs-theme="dark"] .notif-item--warning .notif-item-icon { background:rgba(245,158,11,.15); }
-      [data-bs-theme="dark"] .notif-item--info    .notif-item-icon { background:rgba(59,130,246,.15); }
-      [data-bs-theme="dark"] .notif-item--success .notif-item-icon { background:rgba(34,197,94,.15); }
-
-      .notif-item-body {
-        flex:1; display:flex; flex-direction:column; gap:3px; min-width:0;
-      }
-      .notif-item-texto {
-        font-size:.83rem; line-height:1.4;
-        color:#1e293b; font-weight:500; word-break:break-word;
-      }
-      [data-bs-theme="dark"] .notif-item-texto { color:#e2e8f0; }
-      .notif-item-etiqueta {
-        font-size:.71rem; color:#94a3b8;
-        text-transform:uppercase; letter-spacing:.04em; font-weight:600;
-      }
-      .notif-item-cerrar {
-        flex-shrink:0; background:none; border:none; cursor:pointer;
-        color:#cbd5e1; font-size:.75rem;
-        width:24px; height:24px; border-radius:50%;
-        display:flex; align-items:center; justify-content:center;
-        transition:background .15s, color .15s; margin-top:2px;
-      }
-      .notif-item-cerrar:hover { background:#e2e8f0; color:#475569; }
-      [data-bs-theme="dark"] .notif-item-cerrar:hover { background:#334155; color:#cbd5e1; }
-
-      /* ── Empty state ── */
-      .notif-empty {
-        flex:1; flex-direction:column;
-        align-items:center; justify-content:center;
-        gap:12px; padding:40px 20px;
-        color:#94a3b8; text-align:center;
-      }
-      .notif-empty i { font-size:2.2rem; opacity:.45; }
-      .notif-empty span { font-size:.87rem; font-weight:500; }
-    `;
-    document.head.appendChild(style);
+  function init(opts) {
+    if (opts && typeof opts.onNueva === 'function') onNueva = opts.onNueva;
+    build();
   }
 
-  // ── Init ──────────────────────────────────────────────────
-  function init() {
-    buildStyles();
-    buildTrigger();
-    buildPanel();
-  }
+  document.addEventListener('DOMContentLoaded', () => init());
 
-  // Exponer API pública
-  return { init, procesar, marcarUna, marcarTodas, abrirPanel, cerrarPanel };
-
+  return { init, procesar, cargar, marcarTodas, abrir, cerrar, urlDe, paraToast };
 })();
-
-// Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', () => window.HT_Notif.init());

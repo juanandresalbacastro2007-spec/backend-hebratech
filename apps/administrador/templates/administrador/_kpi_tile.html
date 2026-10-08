@@ -1,0 +1,24 @@
+{% comment %}
+  Tarjeta KPI reutilizable.  Ubicación: templates/administrador/_kpi_tile.html
+  Parámetros:
+    href, qs     destino (qs opcional, ej. "?estado=Pendiente")
+    icon         clase de Bootstrap Icons (ej. "bi-fire")
+    label        nombre de la métrica
+    value        número a mostrar (si llega vacío se muestra "—")
+    hint         texto pequeño opcional
+    alert        opcional: "danger" | "warning". Si value > 0 la tarjeta se resalta
+                 con ese color; si es 0 se muestra en verde con "Todo al día".
+{% endcomment %}<a href="{{ href }}{{ qs }}"
+   class="kpi-tile{% if alert %}{% if value %} kpi-tile--{{ alert }}{% else %} kpi-tile--ok{% endif %}{% endif %}">
+  <span class="kpi-tile-icon" aria-hidden="true"><i class="bi {{ icon }}"></i></span>
+  <span class="kpi-tile-body">
+    <span class="kpi-tile-value">{% if value == "" %}—{% else %}{{ value }}{% endif %}</span>
+    <span class="kpi-tile-label">{{ label }}</span>
+    {% if alert %}
+      <span class="kpi-tile-hint">{% if value %}Requiere atención{% else %}Todo al día{% endif %}</span>
+    {% elif hint %}
+      <span class="kpi-tile-hint">{{ hint }}</span>
+    {% endif %}
+  </span>
+  <i class="bi bi-arrow-right kpi-tile-go" aria-hidden="true"></i>
+</a>

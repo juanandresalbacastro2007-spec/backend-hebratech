@@ -144,6 +144,15 @@ def admin_portal(request):
     )
     total_proveedores = _count(Proveedor) if Proveedor else None
 
+    # ── Inventario / Facturas (misma regla de "stock bajo" que usan las pestañas del módulo) ──
+    total_inventario = Inventario.objects.count()
+    total_materiales = Material.objects.count()
+    stock_bajo = (
+        Inventario.objects.filter(cantidadDisponible__lte=models.F('minimoDefinido')).count()
+        + Material.objects.filter(stockActual__lte=models.F('stockMinimo')).count()
+    )
+    total_facturas = Factura.objects.count()
+
     # ── Actividad reciente unificada ──
     actividad = []
 
@@ -228,6 +237,13 @@ def admin_portal(request):
             'modulo': 'admin_incidencias',
         })
 
+    if stock_bajo:
+        alertas.append({
+            'tipo': 'warning', 'icono': '📦',
+            'texto': f'{stock_bajo} ítem(s) de inventario con stock bajo o agotado',
+            'modulo': 'admin_inventario',
+        })
+
     return render(request, 'administrador/admin_portal.html', {
         'usuario': usuario,
         'total_usuarios': total_usuarios,
@@ -245,6 +261,10 @@ def admin_portal(request):
         'productos_catalogo': productos_catalogo,
         'produccion_activa': produccion_activa,
         'total_proveedores': total_proveedores,
+        'total_inventario': total_inventario,
+        'total_materiales': total_materiales,
+        'stock_bajo': stock_bajo,
+        'total_facturas': total_facturas,
         'actividad_reciente': actividad_reciente,
         'alertas': json.dumps(alertas),
     })
@@ -440,10 +460,17 @@ def usuarios_lista(request):
     if estado_filtro:
         usuarios = usuarios.filter(estado=estado_filtro)
 
+    rol_filtro = request.GET.get('rol', '')
+    if rol_filtro in ('cliente', 'operario', 'administrador'):
+        usuarios = usuarios.filter(rol=rol_filtro)
+    else:
+        rol_filtro = ''
+
     return render(request, 'administrador/usuarios_lista.html', {
         'usuario': usuario,
         'usuarios': usuarios,
         'estado_filtro': estado_filtro,
+        'rol_filtro': rol_filtro,
     })
 
 

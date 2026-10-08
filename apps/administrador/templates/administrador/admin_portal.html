@@ -7,31 +7,20 @@
 {% block topbar_extra %}
 <div class="ms-auto d-flex align-items-center gap-3">
   <!-- Botones de acciones rápidas -->
-  <div class="d-flex gap-2">
-    <a href="{% url 'admin_ordenes' %}" class="btn btn-sm btn-outline-primary">
+  <div class="d-none d-xxl-flex gap-2">
+    <a href="{% url 'admin_ordenes' %}" class="btn-primary-ht">
       <i class="bi bi-bag-plus"></i> Nueva orden
     </a>
-    <a href="{% url 'admin_tarea_asignar' %}" class="btn btn-sm btn-outline-success">
+    <a href="{% url 'admin_tarea_asignar' %}" class="btn-primary-ht">
       <i class="bi bi-clipboard2-plus"></i> Asignar tarea
     </a>
-    <a href="{% url 'admin_usuario_crear' %}" class="btn btn-sm btn-outline-info">
+    <a href="{% url 'admin_usuario_crear' %}" class="btn-primary-ht">
       <i class="bi bi-person-plus"></i> Nuevo usuario
     </a>
   </div>
 
-  <div class="dropdown">
-    <button class="btn-notif-ht" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Notificaciones">
-      <i class="bi bi-bell-fill"></i>
-      <span class="notif-badge-ht" id="notifBadge" style="display:none;">0</span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end p-2 notif-dropdown-ht" aria-labelledby="notifDropdownBtn">
-      <li class="dropdown-header">Notificaciones</li>
-      <li><hr class="dropdown-divider"></li>
-      <div id="notifListContainer">
-        <li class="px-2 py-3 text-center text-muted small">Sin notificaciones nuevas</li>
-      </div>
-    </ul>
-  </div>
+  <!-- Campana de notificaciones (la construye HT_Notif en admin.js) -->
+  <div id="notifMount"></div>
   <div id="topClock" class="top-clock px-3 py-2 rounded d-flex align-items-center gap-2">
     <i class="bi bi-clock"></i>
     <span id="clockText">--:--:--</span>
@@ -64,156 +53,63 @@
   </div>
 {% endif %}
 
-<!-- Tarjetas KPI principales -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'admin_usuarios' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Usuarios</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
-          <i class="bi bi-people-fill fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold ">{{ total_usuarios|default:0 }}</div>
-    </a>
-  </div>
-
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'admin_usuarios' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Clientes</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
-          <i class="bi bi-building fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-dark">{{ total_clientes|default:0 }}</div>
-    </a>
-  </div>
-
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'admin_usuarios' %}?rol=operario" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Operarios</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
-          <i class="bi bi-person-gear fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-dark">{{ total_operarios|default:0 }}</div>
-    </a>
-  </div>
-
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'admin_ordenes' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Órdenes Total</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
-          <i class="bi bi-bag-fill fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-dark">{{ total_ordenes|default:0 }}</div>
-    </a>
-  </div>
-
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'admin_ordenes' %}?estado=Pendiente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Órdenes Pend.</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c47f00;">
-          <i class="bi bi-hourglass-split fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-warning">{{ ordenes_pendientes|default:0 }}</div>
-    </a>
-  </div>
-
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'admin_tareas' %}?estado=Pendiente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Tareas Pend.</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c62839;">
-          <i class="bi bi-clipboard2-x fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-danger">{{ tareas_pendientes|default:0 }}</div>
-    </a>
-  </div>
-</div>
-
-<!-- KPIs adicionales -->
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'admin_incidencias' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Incidencias Abiertas</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c62839;">
-          <i class="bi bi-exclamation-triangle-fill fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-danger">{{ incidencias_abiertas|default:0 }}</div>
-    </a>
-  </div>
-
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'admin_ordenes' %}?prioridad=Urgente" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Órdenes Urgentes</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#c47f00;">
-          <i class="bi bi-fire fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-warning">{{ ordenes_urgentes|default:0 }}</div>
-    </a>
-  </div>
-
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'produccion_portal' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Producción Activa</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
-          <i class="bi bi-gear-fill fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-dark">{{ produccion_activa|default:0 }}</div>
-    </a>
-  </div>
-
-  <div class="col-6 col-md-4 col-xl-2">
-    <a href="{% url 'produccion_portal' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <span class="kpi-label text-muted small fw-medium">Catálogo Productos</span>
-        <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
-          <i class="bi bi-bag-check-fill fs-6"></i>
-        </div>
-      </div>
-      <div class="kpi-value fs-4 fw-bold text-dark">{{ productos_catalogo|default:0 }}</div>
-    </a>
-  </div>
-<div class="col-6 col-md-4 col-xl-2">
-  <a href="{% url 'admin_cotizaciones' %}" class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between text-decoration-none">
-    <div class="d-flex align-items-center justify-content-between mb-2">
-      <span class="kpi-label text-muted small fw-medium">Ver cotizaciones</span>
-      <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
-        <i class="bi bi-bag-check-fill fs-6"></i>
-      </div>
-    </div>
-    <div class="kpi-value fs-4 fw-bold text-dark">{{ total_cotizaciones }}</div>
+<!-- Accesos rápidos (en pantallas donde no caben en la barra superior) -->
+<div class="d-flex flex-wrap gap-2 mb-3 d-xxl-none">
+  <a href="{% url 'admin_ordenes' %}" class="btn-primary-ht">
+    <i class="bi bi-bag-plus"></i> Nueva orden
+  </a>
+  <a href="{% url 'admin_tarea_asignar' %}" class="btn-primary-ht">
+    <i class="bi bi-clipboard2-plus"></i> Asignar tarea
+  </a>
+  <a href="{% url 'admin_usuario_crear' %}" class="btn-primary-ht">
+    <i class="bi bi-person-plus"></i> Nuevo usuario
   </a>
 </div>
 
-{% if total_proveedores is not None %}
-<div class="col-6 col-md-4 col-xl-2">
-  <div class="kpi-card p-3 bg-white rounded border shadow-sm h-100 d-flex flex-column justify-content-between">
-    <div class="d-flex align-items-center justify-content-between mb-2">
-      <span class="kpi-label text-muted small fw-medium">Proveedores</span>
-      <div class="kpi-icon rounded-circle d-flex align-items-center justify-content-center" style="width:36px; height:36px; background:rgba(165,201,202,0.4); color:#2C3333;">
-        <i class="bi bi-truck fs-6"></i>
-      </div>
-    </div>
-    <div class="kpi-value fs-4 fw-bold text-dark">{{ total_proveedores }}</div>
-  </div>
-</div>
-{% endif %}
+<!-- ══ KPIs ══ -->
+{% url 'admin_ordenes' as u_ordenes %}
+{% url 'admin_tareas' as u_tareas %}
+{% url 'admin_incidencias' as u_incidencias %}
+{% url 'admin_produccion' as u_produccion %}
+{% url 'admin_inventario' as u_inventario %}
+{% url 'admin_proveedores' as u_proveedores %}
+{% url 'admin_cotizaciones' as u_cotizaciones %}
+{% url 'admin_facturas' as u_facturas %}
+{% url 'admin_usuarios' as u_usuarios %}
 
+<section class="kpi-section" aria-labelledby="kpi-atencion">
+  <h2 class="kpi-section-title" id="kpi-atencion"><i class="bi bi-lightning-charge-fill"></i> Requiere atención</h2>
+  <div class="kpi-grid">
+    {% include "administrador/_kpi_tile.html" with href=u_ordenes qs="?prioridad=Urgente" icon="bi-fire" label="Órdenes urgentes" value=ordenes_urgentes|default:0 alert="danger" %}
+    {% include "administrador/_kpi_tile.html" with href=u_ordenes qs="?estado=Pendiente" icon="bi-hourglass-split" label="Órdenes pendientes" value=ordenes_pendientes|default:0 alert="warning" %}
+    {% include "administrador/_kpi_tile.html" with href=u_tareas qs="?estado=Pendiente" icon="bi-clipboard2-check-fill" label="Tareas pendientes" value=tareas_pendientes|default:0 alert="warning" %}
+    {% include "administrador/_kpi_tile.html" with href=u_incidencias icon="bi-exclamation-triangle-fill" label="Incidencias abiertas" value=incidencias_abiertas|default:0 alert="danger" %}
+  </div>
+</section>
+
+<section class="kpi-section" aria-labelledby="kpi-operacion">
+  <h2 class="kpi-section-title" id="kpi-operacion"><i class="bi bi-gear-wide-connected"></i> Operación</h2>
+  <div class="kpi-grid">
+    {% include "administrador/_kpi_tile.html" with href=u_ordenes icon="bi-mailbox2-flag" label="Órdenes" hint="Total registradas" value=total_ordenes|default:0 %}
+    {% include "administrador/_kpi_tile.html" with href=u_produccion icon="bi-gear-wide-connected" label="Producción activa" value=produccion_activa|default:0 %}
+    {% include "administrador/_kpi_tile.html" with href=u_produccion icon="bi-bag-check-fill" label="Catálogo de productos" value=productos_catalogo|default:0 %}
+    {% include "administrador/_kpi_tile.html" with href=u_inventario icon="bi-box-seam-fill" label="Inventario" value=total_inventario %}
+    {% if total_proveedores is not None %}
+    {% include "administrador/_kpi_tile.html" with href=u_proveedores icon="bi-cart-check-fill" label="Proveedores" value=total_proveedores %}
+    {% endif %}
+  </div>
+</section>
+
+<section class="kpi-section" aria-labelledby="kpi-comercial">
+  <h2 class="kpi-section-title" id="kpi-comercial"><i class="bi bi-people-fill"></i> Comercial y personas</h2>
+  <div class="kpi-grid">
+    {% include "administrador/_kpi_tile.html" with href=u_cotizaciones icon="bi-file-earmark-medical-fill" label="Cotizaciones" value=total_cotizaciones|default:0 %}
+    {% include "administrador/_kpi_tile.html" with href=u_facturas icon="bi-file-earmark-text-fill" label="Facturas" value=total_facturas %}
+    {% include "administrador/_kpi_tile.html" with href=u_usuarios qs="?rol=cliente" icon="bi-building" label="Clientes" value=total_clientes|default:0 %}
+    {% include "administrador/_kpi_tile.html" with href=u_usuarios qs="?rol=operario" icon="bi-person-gear" label="Operarios" value=total_operarios|default:0 %}
+    {% include "administrador/_kpi_tile.html" with href=u_usuarios icon="bi-people-fill" label="Usuarios" value=total_usuarios|default:0 %}
+  </div>
+</section>
 
 <!-- Listados Recientes -->
 <div class="row g-3 mb-4">
@@ -355,27 +251,56 @@
       <div class="section-card-header d-flex align-items-center">
         <h6 class="mb-0"><i class="bi bi-activity me-2 text-primary"></i>Actividad Reciente del Sistema</h6>
       </div>
-      <div class="section-card-body p-3" id="actividadReciente">
-        {% for a in actividad_reciente %}
-          <a href="{% url a.modulo %}" class="d-flex align-items-start gap-2 py-2 border-bottom text-decoration-none text-dark">
-            <span class="fs-6">{{ a.icono }}</span>
-            <div class="flex-grow-1">
-              <div class="fw-medium">{{ a.titulo }}</div>
-              <div class="small text-muted">
-                {{ a.detalle }}
-                {% if a.fecha %} · {{ a.fecha }}{% endif %}
-              </div>
-            </div>
-            {% if a.estado %}
-              <span class="badge-ht badge-pending align-self-center">{{ a.estado }}</span>
-            {% endif %}
-          </a>
-        {% empty %}
-          <p class="text-muted small mb-0 text-center py-3">
-            <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary opacity-50"></i>
-            No hay actividad reciente registrada
-          </p>
-        {% endfor %}
+      <div class="table-responsive">
+        <table class="ht-table align-middle" id="actividadReciente">
+          <thead>
+            <tr>
+              <th>Actividad</th>
+              <th class="text-center" style="width: 160px;">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in actividad_reciente %}
+            <tr>
+              <td>
+                <a href="{% url a.modulo %}" class="d-flex align-items-center gap-3 text-decoration-none">
+                  <span class="act-icon {% if a.modulo == 'admin_incidencias' %}act-warn{% endif %}">
+                    <i class="bi {% if a.modulo == 'admin_ordenes' %}bi-bag-fill{% elif a.modulo == 'admin_incidencias' %}bi-exclamation-triangle-fill{% elif a.modulo == 'admin_tareas' %}bi-clipboard2-check-fill{% elif a.modulo == 'admin_usuarios' %}bi-people-fill{% elif a.modulo == 'admin_inventario' %}bi-box-seam-fill{% elif a.modulo == 'admin_cotizaciones' %}bi-file-earmark-medical-fill{% elif a.modulo == 'admin_facturas' %}bi-file-earmark-text-fill{% elif a.modulo == 'admin_proveedores' %}bi-cart-check-fill{% elif a.modulo == 'admin_produccion' %}bi-gear-wide-connected{% else %}bi-activity{% endif %}"></i>
+                  </span>
+                  <div>
+                    <div class="act-link">{{ a.titulo }}</div>
+                    <div class="act-sub">{{ a.detalle }}{% if a.fecha %} · {{ a.fecha }}{% endif %}</div>
+                  </div>
+                </a>
+              </td>
+              <td class="text-center">
+                {% if a.estado == 'Entregado' or a.estado == 'Completada' or a.estado == 'Completado' or a.estado == 'Resuelto' or a.estado == 'Resuelta' or a.estado == 'Cerrado' or a.estado == 'Cerrada' %}
+                  <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>{{ a.estado }}</span>
+                {% elif a.estado == 'Revisado' %}
+                  <span class="badge-ht badge-info"><i class="bi bi-eye me-1"></i>{{ a.estado }}</span>
+                {% elif a.estado == 'Procesando' or a.estado == 'Enviado' or a.estado == 'En Progreso' %}
+                  <span class="badge-ht badge-info"><i class="bi bi-arrow-repeat me-1"></i>{{ a.estado }}</span>
+                {% elif a.estado == 'Cancelado' or a.estado == 'Cancelada' or a.estado == 'Rechazado' %}
+                  <span class="badge-ht badge-danger"><i class="bi bi-x-circle me-1"></i>{{ a.estado }}</span>
+                {% elif a.estado == 'Retrasado' or a.estado == 'Retrasada' %}
+                  <span class="badge-ht badge-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ a.estado }}</span>
+                {% elif a.estado %}
+                  <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>{{ a.estado }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="2" class="text-center text-muted py-4">
+                <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary opacity-50"></i>
+                <span class="small">No hay actividad reciente registrada</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -403,57 +328,17 @@
 
     // Notificaciones
     const alertasSistema = {{ alertas|default:"[]"|safe }};
-    renderNotifDropdown(alertasSistema);
-    alertasSistema.forEach((a, i) => {
-      mostrarToast(a, i * 350);
-    });
+    HT_Notif.init({ onNueva: a => mostrarToast(a) });   // toast para alertas nuevas (polling)
+    HT_Notif.procesar(alertasSistema);
+    // Toast solo de las no leídas y una única vez por alerta
+    HT_Notif.paraToast(alertasSistema).slice(0, 3).forEach((a, i) => mostrarToast(a, i * 350));
   });
-
-  function resolverUrlModulo(modulo) {
-    if (!modulo) return '#';
-    if (modulo.startsWith('/')) return modulo;
-    const mapaRutas = {
-      'admin_ordenes': '/administrador/ordenes/',
-      'ordenes': '/administrador/ordenes/',
-      'admin_usuarios': '/administrador/usuarios/',
-      'admin_tareas': '/administrador/tareas/',
-      'admin_incidencias': '/administrador/incidencias/',
-      'admin_inventario': '/administrador/inventario/'
-    };
-    return mapaRutas[modulo] || `/administrador/${modulo}/`;
-  }
-
-  function renderNotifDropdown(alertas) {
-    const badge = document.getElementById('notifBadge');
-    const cont = document.getElementById('notifListContainer');
-    if (!badge || !cont) return;
-    if (!alertas.length) {
-      badge.style.display = 'none';
-      cont.innerHTML = `<li class="px-2 py-3 text-center text-muted small">Sin notificaciones nuevas</li>`;
-      return;
-    }
-    badge.style.display = 'flex';
-    badge.textContent = alertas.length;
-    cont.innerHTML = alertas.map(a => {
-      const urlDestino = resolverUrlModulo(a.modulo);
-      return `
-      <li class="notif-item-ht px-2 py-2">
-        <div class="d-flex align-items-start gap-2">
-          <span class="notif-item-icon">${a.icono}</span>
-          <div class="flex-grow-1 small">
-            <div>${a.texto}</div>
-            ${a.modulo ? `<a href="${urlDestino}" class="notif-item-link">Ver →</a>` : ''}
-          </div>
-        </div>
-      </li>`;
-    }).join('');
-  }
 
   function mostrarToast(notif, delay = 0) {
     setTimeout(() => {
       const id = 'toast-' + Date.now() + Math.random().toString(36).slice(2);
       const duracion = 6000;
-      const urlDestino = resolverUrlModulo(notif.modulo);
+      const urlDestino = HT_Notif.urlDe(notif);
       const accionHtml = notif.modulo
         ? `<button class="ht-toast-action" onclick="window.location.href='${urlDestino}'">Ver →</button>`
         : '';
