@@ -55,7 +55,7 @@ class OrdenProduccion(models.Model):
         ('Pendiente', 'Pendiente'),
         ('En Progreso', 'En Progreso'),
         ('Completado', 'Completado'),
-        ('Atrasada', 'Atrasada'),
+        ('Fuera de Plazo', 'Fuera de Plazo'),
         ('Cancelada', 'Cancelada'),
     ]
 

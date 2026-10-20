@@ -8,6 +8,7 @@ import logging
 from datetime import timedelta, date as date_type
 
 from .models import Producto, OrdenProduccion, Prenda
+from .services import sincronizar_estado_cliente
 from apps.administrador.models import AsignacionTarea
 from apps.core.decorators import login_required_rol, login_required_api
 from apps.administrador.models import Usuario, Orden
@@ -18,32 +19,6 @@ logger = logging.getLogger(__name__)
 
 admin_required = login_required_rol(rol_esperado='administrador', session_key='usuario_id')
 admin_required_api = login_required_api(rol_esperado='administrador', session_key='usuario_id')
-
-
-# ── AUTOMATIZACIÓN: estado de producción → estado de la orden de cliente ──
-MAPA_ESTADO_PRODUCCION_A_CLIENTE = {
-    'En Progreso': 'marcar_en_produccion',   # Pendiente -> Procesando
-    'Completado':  'marcar_enviado',         # Procesando -> Enviado
-    'Cancelada':   'cancelar',               # Pendiente/Procesando -> Cancelado
-}
-
-
-def sincronizar_estado_cliente(orden_produccion):
-    """Aplica al Orden de cliente vinculado la transición FSM que
-    corresponde al nuevo estado de la OrdenProduccion, si existe una."""
-    if not orden_produccion.idOrden_id:
-        return
-    metodo = MAPA_ESTADO_PRODUCCION_A_CLIENTE.get(orden_produccion.estado)
-    if not metodo:
-        return
-    try:
-        orden = Orden.objects.get(pk=orden_produccion.idOrden_id)
-        getattr(orden, metodo)()
-        orden.save()
-    except Orden.DoesNotExist:
-        pass
-    except Exception:
-        pass
 
 
 # ── UTILIDADES DE FECHAS ─────────────────────────────
@@ -360,31 +335,34 @@ def orden_produccion_detalle(request, id):
             except Exception:
                 logger.exception('Error propagando estado a tareas de OP %s', o.pk)
 
-        # ── 2. Cambió fechaInicio → correr TODAS las fechas de las tareas ──
+        # ── 2 y 3. Cambiaron fechas → mover las fechas de las tareas ──
+        delta_inicio = 0
         if 'fechaInicio' in data and o.fechaInicio and fecha_inicio_anterior:
-            delta_dias = (o.fechaInicio - fecha_inicio_anterior).days
-            if delta_dias:
-                try:
-                    from .services import desplazar_tareas_por_cambio_fecha
-                    desplazar_tareas_por_cambio_fecha(o.idOrdenProduccion, delta_dias)
-                except Exception as e:
-                    logger.exception(
-                        'Error desplazando tareas de OP %s: %s',
-                        o.idOrdenProduccion, e,
-                    )
+            delta_inicio = (o.fechaInicio - fecha_inicio_anterior).days
 
-        # ── 3. Cambió fechaEntrega → correr SOLO fechaLimite de tareas ──
+        delta_entrega = 0
         if 'fechaEntrega' in data and o.fechaEntrega and fecha_entrega_anterior:
-            delta_dias = (o.fechaEntrega - fecha_entrega_anterior).days
-            if delta_dias:
-                try:
-                    from .services import desplazar_fechaLimite_por_cambio_entrega
-                    desplazar_fechaLimite_por_cambio_entrega(o.idOrdenProduccion, delta_dias)
-                except Exception as e:
-                    logger.exception(
-                        'Error moviendo fechaLimite de tareas de OP %s: %s',
-                        o.idOrdenProduccion, e,
-                    )
+            delta_entrega = (o.fechaEntrega - fecha_entrega_anterior).days
+
+        # fechaInicio movió → corre fechaInicio de las tareas (y su fechaLimite,
+        # salvo que fechaEntrega TAMBIÉN cambie en la misma edición: en ese caso
+        # fechaLimite se mueve solo con el delta de entrega, para no correrla dos veces).
+        if delta_inicio:
+            try:
+                from .services import desplazar_tareas_por_cambio_fecha
+                desplazar_tareas_por_cambio_fecha(
+                    o.idOrdenProduccion, delta_inicio, mover_limite=not delta_entrega,
+                )
+            except Exception:
+                logger.exception('Error desplazando tareas de OP %s', o.idOrdenProduccion)
+
+        # fechaEntrega movió → corre SOLO fechaLimite de las tareas
+        if delta_entrega:
+            try:
+                from .services import desplazar_fechaLimite_por_cambio_entrega
+                desplazar_fechaLimite_por_cambio_entrega(o.idOrdenProduccion, delta_entrega)
+            except Exception:
+                logger.exception('Error moviendo fechaLimite de tareas de OP %s', o.idOrdenProduccion)
 
         return JsonResponse(orden_produccion_to_dict(o))
 
@@ -476,7 +454,6 @@ def avance_operarios(request):
                     'fechaInicio':       str(t.fechaInicio),
                     'fechaFinalizacion': str(t.fechaFinalizacion) if t.fechaFinalizacion else None,
                     'horasEstimadas':    float(t.horasEstimadas) if t.horasEstimadas is not None else None,
-                    'horasReales':       float(t.horasReales) if t.horasReales is not None else None,
                 }
                 for t in sorted(tareas, key=lambda t: t.fechaInicio)
             ],

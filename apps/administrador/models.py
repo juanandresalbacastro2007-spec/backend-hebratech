@@ -163,14 +163,6 @@ class AsignacionTarea(models.Model):
         on_delete=models.CASCADE,
         db_column='idOperario'
     )
-    idOrden = models.ForeignKey(
-        'Orden',
-        on_delete=models.CASCADE,
-        db_column='idOrden',
-        null=True,
-        blank=True,
-        related_name='asignaciones'
-    )
     descripcion = models.TextField()
     fechaAsignacion = models.DateField(auto_now_add=True)
     fechaInicio = models.DateField()
@@ -179,9 +171,7 @@ class AsignacionTarea(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
     prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='Media')
     horasEstimadas = models.DecimalField(max_digits=5, decimal_places=2)
-    tipoPrenda = models.CharField(max_length=50, null=True, blank=True)
     cantidadPrendas = models.IntegerField(null=True, blank=True)
-    horasReales = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     class Meta:
         db_table = 'asignacion_tareas'

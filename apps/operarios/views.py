@@ -148,8 +148,6 @@ def api_tareas(request):
             'prioridad':       a.prioridad or 'Media',
             'estado':          a.estado,
             'horasEstimadas':  float(a.horasEstimadas or 0),
-            'horasReales':     float(a.horasReales) if a.horasReales is not None else None,
-            'tipoPrenda':      a.tipoPrenda or '',
             'cantidadPrendas': a.cantidadPrendas or 0,
             'maquina':         tarea.proceso or 'Planta General',
             'fechaInicio':     str(a.fechaInicio) if a.fechaInicio else None,

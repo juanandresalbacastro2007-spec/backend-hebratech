@@ -16,6 +16,7 @@ MINUTOS_MINIMOS_EN_PROCESO = getattr(settings, 'PRODUCCION_MINUTOS_MINIMOS_EN_PR
 TRANSICION_CLIENTE_MAP = {
     'En Progreso': 'marcar_en_produccion',   # Orden: Pendiente -> Procesando
     'Completado':  'marcar_enviado',         # Orden: Procesando -> Enviado
+    'Cancelada':   'cancelar',               # Orden: Pendiente/Procesando -> Cancelado
 }
 
 
@@ -170,7 +171,7 @@ def sincronizar_fechas_tareas_con_produccion(produccion):
     )
 
 
-def desplazar_tareas_por_cambio_fecha(id_produccion, delta_dias):
+def desplazar_tareas_por_cambio_fecha(id_produccion, delta_dias, mover_limite=True):
     """
     Corre fechaInicio y fechaLimite de las tareas no terminadas el mismo
     número de días que se movió la fechaInicio de la orden de producción.
@@ -192,7 +193,7 @@ def desplazar_tareas_por_cambio_fecha(id_produccion, delta_dias):
         if asignacion.fechaInicio:
             asignacion.fechaInicio += timedelta(days=delta_dias)
             cambios.append('fechaInicio')
-        if asignacion.fechaLimite:
+        if mover_limite and asignacion.fechaLimite:
             asignacion.fechaLimite += timedelta(days=delta_dias)
             cambios.append('fechaLimite')
         if cambios:
