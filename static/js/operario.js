@@ -20,10 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ─── ESTADO LOCAL ────────────────────────────────────────────
-    const cacheTareas       = {};   // { idAsignacion: tareaObj }
-    const cacheIncidencias  = {};   // { idIncidencia: incObj }
-    const timerIntervals    = {};   // { idAsignacion: intervalId }
-    const alertedTasks      = new Set();   // idAsignacion ya alertados por <1h restante
+    const cacheTareas       = {};
+    const cacheIncidencias  = {};
+    const timerIntervals    = {};
+    const alertedTasks      = new Set();
 
     let pendingDeleteId        = null;
     let activeStartTaskId      = null;
@@ -74,14 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderizarKanban(tareas) {
-        // Limpiar cache y cronómetros
         Object.keys(cacheTareas).forEach(k => delete cacheTareas[k]);
         Object.keys(timerIntervals).forEach(id => {
             clearInterval(timerIntervals[id]);
             delete timerIntervals[id];
         });
 
-        // Limpiar cards del DOM (conservar empty states)
         ['Pendiente', 'En Progreso', 'Completada'].forEach(estado => {
             const zona = zonas[estado];
             if (zona) zona.querySelectorAll('.ht-card').forEach(c => c.remove());
@@ -89,8 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tareas.forEach(t => {
             cacheTareas[t.idAsignacion] = t;
-            // Las tareas Completadas ya no se muestran en el tablero:
-            // quedan archivadas y solo se ven en el modal de Historial.
             if (t.estado === 'Completada') return;
             const card = crearCard(t);
             const zona = zonas[t.estado];
@@ -108,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (total) total.textContent = tareas.length;
     }
 
-    // ─── Crear tarjeta de tarea ──────────────────────────────────
     function crearCard(t) {
         const card = document.createElement('div');
         card.className = 'ht-card';
@@ -121,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const prioClass  = `ht-badge-prio-${t.prioridad}`;
         const compClass  = `ht-badge-complex-${(t.complejidad || 'media').toLowerCase()}`;
 
-        // Bloque de cronómetro (solo para "En Progreso")
         const timerBlock = t.estado === 'En Progreso'
             ? `<div class="ht-timer-block" id="timerBlock-${t.idAsignacion}">
                    <i class="bi bi-stopwatch-fill"></i>
@@ -130,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
                </div>`
             : '';
 
-        // Botones de acción según estado
         let actionBtns = '';
         if (t.estado === 'Pendiente') {
             actionBtns = `
@@ -170,14 +163,12 @@ document.addEventListener('DOMContentLoaded', () => {
             ${actionBtns ? `<div class="ht-card-actions">${actionBtns}</div>` : ''}
         `;
 
-        // Eventos drag
         card.addEventListener('dragstart', e => {
             e.dataTransfer.setData('text/plain', String(t.idAsignacion));
             card.classList.add('dragging');
         });
         card.addEventListener('dragend', () => card.classList.remove('dragging'));
 
-        // Eventos click en botones internos
         card.addEventListener('click', e => {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
@@ -189,7 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (action === 'reportar')   abrirModalIncidencia(null, t);
         });
 
-        // Iniciar cronómetro si corresponde
         if (t.estado === 'En Progreso') iniciarCronometro(t);
 
         return card;
@@ -201,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function iniciarCronometro(tarea) {
         const id = tarea.idAsignacion;
-        // Usar el timestamp del backend si existe, si no usar Date.now() como referencia parcial
         const inicioMs = tarea.fechaInicioTs || Date.now();
         const limitMs  = (tarea.horasEstimadas || 1) * 3600 * 1000;
 
@@ -214,28 +203,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const excessEl    = document.getElementById(`excess-${id}`);
 
             if (remainingMs > 3600000) {
-                // Más de 1 hora restante: se muestra en horas
                 const horasRest = remainingMs / 3600000;
                 el.textContent = `${horasRest.toFixed(1)}h restantes`;
                 el.classList.remove('ht-timer-critico');
                 if (excessEl) excessEl.classList.add('d-none');
 
             } else if (remainingMs > 0) {
-                // Bajo 1 hora: cuenta regresiva minuto a minuto (59, 58, 57…)
                 const minRest = Math.floor(remainingMs / 60000);
                 const segRest = Math.floor((remainingMs % 60000) / 1000);
                 el.textContent = `${minRest}:${String(segRest).padStart(2, '0')} min`;
                 el.classList.add('ht-timer-critico');
                 if (excessEl) excessEl.classList.add('d-none');
 
-                // Alertar una sola vez al cruzar el umbral de 1 hora restante
                 if (!alertedTasks.has(id)) {
                     alertedTasks.add(id);
                     mostrarToast(`⏰ Falta 1 hora para completar "${tarea.nombreTarea}"`, 'err');
                 }
 
             } else {
-                // Tiempo excedido
                 el.textContent = 'Tiempo excedido';
                 el.classList.add('ht-timer-critico');
                 if (excessEl) {
@@ -291,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ).show();
     }
 
-    // Mostrar/ocultar Observaciones según el switch de inconvenientes
     const finishSwitch = document.getElementById('finishHasIncidence');
     if (finishSwitch) {
         finishSwitch.addEventListener('change', function () {
@@ -301,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Listener del botón de confirmar finalización
     const btnFinish = document.getElementById('btnConfirmFinishTask');
     if (btnFinish) {
         btnFinish.addEventListener('click', async () => {
@@ -325,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─── Cambiar estado en backend ───────────────────────────────
     async function cambiarEstado(idAsignacion, nuevoEstado) {
         try {
             const res = await fetch(ENDPOINTS.cambiarEstado(idAsignacion), {
@@ -386,9 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function abrirDetalleTarea(t) {
         document.getElementById('dtlTaskTitle').textContent = t.nombreTarea;
 
-        // "Fin estimado" = fechaLimite real (si existe).
-        // Fallback: si la tarea es antigua y no tiene fechaLimite, se
-        // calcula un aproximado con fechaInicio + horasEstimadas/10.
         let fechaFinStr = '—';
         let diasEst = null;
 
@@ -495,7 +474,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (kpiEl) kpiEl.textContent = reportes.length;
     }
 
-    // ─── Campana de NOTIFICACIONES (respuestas del admin sin leer) ─
     function renderizarNotificaciones(reportes) {
         const badge     = document.getElementById('navNotifBadge');
         const container = document.getElementById('navNotifContainer');
@@ -532,7 +510,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─── Modal de detalle de incidencia (con respuesta del admin) ──
     async function abrirDetalleIncidencia(idIncidencia) {
         const rep = cacheIncidencias[idIncidencia];
         if (!rep) return;
@@ -567,7 +544,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ─── Tabla en modal gestión ──────────────────────────────────
     function renderizarTablaIncidencias(reportes) {
         const tbody = document.getElementById('tableIncidenciasBody');
         if (!tbody) return;
@@ -637,7 +613,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─── Abrir modal crear/editar incidencia ─────────────────────
     function abrirModalIncidencia(incidencia = null, tareaAsociada = null, textoBase = null) {
         const eyebrow    = document.getElementById('reportModalEyebrow');
         const titulo     = document.getElementById('reportModalLabel');
@@ -682,7 +657,6 @@ document.addEventListener('DOMContentLoaded', () => {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('reportModal')).show();
     }
 
-    // ─── Formulario de incidencia ────────────────────────────────
     function configurarFormularioIncidencia() {
         const descEl = document.getElementById('reportDesc');
         if (descEl) {
@@ -749,7 +723,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ─── Modal eliminar ──────────────────────────────────────────
     function configurarModalEliminar() {
         const btn = document.getElementById('btnConfirmDelete');
         if (!btn) return;
@@ -776,7 +749,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─── Filtro de búsqueda en tabla de gestión ──────────────────
     function configurarBusquedaTablaIncidencias() {
         const input = document.getElementById('searchIncidenceModal');
         if (!input) return;
@@ -940,7 +912,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) el.textContent = counts[e];
         });
 
-        // KPI chips navbar
         const kp = document.getElementById('kpiCountPending');
         const kq = document.getElementById('kpiCountProgress');
         const kd = document.getElementById('kpiCountDone');
@@ -948,7 +919,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (kq) kq.textContent = counts['En Progreso'];
         if (kd) kd.textContent = counts['Completada'];
 
-        // Pestañas móvil
         const mp = document.getElementById('mobCountPending');
         const mq = document.getElementById('mobCountProgress');
         const md = document.getElementById('mobCountDone');
@@ -1027,6 +997,44 @@ document.addEventListener('DOMContentLoaded', () => {
         wrap.appendChild(toast);
         setTimeout(() => toast.remove(), 3500);
     }
+
+    // ── NUEVO: Bienvenida flotante (una vez por sesión) ──
+    function mostrarBienvenida(nombre) {
+        const wrap = document.getElementById('toastWrap');
+        if (!wrap) return;
+
+        const hora = new Date().getHours();
+        const momento = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
+        const id = 'toast-welcome-' + Date.now();
+        const duracion = 5500;
+
+        const el = document.createElement('div');
+        el.className = 'ht-toast ht-toast--welcome';
+        el.id = id;
+        el.setAttribute('role', 'status');
+        el.innerHTML = `
+            <span class="ht-welcome-wave">👋</span>
+            <div class="ht-welcome-body">
+                <div class="ht-welcome-title"></div>
+                <div class="ht-welcome-msg"></div>
+            </div>
+            <button type="button" class="ht-welcome-close" aria-label="Cerrar"><i class="bi bi-x"></i></button>
+        `;
+        el.querySelector('.ht-welcome-title').textContent = '¡Hola, ' + nombre + '!';
+        el.querySelector('.ht-welcome-msg').textContent = momento + '. Bienvenido/a a tu tablero operativo.';
+        el.querySelector('.ht-welcome-close').addEventListener('click', () => el.remove());
+
+        wrap.appendChild(el);
+        requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+
+        setTimeout(() => {
+            el.classList.remove('show');
+            setTimeout(() => el.remove(), 400);
+        }, duracion);
+    }
+
+    // Exponer global para que el inline script del template la invoque
+    window.mostrarBienvenida = mostrarBienvenida;
 
     function descargarPDF(idIncidencia) {
         const link = document.createElement('a');

@@ -1020,3 +1020,48 @@ body {
 [data-bs-theme="dark"] .ht-toast,
 [data-bs-theme="dark"] .ot-toggle-btn { background: var(--bg-card) !important; }
 [data-bs-theme="dark"] .ht-toast-close { background: var(--bg-mid) !important; color: var(--inactive) !important; }
+
+/* ══ BIENVENIDA FLOTANTE (NUEVO) ═══════════════════════════ */
+.ht-toast.ht-toast--welcome,
+[data-bs-theme="dark"] .ht-toast.ht-toast--welcome {
+  background: linear-gradient(135deg, var(--primary-deep), var(--primary)) !important;
+  border-color: transparent;
+  align-items: center;
+  padding: 16px 18px;
+}
+.ht-toast--welcome .ht-toast-icon {
+  width: 44px; height: 44px;
+  font-size: 1.4rem;
+  background: rgba(255, 255, 255, 0.16);
+}
+.ht-toast--welcome .ht-toast-title {
+  font-size: 1.1rem;
+  margin-bottom: 2px;
+  color: #fff !important;
+}
+.ht-toast--welcome .ht-toast-msg {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+.ht-toast--welcome .ht-toast-close,
+[data-bs-theme="dark"] .ht-toast--welcome .ht-toast-close {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.ht-toast--welcome .ht-toast-close:hover { background: rgba(255, 255, 255, 0.3); }
+.ht-toast--welcome .ht-toast-progress { background: rgba(255, 255, 255, 0.55); }
+
+.ht-welcome-wave {
+  display: inline-block;
+  transform-origin: 70% 70%;
+  animation: ht-wave 1.6s ease-in-out 0.4s 2;
+}
+@keyframes ht-wave {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(14deg); }
+  20%, 40% { transform: rotate(-8deg); }
+  50% { transform: rotate(10deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ht-welcome-wave { animation: none; }
+}

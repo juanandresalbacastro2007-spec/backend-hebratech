@@ -43,7 +43,16 @@ def tablero_operario(request):
     operario = _get_operario(request)
     if not operario:
         return redirect('login')
-    return render(request, 'operarios/operario.html', {'operario': operario})
+
+    # ── Bienvenida flotante: una vez por sesión ──
+    # logout_view hace session.flush(), así que se resetea al reingresar.
+    mostrar_bienvenida = not request.session.get('bienvenida_mostrada', False)
+    request.session['bienvenida_mostrada'] = True
+
+    return render(request, 'operarios/operario.html', {
+        'operario': operario,
+        'mostrar_bienvenida': mostrar_bienvenida,
+    })
 
 
 # ─────────────────────────────────────────────────────────────────

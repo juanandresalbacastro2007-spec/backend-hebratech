@@ -1,4 +1,4 @@
-#Views para el portal del cliente, incluyendo registro de órdenes, generación de facturas y cotizaciones, edición de perfil y manejo de notificaciones.
+# Views para el portal del cliente, incluyendo registro de órdenes, generación de facturas y cotizaciones, edición de perfil y manejo de notificaciones.
 
 import os
 
@@ -275,6 +275,14 @@ def cliente_portal(request):
     )
 
     # --------------------------------------------------------
+    # NUEVO: Bienvenida flotante — solo la primera vez por
+    # sesión. logout_view hace session.flush(), así que la
+    # bandera se resetea al volver a entrar.
+    # --------------------------------------------------------
+    mostrar_bienvenida = not request.session.get('bienvenida_mostrada', False)
+    request.session['bienvenida_mostrada'] = True
+
+    # --------------------------------------------------------
     # CONTEXTO
     # --------------------------------------------------------
 
@@ -294,6 +302,9 @@ def cliente_portal(request):
 
         'facturas': facturas,
         'cotizaciones': cotizaciones,
+
+        # NUEVO
+        'mostrar_bienvenida': mostrar_bienvenida,
     }
 
     return render(

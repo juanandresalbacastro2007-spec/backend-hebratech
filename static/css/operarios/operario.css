@@ -1,7 +1,7 @@
 /* ================================================================
-  HEBRATECH — MÓDULO OPERARIO (Tablero & Perfil)
-  Paleta: #2C3333 bg · #395B64 accent · #A5C9CA highlight · #E7F6F2 light
-  Fuentes: Fredoka (títulos) · Roboto (cuerpo)
+   HEBRATECH — MÓDULO OPERARIO (Tablero & Perfil)
+   Paleta: #2C3333 bg · #395B64 accent · #A5C9CA highlight · #E7F6F2 light
+   Fuentes: Fredoka (títulos) · Roboto (cuerpo)
    ================================================================ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -10,8 +10,12 @@
   /* Paleta oficial HebraTech */
   --primary:      #395B64;
   --primary-dark: #2c2d33;
+  --primary-deep: #1e3540;
   --accent:       #A5C9CA;
   --bg-light:     #E7F6F2;
+
+  /* NUEVO — altura del navbar para sticky de barras inferiores */
+  --nav-height:   68px;
 
   /* Derivados para UI clara */
   --bg:           #f0f4f5;
@@ -20,9 +24,10 @@
   --border:       rgba(165,201,202,.35);
   --border-md:    rgba(165,201,202,.6);
 
-  /* Texto */
-  
+  /* Texto — faltaban definiciones */
+  --text:         #2c2d33;
   --text-muted:   #7a8c8d;
+  --blue:         #395B64;
 
   /* Semánticos */
   --danger:       #b02a37;
@@ -55,72 +60,47 @@ html, body {
 
 /* ================================================================ NAVBAR */
 .ht-navbar-top {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border-md);
+  background: linear-gradient(90deg, var(--accent) 0%, var(--primary-deep) 100%);
+  border-bottom: none;
   position: sticky;
   top: 0;
   z-index: 1040;
-  padding: 0 24px;
-  height: 60px;
-  box-shadow: 0 2px 10px rgba(44, 51, 51, 0.05);
+  padding: 0 20px;
+  height: var(--nav-height);
+  box-shadow: 0 4px 20px rgba(30, 53, 64, 0.22);
 }
 
 .ht-navbar-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  gap: 14px;
   height: 100%;
   max-width: 1600px;
   margin: 0 auto;
 }
 
-/* Flexbox para alinear logo y texto horizontalmente sin subrayado */
+/* ── Marca ─────────────────────────────────────────── */
 .ht-brand {
   display: flex !important;
   align-items: center !important;
-  gap: 0.75rem !important;
-  text-decoration: none !important; /* Quita el subrayado azul */
-  color: inherit !important;
-}
-
-.ht-brand:hover {
+  gap: 10px !important;
   text-decoration: none !important;
+  color: inherit !important;
+  flex-shrink: 0;
 }
-
-/* Título */
-.ht-brand .brand-title {
-  font-family: var(--ff-display);
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1e293b !important; /* Color oscuro */
-  line-height: 1.1;
-  display: block;
-}
-
-/* Subtítulo */
-.ht-brand .brand-sub {
-  display: block;
-  font-size: 0.75rem;
-  color: #64748b !important; /* Gris secundario */
-  font-weight: 500;
-  line-height: 1.1;
-}
-
-
 
 .brand-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
-  background: #E7F6F2;
-  border: 1px solid var(--border);
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.95);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   padding: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .brand-icon img {
@@ -130,104 +110,223 @@ html, body {
   display: block;
 }
 
+.ht-brand .brand-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff !important;
+  line-height: 1.1;
+  letter-spacing: 0.3px;
+  display: block;
+}
+
+.ht-brand .brand-sub {
+  display: block;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.75) !important;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+/* ── Controles del navbar (botones + avatar) ──────── */
 .ht-nav-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .ht-nav-divider {
   width: 1px;
-  height: 24px;
-  background: var(--border-md);
+  height: 28px;
+  background: rgba(255, 255, 255, 0.22);
   margin: 0 4px;
+  flex-shrink: 0;
 }
 
 /* Botones genéricos de la barra superior */
 .ht-nav-btn {
-  background: var(--surface2);
-  border: 1px solid var(--border-md);
-  color: var(--text);
-  border-radius: var(--radius-xs);
-  padding: 9px 16px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  height: 38px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: .92rem;
+  gap: 7px;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all .15s ease;
-  position: relative;
+  transition: all 0.2s ease;
   font-family: 'Roboto', sans-serif;
   text-decoration: none;
+  white-space: nowrap;
 }
 
-
+.ht-nav-btn i { font-size: 1rem; }
 .ht-nav-btn i.bi-clipboard-check,
-.ht-nav-btn i.bi-exclamation-triangle-fill {
-  font-size: 1.25rem;
-}
+.ht-nav-btn i.bi-exclamation-triangle-fill { font-size: 1.25rem; }
 
 .ht-nav-btn:hover {
-  background: rgba(165, 201, 202, 0.25);
-  border-color: var(--primary);
-  color: var(--text-);
+  background: rgba(165, 201, 202, 0.35);
+  border-color: var(--accent);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
-.ht-nav-btn-label { 
-  display: none; 
+.ht-nav-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-@media (min-width: 768px) { 
-  .ht-nav-btn-label { 
-    display: inline; 
-  } 
+/* Botón solo-ícono (notificaciones) */
+.ht-nav-btn-icon {
+  width: 38px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 10px;
+  position: relative;
 }
 
+.ht-nav-btn-icon .ht-badge-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  border: 2px solid var(--primary-deep);
+}
+
+/* Badge de notificaciones */
 .ht-badge-count {
-  background: var(--primary);
+  background: #dc3545;
   color: #ffffff;
-  font-size: 0.85rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  min-width: 19px;
-  height: 19px;
+  min-width: 18px;
+  height: 18px;
   border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 8px;
+  padding: 2px 6px;
+  line-height: 1;
 }
 
+.ht-nav-btn-label { display: none; }
+@media (min-width: 768px) {
+  .ht-nav-btn-label { display: inline; }
+}
 
+/* ── Reloj ────────────────────────────────────────── */
+.top-clock {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(165, 201, 202, 0.35) !important;
+  color: #ffffff !important;
+  font-size: 0.82rem;
+  letter-spacing: 0.6px;
+  border-radius: 22px !important;
+  padding: 6px 14px !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: none !important;
+  font-weight: 600;
+}
 
+.top-clock i {
+  color: var(--accent) !important;
+  font-size: 0.9rem;
+}
 
+/* ── Perfil (avatar + nombre) ─────────────────────── */
+.ht-profile-info {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 30px;
+  padding: 5px 16px 5px 5px;
+  gap: 10px !important;
+  transition: background 0.15s ease;
+}
 
+.ht-profile-info:hover { background: rgba(255, 255, 255, 0.18); }
 
-/* Flecha pequeña para no recargar */
+.ht-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--primary);
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ht-profile-name-pill {
+  color: #ffffff !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 600;
+  font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ── Botones circulares de acción del perfil ──────── */
+.ht-profile-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.ht-profile-action i {
+  font-size: 1.05rem;
+  line-height: 1;
+  display: block;
+}
+
+.ht-profile-action:hover {
+  background: rgba(165, 201, 202, 0.35);
+  border-color: var(--accent);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.ht-profile-action.ht-logout-action {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.ht-profile-action.ht-logout-action:hover {
+  background: rgba(220, 53, 69, 0.35);
+  border-color: #dc3545;
+  color: #ffffff;
+}
+
+/* ── Dropdown panel (notificaciones) ──────────────── */
 .ht-chevron {
   font-size: 0.75rem;
-  color: var(--text-muted, #f8f4f4);
+  color: var(--text-muted);
 }
+.dropdown.show .ht-chevron { transform: rotate(180deg); }
 
-.dropdown.show .ht-chevron {
-  transform: rotate(180deg);
-}
-
-/* Ancho del panel de incidencias */
-.ht-dropdown-panel--wide {
-  min-width: 340px;
-}
-
-/* Encabezado e ítems más grandes y espaciosos */
-/* Ancho del panel */
+.ht-dropdown-panel { min-width: 320px; }
 .ht-dropdown-panel--wide { min-width: 540px; }
 
-/* Ancho base para todos los paneles desplegables de la barra */
-.ht-dropdown-panel {
-  min-width: 320px; /* Aumenta el ancho (por defecto suele venir en 160px - 200px) */
-}
-
-/* Tamaño de texto y relleno unificados */
 .ht-dropdown-panel :is(.ht-dropdown-header, .dropdown-item, .ht-empty-state) {
   font-size: 0.95rem;
   padding: 12px 16px;
@@ -285,18 +384,14 @@ html, body {
   gap: 3px;
 }
 
-.ht-report-action-btn--edit {
-  color: var(--hi2);
-}
+.ht-report-action-btn--edit { color: var(--hi2); }
 .ht-report-action-btn--edit:hover {
   background: rgba(165,201,202,.25);
   border-color: var(--hi2);
   color: var(--primary-dark);
 }
 
-.ht-report-action-btn--delete {
-  color: var(--danger);
-}
+.ht-report-action-btn--delete { color: var(--danger); }
 .ht-report-action-btn--delete:hover {
   background: rgba(224,92,92,.15);
   border-color: var(--danger);
@@ -327,7 +422,7 @@ html, body {
   border-bottom: 1px solid var(--border);
   padding: 12px 24px;
   position: sticky;
-  top: 56px;
+  top: var(--nav-height);   /* alineado con el nuevo navbar */
   z-index: 1030;
 }
 
@@ -372,7 +467,7 @@ html, body {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-left: auto; /* Empuja todo el bloque a la derecha */
+  margin-left: auto;
 }
 
 .ht-btn-toggle {
@@ -447,14 +542,8 @@ html, body {
   transition: border-color .15s;
   height: 42px;
 }
-
-.ht-filter-select:focus { border-color: var(--hi2); 
-}
-
-
-.ht-filter-select option {
-  background-color: var(--border);
-}
+.ht-filter-select:focus { border-color: var(--hi2); }
+.ht-filter-select option { background-color: var(--border); }
 
 /* ================================================================ MAIN */
 .ht-main {
@@ -487,8 +576,7 @@ html, body {
 .ht-page-sub { margin: 4px 0 0; color: var(--text-muted); font-size: .84rem; }
 .ht-page-sub strong { color: var(--primary); }
 
-
-
+/* Spinner */
 .ht-spinner {
   width: 18px; height: 18px;
   border: 2px solid var(--border-md);
@@ -498,7 +586,7 @@ html, body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Toast */
+/* ================================================================ TOASTS (base) */
 .ht-toast-wrap {
   position: fixed;
   bottom: 24px;
@@ -537,6 +625,95 @@ html, body {
   to   { transform: translateY(0);    opacity: 1; }
 }
 
+/* ================================================================ NUEVO — BIENVENIDA FLOTANTE */
+.ht-toast.ht-toast--welcome {
+  background: linear-gradient(135deg, var(--primary-deep), var(--primary)) !important;
+  border: 1px solid transparent !important;
+  border-left: none !important;
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  gap: 12px;
+  color: #fff;
+  max-width: 400px;
+  align-items: center;
+  /* Animación: entrada + auto-salida sincronizada con la duración del JS (5.5s) */
+  animation: welcomeIn .45s cubic-bezier(0.34, 1.56, 0.64, 1),
+             welcomeOut .4s ease 5.1s forwards;
+}
+
+.ht-toast--welcome .ht-welcome-wave {
+  display: inline-block;
+  font-size: 1.8rem;
+  line-height: 1;
+  transform-origin: 70% 70%;
+  animation: welcomeWave 1.6s ease-in-out 0.4s 2;
+  flex-shrink: 0;
+}
+
+.ht-toast--welcome .ht-welcome-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ht-toast--welcome .ht-welcome-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.ht-toast--welcome .ht-welcome-msg {
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.35;
+}
+
+.ht-toast--welcome .ht-welcome-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s ease;
+}
+
+.ht-toast--welcome .ht-welcome-close:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+@keyframes welcomeIn {
+  from { transform: translateY(20px) scale(0.95); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes welcomeOut {
+  to { transform: translateY(-8px) scale(0.96); opacity: 0; }
+}
+
+@keyframes welcomeWave {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30%      { transform: rotate(14deg); }
+  20%, 40%      { transform: rotate(-8deg); }
+  50%           { transform: rotate(10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ht-toast--welcome,
+  .ht-toast--welcome .ht-welcome-wave { animation: none; }
+}
+
 /* ================================================================ KANBAN */
 .ht-kanban-board {
   display: grid;
@@ -557,12 +734,8 @@ html, body {
   transition: min-height .3s ease;
 }
 
-.ht-kanban-col--completada.collapsed {
-  min-height: unset;
-}
-.ht-kanban-col--completada.collapsed .ht-drop-zone {
-  display: none;
-}
+.ht-kanban-col--completada.collapsed { min-height: unset; }
+.ht-kanban-col--completada.collapsed .ht-drop-zone { display: none; }
 
 .ht-col-chevron {
   font-size: .8rem;
@@ -570,9 +743,7 @@ html, body {
   transition: transform .25s ease;
   margin-left: auto !important;
 }
-.ht-kanban-col--completada.collapsed .ht-col-chevron {
-  transform: rotate(180deg);
-}
+.ht-kanban-col--completada.collapsed .ht-col-chevron { transform: rotate(180deg); }
 
 .ht-col-header {
   display: flex;
@@ -857,111 +1028,16 @@ html, body {
 }
 .ht-detail-desc p { margin: 0; font-size: .87rem; line-height: 1.6; color: var(--text-muted); }
 
-/* ── Píldora que envuelve foto de perfil + nombre del operario ── */
-.ht-profile-info {
-  background: var(--surface2);
-  border: 1px solid var(--border-md);
-  border-radius: 30px;
-  padding: 6px 16px 6px 6px;
-}
-
-.ht-profile-name-pill {
-  font-family: 'Roboto', sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--primary);
-  line-height: 1.1;
-  white-space: nowrap;
-}
-
-[data-bs-theme="dark"] .ht-profile-info {
-  background: var(--surface2);
-  border-color: var(--border-md);
-}
-[data-bs-theme="dark"] .ht-profile-name-pill {
-  color: var(--accent);
-}
-
 /* ================================================================ EDITAR PERFIL LAYOUT */
-/* Botón circular base para las acciones del perfil (editar / cerrar sesión) */
-.ht-profile-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--surface2);
-  border: 1px solid var(--border-md);
-  color: var(--primary);
-  text-decoration: none;
-  cursor: pointer;
-  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
-  flex-shrink: 0;
-}
-
-.ht-profile-action i {
-  font-size: 1.15rem;
-  line-height: 1;
-  display: block;
-}
-
 .ht-profile-btn {
   color: var(--primary-dark) !important;
   background: var(--surface2) !important;
   border-radius: 12px !important;
 }
-
-.ht-profile-btn:hover { 
+.ht-profile-btn:hover {
   background: var(--primary) !important;
   color: #fff !important;
   border-color: var(--primary) !important;
-}
-
-/* Editar perfil -> hover en color primario (Blanco/Gris -> Verde-azulado) */
-.ht-profile-action:hover {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-  transform: translateY(-1px);
-}
-
-/* Cerrar sesión (Salir Blanco -> Rojo) */
-.ht-profile-action.ht-logout-action {
-  color: var(--danger);
-  background: var(--surface2);
-  border-color: rgba(176,42,55,.3);
-}
-
-.ht-profile-action.ht-logout-action:hover {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: #fff;
-}
-
-/* Modo oscuro */
-[data-bs-theme="dark"] .ht-profile-action {
-  background: var(--surface2);
-  border-color: var(--border-md);
-  color: var(--accent);
-}
-[data-bs-theme="dark"] .ht-profile-action:hover {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
-[data-bs-theme="dark"] .ht-profile-action.ht-logout-action {
-  border-color: rgba(176,42,55,.4);
-  color: #e07a82;
-}
-[data-bs-theme="dark"] .ht-profile-action.ht-logout-action:hover {
-  background: var(--danger);
-  color: #fff;
-}
-@media (max-width: 992px) {
-  .ht-profile-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .ht-card-panel {
@@ -972,10 +1048,7 @@ html, body {
   overflow: hidden;
   transition: border-color .2s ease;
 }
-
-.ht-card-panel:hover {
-  border-color: var(--primary);
-}
+.ht-card-panel:hover { border-color: var(--primary); }
 
 .ht-panel-header {
   background: var(--surface2);
@@ -989,9 +1062,7 @@ html, body {
   align-items: center;
 }
 
-.ht-panel-body {
-  padding: 24px;
-}
+.ht-panel-body { padding: 24px; }
 
 .ht-panel-footer {
   padding: 16px 24px;
@@ -1027,11 +1098,7 @@ html, body {
   margin: 0 auto;
 }
 
-.ht-avatar-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.ht-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 
 .ht-avatar-upload-btn {
   position: absolute;
@@ -1050,11 +1117,7 @@ html, body {
   box-shadow: var(--shadow-sm);
   transition: all .2s ease;
 }
-
-.ht-avatar-upload-btn:hover {
-  background: var(--primary-dark);
-  transform: scale(1.08);
-}
+.ht-avatar-upload-btn:hover { background: var(--primary-dark); transform: scale(1.08); }
 
 .ht-user-fullname {
   font-family: 'Fredoka', sans-serif;
@@ -1159,9 +1222,7 @@ html, body {
   pointer-events: none;
 }
 
-.ht-input-padded {
-  padding-left: 36px !important;
-}
+.ht-input-padded { padding-left: 36px !important; }
 
 .ht-textarea { resize: vertical; min-height: 100px; }
 
@@ -1172,7 +1233,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(100, 57, 57, 0.2);
+  background: rgba(57,91,100,.1);
   border: 1px solid rgba(57,91,100,.4);
   border-radius: var(--radius-xs);
   padding: 9px 12px;
@@ -1243,42 +1304,43 @@ html, body {
 
 /* Botón descargar PDF en historial */
 .ht-report-action-btn--pdf {
-    background:    transparent;
-    border:        1px solid rgba(124, 58, 237, 0.35);
-    border-radius: 6px;
-    color:         #7c3aed;
-    padding:       4px 7px;
-    cursor:        pointer;
-    font-size:     .85rem;
-    line-height:   1;
-    transition:    background .18s, color .18s, border-color .18s;
-    flex-shrink:   0;
+  background: transparent;
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 6px;
+  color: #7c3aed;
+  padding: 4px 7px;
+  cursor: pointer;
+  font-size: .85rem;
+  line-height: 1;
+  transition: background .18s, color .18s, border-color .18s;
+  flex-shrink: 0;
 }
 .ht-report-action-btn--pdf:hover {
-    background:    #7c3aed;
-    color:         #fff;
-    border-color:  #7c3aed;
+  background: #7c3aed;
+  color: #fff;
+  border-color: #7c3aed;
 }
 
-
-/* Scrollbar */
+/* ================================================================ SCROLLBAR */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--hi2); }
 
-/* Responsive */
+/* ================================================================ RESPONSIVE */
 @media (max-width: 640px) {
-  .ht-navbar-top  { padding: 0 12px; }
+  .ht-navbar-top   { padding: 0 12px; }
   .ht-controls-bar { padding: 8px 12px; }
-  .ht-main        { padding: 16px 12px 32px; }
-  .ht-stats-row   { gap: 4px; }
-  .ht-stat        { padding: 4px 8px; font-size: .78rem; }
+  .ht-main         { padding: 16px 12px 32px; }
+  .ht-stats-row    { gap: 4px; }
+  .ht-stat         { padding: 4px 8px; font-size: .78rem; }
   .ht-search-input { width: 140px; }
-  .ht-page-title  { font-size: 1.4rem; }
+  .ht-page-title   { font-size: 1.4rem; }
   .ht-btn-toggle span { display: none; }
+  .ht-profile-name-pill { display: none; }
 }
-/* Estilos para errores de validación de operario */
+
+/* ================================================================ VALIDACIÓN */
 .ht-input-error {
   border-color: var(--danger) !important;
   box-shadow: 0 0 0 3px rgba(224, 92, 92, 0.15) !important;
@@ -1294,11 +1356,10 @@ html, body {
 }
 
 /* ================================================================
-   HEBRATECH — ADDENDUM (agregar al final de operario.css)
-   Clases nuevas que usa el rediseño del tablero operario.
+   HEBRATECH — ADDENDUM (KPI chips, timers, mobile tabs)
    ================================================================ */
 
-/* ── KPI chips del navbar ────────────────────────────────────── */
+/* ── KPI chips del navbar ─────────────────────────── */
 .ht-kpis-row {
   display: flex;
   align-items: center;
@@ -1349,19 +1410,16 @@ html, body {
   color: var(--accent2);
 }
 
-.ht-kpi-chip--pending  .ht-kpi-dot  { background: var(--text-muted); }
-.ht-kpi-chip--pending  .ht-kpi-count { background: var(--text-muted); }
-
-.ht-kpi-chip--progress .ht-kpi-dot  { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-.ht-kpi-chip--progress .ht-kpi-count { background: var(--info); }
-
-.ht-kpi-chip--done     .ht-kpi-dot  { background: var(--ok); }
-.ht-kpi-chip--done     .ht-kpi-count { background: var(--ok); }
-
-.ht-kpi-chip--incidence .ht-kpi-dot  { background: var(--danger); }
+.ht-kpi-chip--pending   .ht-kpi-dot   { background: var(--text-muted); }
+.ht-kpi-chip--pending   .ht-kpi-count { background: var(--text-muted); }
+.ht-kpi-chip--progress  .ht-kpi-dot   { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.ht-kpi-chip--progress  .ht-kpi-count { background: var(--info); }
+.ht-kpi-chip--done      .ht-kpi-dot   { background: var(--ok); }
+.ht-kpi-chip--done      .ht-kpi-count { background: var(--ok); }
+.ht-kpi-chip--incidence .ht-kpi-dot   { background: var(--danger); }
 .ht-kpi-chip--incidence .ht-kpi-count { background: var(--danger); }
 
-/* ── Tags dentro de la tarjeta ──────────────────────────────── */
+/* ── Tags dentro de la tarjeta ────────────────────── */
 .ht-card-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1369,7 +1427,7 @@ html, body {
   margin-bottom: 8px;
 }
 
-/* ── Bloque de cronómetro en tarjeta ────────────────────────── */
+/* ── Bloque de cronómetro en tarjeta ──────────────── */
 .ht-timer-block {
   display: flex;
   align-items: center;
@@ -1402,7 +1460,7 @@ html, body {
   border-radius: 4px;
 }
 
-/* ── Fila de acciones debajo de la tarjeta ──────────────────── */
+/* ── Fila de acciones debajo de la tarjeta ────────── */
 .ht-card-actions {
   display: flex;
   gap: 6px;
@@ -1450,7 +1508,7 @@ html, body {
 }
 .ht-card-btn--warn:hover { background: #fde68a; }
 
-/* ── Pestañas móvil ─────────────────────────────────────────── */
+/* ── Pestañas móvil ──────────────────────────────── */
 .ht-mobile-tabs {
   display: flex;
   gap: 4px;
@@ -1473,9 +1531,7 @@ html, body {
   cursor: pointer;
   font-family: 'Roboto', sans-serif;
   transition: background .15s, color .15s;
-  
 }
-
 
 .ht-mobile-tab.active {
   background: var(--primary);
@@ -1488,39 +1544,41 @@ html, body {
   .ht-kanban-col.active-mobile-col { display: flex; }
 }
 
-
+/* ================================================================
+   MODO OSCURO
+   ================================================================ */
 [data-bs-theme="dark"] {
-  --bg:        #182024;
-  --surface:   #212b30;
-  --surface2:  #263239;
-  --border:    rgba(165,201,202,0.15);
-  --border-md: rgba(165,201,202,0.3);
-  --text:      #E7F6F2;
-  --blue:      #0b49f5; 
-  --text-muted:#93a9af;
+  --bg:           #182024;
+  --surface:      #212b30;
+  --surface2:     #263239;
+  --border:       rgba(165,201,202,0.15);
+  --border-md:    rgba(165,201,202,0.3);
+  --text:         #E7F6F2;
+  --text-muted:   #93a9af;
+  --blue:         #a5c9ca;
+  --primary-deep: #12181b;
 }
- 
+
 [data-bs-theme="dark"] html,
 [data-bs-theme="dark"] body { background: var(--bg); color: var(--text); }
- 
 
+/* Superficies translúcidas */
 [data-bs-theme="dark"] .ht-search-input,
 [data-bs-theme="dark"] .ht-filter-select,
 [data-bs-theme="dark"] .ht-stat,
 [data-bs-theme="dark"] .ht-kanban-col,
 [data-bs-theme="dark"] .ht-modal-content,
 [data-bs-theme="dark"] .ht-card-panel,
-[data-bs-theme="dark"] .ht-toast
+[data-bs-theme="dark"] .ht-toast,
 [data-bs-theme="dark"] .dropdown-menu,
 [data-bs-theme="dark"] .ht-dropdown-panel {
   background: transparent !important;
   background-color: transparent !important;
-  backdrop-filter: blur(8px) !important;  /* Opcional: efecto vidrio */
+  backdrop-filter: blur(8px) !important;
   border-color: rgba(165,201,202,0.15) !important;
 }
 
-
-/* El li del perfil (donde está "Carlos Méndez / Confección") */
+/* Dropdown perfil */
 [data-bs-theme="dark"] .dropdown-menu .px-3.py-2 {
   background: var(--surface2) !important;
   border-radius: 8px 8px 0 0;
@@ -1531,56 +1589,81 @@ html, body {
   color: white;
 }
 
+[data-bs-theme="dark"] .ht-profile-btn { color: var(--accent) !important; }
+[data-bs-theme="dark"] .nombre         { background: var(--border) !important; }
 
-[data-bs-theme="dark"] .top-clock {
-  background: var(--border) !important;
+/* Navbar en dark mode */
+[data-bs-theme="dark"] .ht-navbar-top {
+  background: linear-gradient(90deg, #2a3a42 0%, var(--primary-deep) 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
 }
-
-.ht-kpi-chip:hover{
-  color: lightcyan;
+[data-bs-theme="dark"] .brand-icon {
+  background: rgba(255, 255, 255, 0.1);
 }
-
-[data-bs-theme="dark"] .ht-profile-btn{
-  color:  var(--accent) !important;
-}
-
-
-[data-bs-theme="dark"] .nombre{
-  background: var(--border) !important;
-}
-
-[data-bs-theme="dark"] .brand-title {
-  color: var(--blue) !important;
-}
-
-
-[data-bs-theme="dark"] .ht-card,
-[data-bs-theme="dark"] .ht-detail-item,
-[data-bs-theme="dark"] .ht-input,
-[data-bs-theme="dark"] .ht-panel-header,
-[data-bs-theme="dark"] .ht-panel-footer,
-[data-bs-theme="dark"] .ht-detail-desc 
-{
-  background: var(--surface2) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
-}
-
-
- 
-[data-bs-theme="dark"] .ht-brand  { color: #ffffff !important; }
+[data-bs-theme="dark"] .ht-brand { color: #ffffff !important; }
+[data-bs-theme="dark"] .ht-brand .brand-title { color: #ffffff !important; }
 [data-bs-theme="dark"] .ht-brand .brand-sub   { color: var(--text-muted) !important; }
- 
-[data-bs-theme="dark"] .ht-btn-secondary:hover,
-[data-bs-theme="dark"] .ht-nav-btn:hover,
- 
-[data-bs-theme="dark"] .ht-controls-bar { background: var(--bg) !important; border-color: var(--border) !important; }
 
 [data-bs-theme="dark"] .top-clock {
   background: var(--surface) !important;
   border-color: var(--border-md) !important;
   color: var(--text) !important;
 }
-[data-bs-theme="dark"] .top-clock i {
+[data-bs-theme="dark"] .top-clock i { color: var(--text) !important; }
+
+[data-bs-theme="dark"] .ht-profile-info {
+  background: var(--surface2);
+  border-color: var(--border-md);
+}
+[data-bs-theme="dark"] .ht-profile-name-pill { color: var(--accent); }
+
+[data-bs-theme="dark"] .ht-profile-action {
+  background: var(--surface2);
+  border-color: var(--border-md);
+  color: var(--accent);
+}
+[data-bs-theme="dark"] .ht-profile-action:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+[data-bs-theme="dark"] .ht-profile-action.ht-logout-action {
+  border-color: rgba(176,42,55,.4);
+  color: #e07a82;
+}
+[data-bs-theme="dark"] .ht-profile-action.ht-logout-action:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+[data-bs-theme="dark"] .ht-nav-btn:hover,
+[data-bs-theme="dark"] .ht-btn-secondary:hover {
+  background: rgba(165, 201, 202, 0.15);
+}
+
+[data-bs-theme="dark"] .ht-controls-bar {
+  background: var(--bg) !important;
+  border-color: var(--border) !important;
+}
+
+/* Cards / panels / inputs */
+[data-bs-theme="dark"] .ht-card,
+[data-bs-theme="dark"] .ht-detail-item,
+[data-bs-theme="dark"] .ht-input,
+[data-bs-theme="dark"] .ht-panel-header,
+[data-bs-theme="dark"] .ht-panel-footer,
+[data-bs-theme="dark"] .ht-detail-desc {
+  background: var(--surface2) !important;
   color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* KPI chip hover en dark mode */
+[data-bs-theme="dark"] .ht-kpi-chip:hover {
+  color: lightcyan;
+}
+
+/* Bienvenida flotante: mantener el gradiente aún con la regla de "transparent" */
+[data-bs-theme="dark"] .ht-toast.ht-toast--welcome {
+  background: linear-gradient(135deg, var(--primary-deep), var(--primary)) !important;
 }

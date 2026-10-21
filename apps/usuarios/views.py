@@ -40,9 +40,13 @@ class GoogleLoginView(SocialLoginView):
 # ==========================================
 
 def login_view(request):
+    # Preservamos el correo entre intentos fallidos para que el usuario
+    # solo tenga que reescribir la contraseña (como en una red social).
+    correo = ''
+
     if request.method == 'POST':
-        correo = request.POST.get('correo')
-        contrasena = request.POST.get('contrasena')
+        correo = request.POST.get('correo', '')
+        contrasena = request.POST.get('contrasena', '')
 
         # ✅ Mensaje genérico de error para no revelar si el correo existe
         # o no en la base (evita enumeración de usuarios).
@@ -88,24 +92,35 @@ def login_view(request):
         except Usuario.DoesNotExist:
             messages.error(request, error_generico)
 
-    return render(request, 'usuarios/login.html')
+    # 👇 Le devolvemos el correo al template para no borrarlo.
+    return render(request, 'usuarios/login.html', {'correo': correo})
 
 
 def registro_view(request):
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        apellido = request.POST.get('apellido')
-        correo = request.POST.get('correo')
-        contrasena = request.POST.get('contrasena')
-        confirmar = request.POST.get('confirmar')
+        nombre = request.POST.get('nombre', '')
+        apellido = request.POST.get('apellido', '')
+        correo = request.POST.get('correo', '')
+        contrasena = request.POST.get('contrasena', '')
+        confirmar = request.POST.get('confirmar', '')
+
+        # Contexto para repoblar el formulario de REGISTRO si hay error.
+        # `show_register: True` hace que login.html muestre la vista de
+        # registro en vez de la de login (si no, el usuario perdería todo).
+        ctx_error = {
+            'show_register': True,
+            'reg_nombre': nombre,
+            'reg_apellido': apellido,
+            'reg_correo': correo,
+        }
 
         if contrasena != confirmar:
             messages.error(request, 'Las contraseñas no coinciden.')
-            return render(request, 'usuarios/login.html')
+            return render(request, 'usuarios/login.html', ctx_error)
 
         if Usuario.objects.filter(correoElectronico=correo).exists():
             messages.error(request, 'Ya existe una cuenta con ese correo.')
-            return render(request, 'usuarios/login.html')
+            return render(request, 'usuarios/login.html', ctx_error)
 
         with connection.cursor() as cursor:
             cursor.execute("""

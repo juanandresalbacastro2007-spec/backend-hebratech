@@ -12,7 +12,7 @@
   </button>
 
   <!-- LOGIN VIEW -->
-  <div id="login-view">
+  <div id="login-view" {% if show_register %}style="display: none;"{% endif %}>
     <h1 class="mb-4">¡Bienvenido/a de nuevo!</h1>
 
     <!-- Botón Iniciar Sesión con Google -->
@@ -36,12 +36,14 @@
       <div class="mb-3">
         <label class="form-label">Email</label>
         <input type="email" name="correo" class="form-control"
+          value="{{ correo|default:'' }}"
           placeholder="ejemplo@correo.com" required>
       </div>
       <div class="mb-2">
         <label class="form-label">Contraseña</label>
         <div class="password-wrapper position-relative">
           <input type="password" name="contrasena" id="login-pass" class="form-control"
+            {% if correo and not show_register %}autofocus{% endif %}
             placeholder="Mínimo 8 caracteres" required>
           <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
             onclick="togglePass('login-pass')" style="cursor:pointer;"></i>
@@ -64,7 +66,7 @@
   </div>
 
   <!-- REGISTER VIEW -->
-  <div id="register-view" style="display: none;">
+  <div id="register-view" {% if not show_register %}style="display: none;"{% endif %}>
     <h1 class="mb-4">Crea tu cuenta</h1>
 
     <!-- Botón Registrase con Google -->
@@ -88,16 +90,19 @@
       <div class="mb-3">
         <label class="form-label">Nombre</label>
         <input type="text" name="nombre" class="form-control"
+          value="{{ reg_nombre|default:'' }}"
           placeholder="Tu nombre" required>
       </div>
       <div class="mb-3">
         <label class="form-label">Apellido</label>
         <input type="text" name="apellido" class="form-control"
+          value="{{ reg_apellido|default:'' }}"
           placeholder="Tu apellido" required>
       </div>
       <div class="mb-3">
         <label class="form-label">Email</label>
         <input type="email" name="correo" class="form-control"
+          value="{{ reg_correo|default:'' }}"
           placeholder="ejemplo@correo.com" required>
       </div>
       <div class="mb-3">

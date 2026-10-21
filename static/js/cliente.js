@@ -266,6 +266,46 @@ function cerrarToast(id) {
 
 
 /* ══════════════════════════════════════════════════════════════
+   NUEVO: BIENVENIDA FLOTANTE (una vez por sesión)
+   Mismo patrón que el dashboard del administrador.
+══════════════════════════════════════════════════════════════ */
+function mostrarBienvenida(nombre) {
+  const hora = new Date().getHours();
+  const momento = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const id = 'toast-welcome-' + Date.now();
+  const duracion = 5500;
+
+  const el = document.createElement('div');
+  el.className = 'ht-toast ht-toast--welcome';
+  el.id = id;
+  el.setAttribute('role', 'status');
+  el.innerHTML = `
+    <div class="ht-toast-icon"><span class="ht-welcome-wave">👋</span></div>
+    <div class="ht-toast-body">
+      <div class="ht-toast-title"></div>
+      <div class="ht-toast-msg"></div>
+    </div>
+    <button type="button" class="ht-toast-close" aria-label="Cerrar"><i class="bi bi-x"></i></button>
+    <div class="ht-toast-progress" id="prog-${id}" style="width:100%;"></div>
+  `;
+  // textContent evita inyectar HTML con el nombre del usuario
+  el.querySelector('.ht-toast-title').textContent = '¡Hola, ' + nombre + '!';
+  el.querySelector('.ht-toast-msg').textContent = momento + '. Bienvenido/a a tu portal de clientes HebraTech.';
+  el.querySelector('.ht-toast-close').addEventListener('click', () => cerrarToast(id));
+
+  document.getElementById('toastContainer')?.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+
+  const prog = document.getElementById('prog-' + id);
+  if (prog) {
+    prog.style.transition = `width ${duracion}ms linear`;
+    setTimeout(() => { prog.style.width = '0%'; }, 50);
+  }
+  setTimeout(() => cerrarToast(id), duracion);
+}
+
+
+/* ══════════════════════════════════════════════════════════════
    6. FORMULARIO DE CONTACTO / SOPORTE
 ══════════════════════════════════════════════════════════════ */
 function previewContactFile(input) {
