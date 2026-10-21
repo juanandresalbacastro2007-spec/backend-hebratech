@@ -142,3 +142,34 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAnt.addEventListener('click', () => cambiarProveedor('anterior'));
   }
 });
+
+
+/* ── Cambiar Estado de Proveedor (Activo / Inactivo) ──── */
+  window.cambiarEstadoProveedor = function(id, nuevoEstado) {
+    const mensaje = nuevoEstado === 'inactivo' 
+      ? '¿Estás seguro de desactivar este proveedor?' 
+      : '¿Estás seguro de activar este proveedor?';
+      
+    if (!confirm(mensaje)) return;
+
+    fetch(`/proveedores/cambiar-estado/${id}/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({ estado: nuevoEstado })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload(); // Recarga la página para actualizar estados visuales y KPIs
+      } else {
+        alert('No se pudo cambiar el estado: ' + (data.error || 'Error desconocido'));
+      }
+    })
+    .catch(error => {
+      console.error('Error de red:', error);
+      alert('Ocurrió un error al procesar la solicitud.');
+    });
+  };
