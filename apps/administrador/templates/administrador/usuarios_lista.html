@@ -117,14 +117,12 @@
               <i class="bi bi-pencil"></i>
             </a>
 
-            {# Solo mostrar botón de eliminar si el usuario es Operario #}
-            {% if u.rol == 'operario' %}
+            {% if u.rol == 'operario' or u.rol == 'cliente' %}
               <button type="button" class="btn btn-sm btn-outline-danger"
                       data-bs-toggle="modal" data-bs-target="#deleteModal{{ u.idUsuario }}" title="Eliminar usuario">
                 <i class="bi bi-trash"></i>
               </button>
 
-              <!-- 3. MODAL CONFIRMAR ELIMINACIÓN DETALLADO -->
               <div class="modal fade" id="deleteModal{{ u.idUsuario }}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                   <div class="modal-content" style="border-radius:14px; overflow:hidden;">
@@ -136,8 +134,14 @@
                       </div>
                       <h5 class="fw-bold">¿Eliminar a {{ u.nombre }} {{ u.apellido }}?</h5>
                       <p class="text-muted small mb-1">Correo: <strong>{{ u.correoElectronico }}</strong></p>
-                      <div class="alert alert-danger py-2 px-3 small mt-3 mb-3 text-start">
-                        <i class="bi bi-info-circle me-1"></i> Esta acción eliminará permanentemente la cuenta del usuario operario y sus accesos asociados.
+                      <!-- Reemplaza el bloque alert-danger dentro del modal por este: -->
+                      <div class="alert alert-warning py-2 px-3 small mt-3 mb-3 text-start">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        {% if u.rol == 'cliente' %}
+                          <strong>Importante:</strong> Solo se podrán eliminar clientes que no tengan órdenes en proceso (Pendientes, En producción o Enviadas) ni facturas pendientes.
+                        {% else %}
+                          Esta acción eliminará permanentemente la cuenta de este {{ u.rol }}.
+                        {% endif %}
                       </div>
                       <form method="POST" action="{% url 'admin_usuario_eliminar' u.idUsuario %}">
                         {% csrf_token %}

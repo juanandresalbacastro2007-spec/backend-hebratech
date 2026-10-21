@@ -12,11 +12,6 @@ class Proveedor(models.Model):
     ]
 
     idProveedor = models.AutoField(primary_key=True)
-    idUsuario = models.ForeignKey(
-        Usuario,
-        on_delete=models.DO_NOTHING,
-        db_column='idUsuario'
-    )
     nombreEmpresa = models.CharField(max_length=150, db_column='nombreEmpresa')
     nombreContacto = models.CharField(
         max_length=100, db_column='nombreContacto', null=True, blank=True
