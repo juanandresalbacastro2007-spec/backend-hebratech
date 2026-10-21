@@ -6,37 +6,38 @@
 {% block topbar_sub %}Todas las órdenes registradas en el sistema{% endblock %}
 
 {% block topbar_extra %}
-<div class="d-flex gap-2">
-  <a href="{% url 'exportar_ordenes_excel' %}?buscar={{ request.GET.buscar }}&estado={{ request.GET.estado }}" class="btn btn-success d-inline-flex align-items-center bg-success border-success px-3 py-2 fw-medium shadow-sm">
-    <i class="bi bi-file-earmark-excel me-2 fs-5"></i> Exportar a Excel
+<div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
+
+  <!-- Exportar (mismo alto que los controles de búsqueda y filtro) -->
+  <a href="{% url 'exportar_ordenes_excel' %}?buscar={{ buscar_filtro|default:'' }}&estado={{ estado_filtro|default:'' }}"
+     class="btn btn-sm btn-success d-inline-flex align-items-center gap-1" title="Exportar a Excel">
+    <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline">Excel</span>
+  </a>
+  <a href="{% url 'exportar_ordenes_pdf' %}?buscar={{ buscar_filtro|default:'' }}&estado={{ estado_filtro|default:'' }}"
+     class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1" title="Exportar a PDF">
+    <i class="bi bi-file-earmark-pdf"></i><span class="d-none d-md-inline">PDF</span>
   </a>
 
-  <a href="{% url 'exportar_ordenes_pdf' %}?buscar={{ request.GET.buscar }}&estado={{ request.GET.estado }}" class="btn btn-danger d-inline-flex align-items-center bg-danger border-danger px-3 py-2 fw-medium shadow-sm">
-    <i class="bi bi-file-earmark-pdf me-2 fs-5"></i> Exportar a PDF
-  </a>
-  
-</div>
-<div class="ms-auto">
-
-  
-  <form method="GET" class="d-flex gap-2 align-items-center" id="searchForm">
-
-    <div class="input-group input-group-sm" style="max-width: 280px;">
-      <span class="input-group-text bg-white border-end-0 text-muted">
+  <!-- Búsqueda y filtro -->
+  <form method="GET" class="d-flex flex-wrap gap-2 align-items-center" id="searchForm">
+    <div class="input-group input-group-sm" style="width: 260px;">
+      <span class="input-group-text bg-body border-end-0 text-muted">
         <i class="bi bi-search"></i>
       </span>
-      <input type="search" name="buscar" id="buscarInput" class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
+      <input type="search" name="buscar" id="buscarInput"
+             class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
              placeholder="Buscar por ID o cliente..." value="{{ buscar_filtro|default:'' }}">
-
       {% if buscar_filtro %}
         <a href="{% url 'admin_ordenes' %}{% if estado_filtro %}?estado={{ estado_filtro }}{% endif %}"
-           class="input-group-text bg-white border-start-0 text-muted" title="Limpiar búsqueda" style="cursor: pointer; text-decoration: none;">
+           class="input-group-text bg-body border-start-0 text-muted" title="Limpiar búsqueda"
+           style="cursor: pointer; text-decoration: none;">
           <i class="bi bi-x-circle-fill"></i>
         </a>
       {% endif %}
     </div>
 
-    <select name="estado" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
+    <select name="estado" class="form-select form-select-sm" style="width: auto; min-width: 190px;"
+            aria-label="Filtrar por estado" onchange="this.form.submit()">
       <option value="">Todos los estados</option>
       <option value="Pendiente" {% if estado_filtro == 'Pendiente' %}selected{% endif %}>Pendiente</option>
       <option value="Procesando" {% if estado_filtro == 'Procesando' %}selected{% endif %}>En producción</option>
@@ -105,9 +106,9 @@
           <td>{{ orden.fechaCreacion|date:"d/m/Y"|default:"—" }}</td>
           <td>{{ orden.cantidad|default:"—" }}</td>
           <td>
-            {% if orden.cantidad and orden.precioUnitario %}
-            ${{ orden.cantidad|floatformat:0|add:orden.precioUnitario|floatformat:0 }}
-            <small class="text-muted d-block">({{ orden.cantidad|floatformat:0 }} × ${{ orden.precioUnitario|floatformat:0 }})</small>
+            {% if orden.subtotal_fmt %}
+            <strong>{{ orden.subtotal_fmt }}</strong>
+            <small class="text-muted d-block">({{ orden.cantidad|floatformat:0 }} × {{ orden.precio_fmt }})</small>
             {% else %}—{% endif %}
           </td>
           <td>{{ orden.fechaEntregaEstimada|date:"d/m/Y"|default:"—" }}</td>

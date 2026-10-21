@@ -120,6 +120,9 @@
         .badge-progreso { background-color: #E8F8F5; color: #117864; }
         .badge-pendiente { background-color: #FCF3CF; color: #7D6608; }
         .badge-cancelada { background-color: #FADBD8; color: #78281F; }
+        .badge-enviado { background-color: #D6EAF8; color: #1B4F72; }
+        .badge-atrasado { background-color: #FAE5D3; color: #935116; }
+        .badge-normal { background-color: #E8F0F7; color: #1F497D; }
 
         /* Clases de utilidad */
         .text-center { text-align: center; }
@@ -211,19 +214,25 @@
                         <span class="badge badge-alta">Alta</span>
                     {% elif orden.prioridad == 'Media' %}
                         <span class="badge badge-media">Media</span>
-                    {% else %}
+                    {% elif orden.prioridad == 'Baja' %}
                         <span class="badge badge-baja">Baja</span>
+                    {% else %}
+                        <span class="badge badge-normal">Normal</span>
                     {% endif %}
                 </td>
                 <td class="text-center">
-                    {% if orden.estado == 'Completada' %}
-                        <span class="badge badge-completada">Completada</span>
-                    {% elif orden.estado == 'En Progreso' %}
-                        <span class="badge badge-progreso">En Progreso</span>
-                    {% elif orden.estado == 'Cancelada' %}
-                        <span class="badge badge-cancelada">Cancelada</span>
+                    {% if orden.estado == 'Entregado' %}
+                        <span class="badge badge-completada">Entregado</span>
+                    {% elif orden.estado == 'Procesando' %}
+                        <span class="badge badge-progreso">En producción</span>
+                    {% elif orden.estado == 'Enviado' %}
+                        <span class="badge badge-enviado">Enviado</span>
+                    {% elif orden.estado == 'Cancelado' %}
+                        <span class="badge badge-cancelada">Cancelado</span>
+                    {% elif orden.estado == 'Retrasado' %}
+                        <span class="badge badge-atrasado">Atrasado</span>
                     {% else %}
-                        <span class="badge badge-pendiente">Pendiente</span>
+                        <span class="badge badge-pendiente">{{ orden.estado|default:"Pendiente" }}</span>
                     {% endif %}
                 </td>
             </tr>

@@ -326,12 +326,18 @@
     updateClock();
     setInterval(updateClock, 1000);
 
+    // Bienvenida flotante (solo una vez por inicio de sesión)
+    {% if mostrar_bienvenida %}
+    mostrarBienvenida("{{ usuario.nombre|escapejs }}");
+    {% endif %}
+
     // Notificaciones
     const alertasSistema = {{ alertas|default:"[]"|safe }};
     HT_Notif.init({ onNueva: a => mostrarToast(a) });   // toast para alertas nuevas (polling)
     HT_Notif.procesar(alertasSistema);
     // Toast solo de las no leídas y una única vez por alerta
-    HT_Notif.paraToast(alertasSistema).slice(0, 3).forEach((a, i) => mostrarToast(a, i * 350));
+    const base = {% if mostrar_bienvenida %}700{% else %}0{% endif %};
+    HT_Notif.paraToast(alertasSistema).slice(0, 3).forEach((a, i) => mostrarToast(a, base + i * 350));
   });
 
   function mostrarToast(notif, delay = 0) {
@@ -367,6 +373,40 @@
       }
       setTimeout(() => cerrarToast(id), duracion);
     }, delay);
+  }
+
+  function mostrarBienvenida(nombre) {
+    const hora = new Date().getHours();
+    const momento = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
+    const id = 'toast-welcome-' + Date.now();
+    const duracion = 5500;
+
+    const el = document.createElement('div');
+    el.className = 'ht-toast ht-toast--welcome';
+    el.id = id;
+    el.setAttribute('role', 'status');
+    el.innerHTML = `
+      <div class="ht-toast-icon"><span class="ht-welcome-wave">👋</span></div>
+      <div class="ht-toast-body">
+        <div class="ht-toast-title"></div>
+        <div class="ht-toast-msg"></div>
+      </div>
+      <button type="button" class="ht-toast-close" aria-label="Cerrar"><i class="bi bi-x"></i></button>
+      <div class="ht-toast-progress" id="prog-${id}" style="width:100%;"></div>
+    `;
+    // textContent evita inyectar HTML con el nombre del usuario
+    el.querySelector('.ht-toast-title').textContent = '¡Hola, ' + nombre + '!';
+    el.querySelector('.ht-toast-msg').textContent = momento + '. Este es el resumen de hoy en HebraTech.';
+    el.querySelector('.ht-toast-close').addEventListener('click', () => cerrarToast(id));
+
+    document.getElementById('toastContainer')?.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+    const prog = document.getElementById('prog-' + id);
+    if (prog) {
+      prog.style.transition = `width ${duracion}ms linear`;
+      setTimeout(() => { prog.style.width = '0%'; }, 50);
+    }
+    setTimeout(() => cerrarToast(id), duracion);
   }
 
   function cerrarToast(id) {
