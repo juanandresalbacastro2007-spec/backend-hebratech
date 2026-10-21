@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',  # Requerido por allauth
     'simple_history.middleware.HistoryRequestMiddleware',  # para guardar el usuario que hizo el cambio
+    'apps.core.middleware.RoleSecurityMiddleware',
 ]
 
 # --- BACKENDS DE AUTENTICACIÓN ---
