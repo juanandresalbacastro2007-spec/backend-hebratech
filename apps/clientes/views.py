@@ -302,7 +302,6 @@ def cliente_portal(request):
         contexto
     )
 
-
 # ============================================================
 # EDITAR PERFIL DEL CLIENTE
 # ============================================================
@@ -317,28 +316,18 @@ def editar_perfil_cliente(request):
             idUsuario=usuario_id
         )
     except Cliente.DoesNotExist:
-
         messages.error(
             request,
             'Tu usuario no tiene un perfil de cliente asociado.'
         )
-
         return redirect('login')
 
     if request.method == 'POST':
 
         try:
-
-            nombre = request.POST.get(
-                'nombre',
-                ''
-            ).strip()
-
-            empresa = request.POST.get(
-                'empresa',
-                ''
-            ).strip()
-
+            # ELIMINAMOS la lectura y validación de 'nombre' y 'empresa' 
+            # ya que están bloqueados en la vista y no viajan en el POST.
+            
             telefono = request.POST.get(
                 'telefono',
                 ''
@@ -354,19 +343,7 @@ def editar_perfil_cliente(request):
                 ''
             ).strip()
 
-            if not nombre:
-
-                messages.error(
-                    request,
-                    'El nombre es requerido.'
-                )
-
-                return redirect(
-                    'editar_perfil_cliente'
-                )
-
-            cliente.nombre = nombre
-            cliente.empresa = empresa or None
+            # Solo actualizamos los campos que el cliente sí puede editar:
             cliente.telefono = telefono or None
             cliente.ciudad = ciudad or None
             cliente.direccion = direccion or None
@@ -383,12 +360,10 @@ def editar_perfil_cliente(request):
             )
 
         except Exception as e:
-
             messages.error(
                 request,
                 f'Error al actualizar perfil: {str(e)}'
             )
-
             return redirect(
                 'editar_perfil_cliente'
             )
@@ -400,7 +375,6 @@ def editar_perfil_cliente(request):
             'cliente': cliente
         }
     )
-
 
 # ============================================================
 # REGISTRAR NUEVA ORDEN
