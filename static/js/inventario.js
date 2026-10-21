@@ -202,6 +202,34 @@
     });
   }
 
+  /* ── Selects de cliente con opción "Otro" ───────────────────
+     Si eliges "Otro" aparece un input para escribir la empresa.
+     El input solo es obligatorio mientras está visible.        */
+  function aplicarClienteOtro(select) {
+    const wrap = document.getElementById(select.dataset.target);
+    if (!wrap) return;
+    const input = wrap.querySelector('input');
+    const mostrar = select.value === 'otro';
+    wrap.classList.toggle('d-none', !mostrar);
+    if (input) {
+      input.required = mostrar;
+      if (!mostrar) input.value = '';
+    }
+  }
+
+  function initClientes() {
+    // Delegado: funciona para todos los modales, incluidos los de cada fila
+    document.addEventListener('change', function (e) {
+      const select = e.target.closest('.cliente-select');
+      if (!select) return;
+      aplicarClienteOtro(select);
+      if (select.value === 'otro') {
+        document.getElementById(select.dataset.target)
+          ?.querySelector('input')?.focus();
+      }
+    });
+  }
+
   /* ── Productos: botones +/- y ajuste personalizado ──────── */
   function initAjustesProducto() {
     // +/- de 1 unidad
@@ -405,6 +433,9 @@
       alertaForm.classList.add('d-none');
       inpDisp.classList.remove('is-invalid');
       document.getElementById('ubicacionOtroWrapNuevo')?.classList.add('d-none');
+      // Re-sincroniza el campo "Otro" del cliente (oculta el input y quita su "required")
+      const selCliente = form.querySelector('.cliente-select');
+      if (selCliente) aplicarClienteOtro(selCliente);
     });
   }
 
@@ -604,6 +635,7 @@
 
   /* ── Arranque ───────────────────────────────────────────── */
   function init() {
+    initClientes();      // primero, para que no dependa de las demás
     initTabs();
     initBuscadorEgresos();
     initUbicaciones();

@@ -589,14 +589,19 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label fw-semibold">Cliente / Empresa <span class="text-danger">*</span></label>
-              <select name="cliente" class="form-select" required>
+              <select name="cliente" class="form-select cliente-select" data-target="clienteOtroWrapNuevo" required>
                 <option value="">-- Seleccionar --</option>
                 {% for cli in clientes_list %}
                 <option value="{{ cli.idCliente }}">
-                  {% if cli.empresa %}{{ cli.empresa }}{% if cli.nombre %} ({{ cli.nombre }}){% endif %}{% else %}{{ cli.nombre|default:"Cliente #"|add:cli.idCliente|stringformat:"s" }}{% endif %}
+                  {% if cli.empresa %}{{ cli.empresa }}{% if cli.nombre %} ({{ cli.nombre }}){% endif %}{% else %}{{ cli }}{% endif %}
                 </option>
                 {% endfor %}
+                <option value="otro">➕ Otro (escribir empresa)</option>
               </select>
+              <div class="d-none mt-2" id="clienteOtroWrapNuevo">
+                <input type="text" name="cliente_nuevo" class="form-control"
+                       maxlength="150" placeholder="Nombre de la empresa o cliente">
+              </div>
             </div>
             <div class="col-md-3">
               <label class="form-label fw-semibold">Unidades</label>
@@ -1057,15 +1062,21 @@
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">Cliente / Empresa</label>
-              <select name="cliente" class="form-select">
+              <select name="cliente" class="form-select cliente-select"
+                      data-target="clienteOtroWrap{{ item.idInventario }}">
                 <option value="">-- Sin asignar --</option>
                 {% for cli in clientes_list %}
                 <option value="{{ cli.idCliente }}"
                   {% if item.cliente and cli.idCliente == item.cliente.idCliente %}selected{% endif %}>
-                  {% if cli.empresa %}{{ cli.empresa }}{% if cli.nombre %} ({{ cli.nombre }}){% endif %}{% else %}{{ cli.nombre|default:"Cliente #"|add:cli.idCliente|stringformat:"s" }}{% endif %}
+                  {% if cli.empresa %}{{ cli.empresa }}{% if cli.nombre %} ({{ cli.nombre }}){% endif %}{% else %}{{ cli }}{% endif %}
                 </option>
                 {% endfor %}
+                <option value="otro">➕ Otro (escribir empresa)</option>
               </select>
+              <div class="d-none mt-2" id="clienteOtroWrap{{ item.idInventario }}">
+                <input type="text" name="cliente_nuevo" class="form-control"
+                       maxlength="150" placeholder="Nombre de la empresa o cliente">
+              </div>
             </div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">Cantidad disponible</label>
@@ -1269,5 +1280,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/inventario.js' %}?v=1"></script>
+<script src="{% static 'js/inventario.js' %}?v=2"></script>
 {% endblock %}
