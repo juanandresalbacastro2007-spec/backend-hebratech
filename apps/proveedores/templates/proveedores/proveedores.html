@@ -162,9 +162,16 @@
                           data-bs-target="#modalEditarProveedor-{{ p.idProveedor }}">
                     <i class="bi bi-pencil-square me-1"></i>Editar
                   </button>
-                  <a href="{% url 'eliminar_proveedor' p.idProveedor %}"
-                     class="btn btn-sm btn-danger-ht"
-                     onclick="return confirm('¿Desactivar este proveedor?')">
+                  <button type="button"
+                          class="btn btn-sm btn-outline-danger"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalBorrarProveedor-{{ p.idProveedor }}"
+                          title="Eliminar definitivamente">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                  <a href="{% url 'borrar_proveedor' p.idProveedor %}"
+                    class="btn btn-sm btn-danger-ht"
+                    onclick="return confirm('¿Desactivar este proveedor?')">
                     <i class="bi bi-slash-circle me-1"></i>Desactivar
                   </a>
                 </div>
@@ -196,10 +203,6 @@
                   <div class="info-block info-block-full">
                     <label class="info-label"><i class="bi bi-geo-alt-fill me-1"></i>Dirección comercial</label>
                     <div class="info-value">{{ p.direccion }}</div>
-                  </div>
-                  <div class="info-block">
-                    <label class="info-label"><i class="bi bi-link-45deg me-1"></i>Usuario asociado</label>
-                    <div class="info-value prov-meta">#{{ p.idUsuario }}</div>
                   </div>
                 </div>
 
@@ -295,6 +298,8 @@
                   <option value="inactivo" {% if p.estado == "inactivo" %}selected{% endif %}>🔴 Inactivo</option>
                 </select>
               </div>
+              <div>
+              </div>
             </div>
           </div>
           <div class="modal-footer bg-light rounded-bottom-4">
@@ -303,6 +308,34 @@
           </div>
         </form>
 
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- MODALES ELIMINAR PROVEEDOR -->
+  {% for p in proveedores %}
+  <div class="modal fade" id="modalBorrarProveedor-{{ p.idProveedor }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 rounded-4 shadow-lg">
+        <div class="modal-body text-center p-4">
+          <span class="p-3 bg-danger-subtle text-danger rounded-circle d-inline-block mb-3">
+            <i class="bi bi-trash fs-2"></i>
+          </span>
+          <h5 class="fw-bold">¿Eliminar a {{ p.nombreEmpresa }}?</h5>
+          <div class="alert alert-danger py-2 px-3 small text-start mt-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Esta acción es permanente. Los materiales de este proveedor quedarán sin proveedor asignado.
+            Si el proveedor tiene entradas de materiales registradas, el sistema no lo permitirá.
+          </div>
+          <form method="POST" action="{% url 'borrar_proveedor' p.idProveedor %}">
+            {% csrf_token %}
+            <div class="d-flex gap-2 justify-content-center mt-3">
+              <button type="button" class="btn btn-light px-4 border" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-danger px-4">Sí, eliminar</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>

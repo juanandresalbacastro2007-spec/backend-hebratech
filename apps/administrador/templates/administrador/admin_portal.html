@@ -92,7 +92,7 @@
   <div class="kpi-grid">
     {% include "administrador/_kpi_tile.html" with href=u_ordenes icon="bi-mailbox2-flag" label="Órdenes" hint="Total registradas" value=total_ordenes|default:0 %}
     {% include "administrador/_kpi_tile.html" with href=u_produccion icon="bi-gear-wide-connected" label="Producción activa" value=produccion_activa|default:0 %}
-    {% include "administrador/_kpi_tile.html" with href=u_produccion icon="bi-bag-check-fill" label="Catálogo de productos" value=productos_catalogo|default:0 %}
+    {% include "administrador/_kpi_tile.html" with href=u_inventario icon="bi-bag-check-fill" label="Catálogo de productos" value=productos_catalogo|default:0 %}
     {% include "administrador/_kpi_tile.html" with href=u_inventario icon="bi-box-seam-fill" label="Inventario" value=total_inventario %}
     {% if total_proveedores is not None %}
     {% include "administrador/_kpi_tile.html" with href=u_proveedores icon="bi-cart-check-fill" label="Proveedores" value=total_proveedores %}

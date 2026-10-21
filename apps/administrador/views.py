@@ -585,16 +585,54 @@ def usuario_eliminar(request, idUsuario):
     if request.method == 'POST':
         usuario_obj = get_object_or_404(Usuario, idUsuario=idUsuario)
 
-        if usuario_obj.rol != 'operario':
-            messages.error(request, '⚠️ No está permitido eliminar usuarios con rol diferente a Operario.')
+        if usuario_obj.rol not in ('operario', 'cliente'):
+            messages.error(request, '⚠️ Solo se pueden eliminar usuarios con rol Operario o Cliente.')
             return redirect('admin_usuarios')
 
         nombre = f'{usuario_obj.nombre} {usuario_obj.apellido}'
-        usuario_obj.delete()
-        messages.success(request, f'✅ Usuario operario {nombre} eliminado correctamente.')
+
+        # Validaciones de seguridad si el rol es Cliente
+        if usuario_obj.rol == 'cliente':
+            # Buscamos el registro asociado en la tabla Clientes
+            cliente = Cliente.objects.filter(idUsuario=usuario_obj).first()
+            if cliente:
+                # 1. Validar órdenes activas (Pendiente, Procesando, Enviado, Retrasado, etc.)
+                ordenes_activas = Orden.objects.filter(idCliente=cliente).exclude(
+                    estado__in=['Entregado', 'Cancelado']
+                ).count()
+
+                if ordenes_activas > 0:
+                    messages.error(
+                        request,
+                        f'⚠️ No se puede eliminar al cliente {nombre}: tiene {ordenes_activas} orden(es) activa(s) en el sistema. '
+                        'Debes cancelar las órdenes o esperar a que se completen/entreguen.'
+                    )
+                    return redirect('admin_usuarios')
+
+                # 2. Validar facturas pendientes de pago
+                facturas_pendientes = Factura.objects.filter(
+                    idCliente=cliente, estado__in=['Emitida', 'Pendiente de pago']
+                ).count()
+
+                if facturas_pendientes > 0:
+                    messages.error(
+                        request,
+                        f'⚠️ No se puede eliminar al cliente {nombre}: tiene {facturas_pendientes} factura(s) pendiente(s) por pagar.'
+                    )
+                    return redirect('admin_usuarios')
+
+        # Si no tiene restricciones, se procede con la eliminación segura
+        try:
+            with transaction.atomic():
+                usuario_obj.delete()
+            messages.success(request, f'✅ Usuario {usuario_obj.rol.capitalize()} "{nombre}" eliminado correctamente.')
+        except (ProtectedError, IntegrityError):
+            messages.error(
+                request,
+                f'❌ No se pudo eliminar a {nombre} porque tiene registros históricos (órdenes anteriores, facturas o tareas) vinculados en el sistema.'
+            )
 
     return redirect('admin_usuarios')
-
 
 # ── Órdenes ──────────────────────────────────────────────────
 @admin_required

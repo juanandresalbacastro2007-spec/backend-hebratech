@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 from .models import Proveedor
 from .forms import ProveedorForm
 from django.contrib import messages
+from django.db import connection, IntegrityError, transaction
 import json
 from apps.core.decorators import login_required_rol, login_required_api
 from apps.administrador.models import Usuario
@@ -69,7 +70,7 @@ def crear_proveedor(request):
 
             # ID del usuario logueado (sesión manual, no auth de Django)
             usuario_id = request.session.get('usuario_id')
-            proveedor.idUsuario_id = usuario_id
+            
 
             proveedor.save()
             messages.success(request, f'✅ Proveedor "{proveedor.nombreEmpresa}" creado con éxito.')
@@ -115,14 +116,38 @@ def editar_proveedor(request, id):
 
 
 @admin_required
-def eliminar_proveedor(request, id):
+@require_POST
+def borrar_proveedor(request, id):
+    """Elimina el proveedor de forma definitiva (solo si no tiene entradas de materiales)."""
+    proveedor = get_object_or_404(Proveedor, idProveedor=id)
+    nombre = proveedor.nombreEmpresa
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT COUNT(*) FROM entrada_materiales WHERE idProveedor = %s", [id]
+        )
+        entradas = cursor.fetchone()[0]
+
+    if entradas:
+        messages.error(
+            request,
+            f'No se puede eliminar "{nombre}": tiene {entradas} entrada(s) de materiales registradas. '
+            'Desactívalo en su lugar.'
+        )
+        return redirect('admin_proveedores')
+
     try:
-        proveedor = get_object_or_404(Proveedor, idProveedor=id)
-        proveedor.estado = 'inactivo'
-        proveedor.save()
-        messages.warning(request, f'🗑️ {proveedor.nombreEmpresa} desactivado correctamente')
-    except Exception as e:
-        messages.error(request, f'Error al desactivar proveedor: {str(e)}')
+        # DELETE directo, igual que en materiales: la BD decide qué se protege o se anula.
+        # materiales.idProveedor queda en NULL (ON DELETE SET NULL).
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute("DELETE FROM proveedores WHERE idProveedor = %s", [id])
+        messages.success(request, f'🗑️ Proveedor "{nombre}" eliminado definitivamente.')
+    except IntegrityError:
+        messages.error(
+            request,
+            f'No se pudo eliminar "{nombre}" porque tiene registros relacionados. Desactívalo en su lugar.'
+        )
+
     return redirect('admin_proveedores')
 
 
