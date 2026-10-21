@@ -20,12 +20,25 @@ def login_required_rol(rol_esperado=None, session_key='usuario_id'):
     def decorador(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
-            if not request.session.get(session_key):
+            usuario_id = request.session.get(session_key)
+            usuario_rol = request.session.get('usuario_rol')
+
+            # 1. Si no hay sesión, al login
+            if not usuario_id:
                 messages.error(request, 'Debes iniciar sesión para acceder a esta página.')
                 return redirect('login')
-            if rol_esperado and request.session.get('usuario_rol') != rol_esperado:
+            
+            # 2. Si el rol no coincide, lo expulsamos a SU portal (no al login)
+            if rol_esperado and usuario_rol != rol_esperado:
                 messages.error(request, 'No tienes permisos para acceder a esta sección.')
+                if usuario_rol == 'cliente':
+                    return redirect('cliente_portal')
+                elif usuario_rol == 'operario':
+                    return redirect('operarios:tablero')
+                elif usuario_rol == 'administrador':
+                    return redirect('admin_portal')
                 return redirect('login')
+                
             return view_func(request, *args, **kwargs)
         return wrapper
     return decorador
@@ -36,10 +49,15 @@ def login_required_api(rol_esperado=None, session_key='usuario_id'):
     def decorador(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
-            if not request.session.get(session_key):
+            usuario_id = request.session.get(session_key)
+            usuario_rol = request.session.get('usuario_rol')
+
+            if not usuario_id:
                 return JsonResponse({'ok': False, 'error': 'Sesión no válida'}, status=401)
-            if rol_esperado and request.session.get('usuario_rol') != rol_esperado:
+            
+            if rol_esperado and usuario_rol != rol_esperado:
                 return JsonResponse({'ok': False, 'error': 'No autorizado'}, status=403)
+                
             return view_func(request, *args, **kwargs)
         return wrapper
     return decorador
