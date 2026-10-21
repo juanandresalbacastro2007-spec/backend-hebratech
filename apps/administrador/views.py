@@ -244,8 +244,13 @@ def admin_portal(request):
             'modulo': 'admin_inventario',
         })
 
+    # Bienvenida flotante: solo la primera vez por inicio de sesión
+    mostrar_bienvenida = not request.session.get('bienvenida_mostrada', False)
+    request.session['bienvenida_mostrada'] = True
+
     return render(request, 'administrador/admin_portal.html', {
         'usuario': usuario,
+        'mostrar_bienvenida': mostrar_bienvenida,
         'total_usuarios': total_usuarios,
         'total_clientes': total_clientes,
         'total_operarios': total_operarios,
@@ -612,6 +617,13 @@ def ordenes_lista(request):
     prioridad_filtro = request.GET.get('prioridad', '')
     if prioridad_filtro:
         ordenes = ordenes.filter(prioridad=prioridad_filtro)
+
+    # Subtotal = cantidad × precio unitario (formato COP: $1.900.000)
+    ordenes = list(ordenes)
+    for o in ordenes:
+        if o.cantidad and o.precioUnitario:
+            o.subtotal_fmt = _fmt_cop(float(o.cantidad) * float(o.precioUnitario))
+            o.precio_fmt = _fmt_cop(float(o.precioUnitario))
 
     return render(request, 'administrador/ordenes_lista.html', {
         'usuario': usuario,

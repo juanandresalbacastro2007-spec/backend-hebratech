@@ -263,45 +263,8 @@ function toggleSidebar() {
   
   if (sidebar) {
     sidebar.classList.toggle('open');
-    console.log("Clase 'open' alternada con éxito.");
-  } else {
-    alert("Error: No se encontró ningún elemento de menú lateral en el HTML.");
   }
 }
-
-// static/js/perfil.js
-
-document.addEventListener("DOMContentLoaded", function () {
-  const formPerfil = document.querySelector("#modalEditarPerfil form");
-
-  if (formPerfil) {
-    formPerfil.addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      const formData = new FormData(this);
-      const token = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-      fetch(this.action, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': token
-        },
-        body: formData
-      })
-      .then(res => {
-        if (!res.ok) throw new Error("Error en el servidor");
-        return res.json();
-      })
-      .then(data => {
-        window.location.reload();
-      })
-      .catch(err => {
-        console.error("Detalle del error:", err);
-      });
-    });
-  }
-});
-
 </script>
 </body>
 </html>
