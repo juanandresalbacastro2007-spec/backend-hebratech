@@ -647,7 +647,7 @@ body {
   color: rgba(165,201,202,0.6);
   margin: 0;
 }
-.fd-btn-primary, .fd-btn-outline {
+ .fd-btn-outline {
   font-family: var(--ff-body);
   font-size: 0.75rem;
   font-weight: 600;
@@ -656,10 +656,9 @@ body {
   cursor: pointer;
   display: flex; align-items: center; gap: 6px;
   border: none;
-  transition: all 0.2s;
+  transition: all 0.2s
 }
-.fd-btn-primary { background: var(--primary); color: var(--accent); }
-.fd-btn-primary:hover { background: #4a7a87; }
+
 .fd-btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--dash-border); }
 .fd-btn-outline:hover { background: rgba(165,201,202,0.08); }
 
@@ -953,6 +952,12 @@ body {
   color: var(--accent) !important;
 }
 
+
+[data-bs-theme="dark"] .fd-btn-outline, .fa-industry { 
+  color: var(--primary-deep)!important;
+  background: var(--primary) !important;
+}
+
 /* Modo oscuro: fondo oscuro, borde acorde */
 [data-bs-theme="dark"] .team-card {
   background: #1a2e38 !important;
@@ -1002,6 +1007,9 @@ body {
 [data-bs-theme="dark"] .team-card:hover .team-role {
   color: var(--bg-body) !important;
 }
+
+
+
 
 /* Resto de estilos de la tarjeta (avatar, nombre, rol, sociales) */
 .team-avatar {

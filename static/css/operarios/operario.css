@@ -906,6 +906,18 @@ html, body {
   display: block;
 }
 
+.ht-profile-btn {
+  color: var(--primary-dark) !important;
+  background: var(--surface2) !important;
+  border-radius: 12px !important;
+}
+
+.ht-profile-btn:hover { 
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+}
+
 /* Editar perfil -> hover en color primario (Blanco/Gris -> Verde-azulado) */
 .ht-profile-action:hover {
   background: var(--primary);
@@ -1528,6 +1540,11 @@ html, body {
   color: lightcyan;
 }
 
+[data-bs-theme="dark"] .ht-profile-btn{
+  color:  var(--accent) !important;
+}
+
+
 [data-bs-theme="dark"] .nombre{
   background: var(--border) !important;
 }
@@ -1556,7 +1573,6 @@ html, body {
  
 [data-bs-theme="dark"] .ht-btn-secondary:hover,
 [data-bs-theme="dark"] .ht-nav-btn:hover,
-[data-bs-theme="dark"] .ht-profile-btn:hover { background: rgba(165,201,202,0.08) !important; }
  
 [data-bs-theme="dark"] .ht-controls-bar { background: var(--bg) !important; border-color: var(--border) !important; }
 
