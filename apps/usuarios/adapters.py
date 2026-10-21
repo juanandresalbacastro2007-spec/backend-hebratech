@@ -7,17 +7,7 @@ from django.urls import reverse
 
 class CustomAccountAdapter(DefaultAccountAdapter):
     """
-    Controla a dónde se redirige después de un login (incluye login con
-    Google).
-
-    OJO: no depende del signal `procesar_login_google` para esto, porque
-    el signal `allauth.account.signals.user_logged_in` dispara DESPUÉS de
-    que este método ya calculó la URL de redirect (allauth arma la
-    respuesta de redirect y recién ahí manda el signal). Si dependiéramos
-    de que el signal ya haya escrito 'usuario_rol' en la sesión, siempre
-    llegaríamos tarde y caeríamos al home por más que el usuario ya
-    estuviera activo. Por eso acá consultamos la tabla `usuarios`
-    directamente y, de paso, dejamos la sesión lista nosotros mismos.
+    Controla a dónde se redirige después de un login (incluye login con Google).
     """
 
     def get_login_redirect_url(self, request):
@@ -32,11 +22,8 @@ class CustomAccountAdapter(DefaultAccountAdapter):
             return super().get_login_redirect_url(request)
 
         if usuario_db.estado != 'activo':
-            # Pendiente/sin_asignar: no le damos portal todavía.
             return super().get_login_redirect_url(request)
 
-        # Dejamos la sesión lista con las claves que usa tu sistema manual
-        # (login_view), por si algún signal más tarde no llega a tiempo.
         request.session['usuario_id'] = usuario_db.idUsuario
         request.session['usuario_nombre'] = usuario_db.nombre
         request.session['usuario_rol'] = usuario_db.rol
@@ -56,32 +43,29 @@ class CustomAccountAdapter(DefaultAccountAdapter):
 
         return super().get_login_redirect_url(request)
 
+    def add_message(self, request, level, message_template, message_context=None, extra_tags=""):
+        # Evita mostrar el mensaje automático "Ha iniciado sesión exitosamente..."
+        if message_template == "account/messages/logged_in.txt":
+            return
+        super().add_message(request, level, message_template, message_context, extra_tags)
+
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
     """
     Puentea el registro por Google (allauth) con la tabla `usuarios` propia
-    de HebraTech (managed=False). El usuario queda con rol 'sin_asignar' y
-    estado 'pendiente', igual que en el registro manual (registro_view),
-    esperando aprobación de un administrador.
+    de HebraTech.
     """
 
     def save_user(self, request, sociallogin, form=None):
-        # 1. Dejar que allauth cree/guarde el usuario Django estándar
-        #    (necesario internamente para que allauth funcione).
         user = super().save_user(request, sociallogin, form=form)
 
         from apps.usuarios.models import Usuario
 
         correo = user.email
 
-        # 2. Evitar duplicar si ya existe una fila con ese correo
-        #    (por ejemplo si ya se había registrado manualmente antes).
         if Usuario.objects.filter(correoElectronico=correo).exists():
             return user
 
-        # 3. Datos: priorizar lo que la persona escribió en el formulario;
-        #    si no vino formulario (por algún flujo alternativo), usar lo
-        #    que trae Google.
         extra_data = sociallogin.account.extra_data or {}
 
         if form is not None:
@@ -95,8 +79,6 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
 
         contrasena_hash = make_password(contrasena_plana)
 
-        # 4. Insertar en `usuarios` (managed=False, así que insert manual
-        #    igual que hace registro_view con su cursor crudo).
         with connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO usuarios

@@ -2,6 +2,7 @@
 
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.contrib.auth import logout  # 👈 IMPORTANTE PARA LIMPIAR ALLAUTH
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import connection
 from django.core.mail import send_mail
@@ -22,13 +23,6 @@ from dj_rest_auth.registration.views import SocialLoginView
 class GoogleLoginView(SocialLoginView):
     """
     Endpoint API para procesar el login con Google.
-    
-    El cliente/frontend envía un POST a '/api/auth/google/' con el token obtenido de Google:
-    {
-        "access_token": "TOKEN_DE_GOOGLE"
-    }
-    
-    Responde con los tokens JWT del sistema (access y refresh).
     """
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
@@ -40,16 +34,12 @@ class GoogleLoginView(SocialLoginView):
 # ==========================================
 
 def login_view(request):
-    # Preservamos el correo entre intentos fallidos para que el usuario
-    # solo tenga que reescribir la contraseña (como en una red social).
     correo = ''
 
     if request.method == 'POST':
         correo = request.POST.get('correo', '')
         contrasena = request.POST.get('contrasena', '')
 
-        # ✅ Mensaje genérico de error para no revelar si el correo existe
-        # o no en la base (evita enumeración de usuarios).
         error_generico = 'Correo o contraseña incorrectos.'
 
         try:
@@ -59,16 +49,12 @@ def login_view(request):
             )
 
             if check_password(contrasena, usuario.contrasena):
-                # ✅ Regenerar el ID de sesión antes de guardar datos del
-                # usuario autenticado, para prevenir session fixation.
                 request.session.cycle_key()
 
-                # Guardar datos clave en la sesión
                 request.session['usuario_id'] = usuario.idUsuario
                 request.session['usuario_nombre'] = usuario.nombre
                 request.session['usuario_rol'] = usuario.rol
 
-                # Si es operario, guardar también su idOperario en sesión
                 if usuario.rol == 'operario':
                     try:
                         from apps.operarios.models import Operario
@@ -77,7 +63,6 @@ def login_view(request):
                     except Exception:
                         pass
 
-                # Redirigir según el rol real guardado en la BD
                 if usuario.rol == 'cliente':
                     return redirect('cliente_portal')
                 elif usuario.rol == 'administrador':
@@ -92,7 +77,6 @@ def login_view(request):
         except Usuario.DoesNotExist:
             messages.error(request, error_generico)
 
-    # 👇 Le devolvemos el correo al template para no borrarlo.
     return render(request, 'usuarios/login.html', {'correo': correo})
 
 
@@ -104,9 +88,6 @@ def registro_view(request):
         contrasena = request.POST.get('contrasena', '')
         confirmar = request.POST.get('confirmar', '')
 
-        # Contexto para repoblar el formulario de REGISTRO si hay error.
-        # `show_register: True` hace que login.html muestre la vista de
-        # registro en vez de la de login (si no, el usuario perdería todo).
         ctx_error = {
             'show_register': True,
             'reg_nombre': nombre,
@@ -140,6 +121,9 @@ def home_view(request):
 
 
 def logout_view(request):
+    # 👇 Cierra sesión en Django y allauth (limpia cookies de sesión y tokens)
+    logout(request)
+    # Garantiza que cualquier rastro en la sesión se destruya
     request.session.flush()
     return redirect('login')
 
@@ -169,17 +153,15 @@ def recuperar_view(request):
             send_mail(
                 subject='Recuperación de contraseña - HebraTech',
                 message=texto_plano,
-                from_email=None,  # usa DEFAULT_FROM_EMAIL
+                from_email=None,
                 recipient_list=[usuario.correoElectronico],
                 html_message=html_content,
                 fail_silently=False,
             )
 
         except Usuario.DoesNotExist:
-            # ✅ No revelamos si el correo existe o no (mismo criterio que el login)
             pass
 
-        # Siempre mostramos el mismo mensaje de éxito, exista o no el correo
         messages.success(
             request,
             'Si el correo está registrado, te enviamos un enlace de recuperación.'

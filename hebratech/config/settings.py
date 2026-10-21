@@ -164,6 +164,7 @@ SOCIALACCOUNT_ADAPTER = 'apps.usuarios.adapters.CustomSocialAccountAdapter'
 SOCIALACCOUNT_FORMS = {'signup': 'apps.usuarios.forms.SocialSignupForm'}
 ACCOUNT_ADAPTER = 'apps.usuarios.adapters.CustomAccountAdapter'
 SOCIALACCOUNT_AUTO_SIGNUP = False
+
 # --- CONFIGURACIÓN DE LOGIN SOCIAL CON GOOGLE ---
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -173,10 +174,10 @@ SOCIALACCOUNT_PROVIDERS = {
         ],
         'AUTH_PARAMS': {
             'access_type': 'online',
+            'prompt': 'select_account',  # 👈 OBLIGA A GOOGLE A PREGUNTAR LA CUENTA
         }
     }
 }
 
 ACCOUNT_PREVENT_ENUMERATION = False
-# O para deshabilitar explícitamente el índice en bases de datos incompatibles:
 ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
