@@ -8,12 +8,12 @@
 <div class="ms-auto">
   <form method="GET" class="d-flex gap-2 align-items-center" id="searchForm">
 
-    <div class="input-group input-group-sm" style="max-width: 280px;">
+    <div class="input-group input-group-sm" style="width: 340px;">
       <span class="input-group-text bg-white border-end-0 text-muted">
         <i class="bi bi-search"></i>
       </span>
       <input type="search" name="buscar" id="buscarInput" class="form-control border-start-0 {% if buscar_filtro %}border-end-0{% endif %} ps-1"
-             placeholder="Buscar por Nº factura, orden o cliente..." value="{{ buscar_filtro|default:'' }}">
+             placeholder="Buscar factura, orden o cliente..." value="{{ buscar_filtro|default:'' }}">
 
       {% if buscar_filtro %}
         <a href="{% url 'admin_facturas' %}{% if estado_filtro %}?estado={{ estado_filtro }}{% endif %}"
@@ -23,7 +23,7 @@
       {% endif %}
     </div>
 
-    <select name="estado" class="form-select form-select-sm" style="width:180px;" onchange="this.form.submit()">
+    <select name="estado" class="form-select form-select-sm flex-shrink-0" style="width: 210px; padding-right: 2.25rem;" onchange="this.form.submit()">
       <option value="">Todos los estados</option>
       <option value="Pendiente de pago" {% if estado_filtro == 'Pendiente de pago' %}selected{% endif %}>Pendiente de pago</option>
       <option value="Pagada" {% if estado_filtro == 'Pagada' %}selected{% endif %}>Pagada</option>
