@@ -1,745 +1,684 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HebraTech | Sistema Inteligente de Producción Textil</title>
-    <link rel="icon" type="image/png" href="{% static 'img/fondo_logo.jpg' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/fondo_logo.jpg' %}" />
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Graduate&family=Roboto:wght@300;400;500;700&display=swap"
-        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Graduate&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
 
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <!-- boton hamburguesa-->
+    <!-- boton hamburguesa -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{% static 'css/usuarios/style.css' %}?v=6">
-</head>
+    <link rel="stylesheet" href="{% static 'css/usuarios/style.css' %}?v=6" />
+  </head>
 
-<body>
-
+  <body>
     <!-- ── NAVBAR ── -->
     <nav class="ht-navbar navbar navbar-expand-lg">
-        <div class="container-xl">
+      <div class="container-xl">
+        <a class="ht-brand" href="#">
+          <div class="brand-icon">
+            <img src="{% static 'img/logo.png' %}" alt="logohebratech" style="width:100%;height:auto;" />
+          </div>
+          <span>Hebra<strong>Tech</strong></span>
+        </a>
 
-            <a class="ht-brand" href="#">
-                <div class="brand-icon">
-                    <img src="{% static 'img/logo.png' %}" alt="logohebratech" style="width:100%;height:auto;" />
-                </div>
-                <span>Hebra<strong>Tech</strong></span>
-            </a>
+        <button class="navbar-toggler ht-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Menú"><i class="fas fa-bars"></i></button>
 
-            <button class="navbar-toggler ht-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-                aria-label="Menú">
-                <i class="fas fa-bars"></i>
-            </button>
-
-            <div class="collapse navbar-collapse" id="mainNav">
-                <ul class="navbar-nav mx-auto gap-1">
-                    <li class="nav-item"><a class="ht-nav-link active" href="#inicio">Inicio</a></li>
-                    <li class="nav-item"><a class="ht-nav-link" href="#modulos">Módulos</a></li>
-                    <li class="nav-item"><a class="ht-nav-link" href="#como-funciona">Cómo funciona</a></li>
-                    <li class="nav-item"><a class="ht-nav-link" href="#mision-vision">Misión & Visión</a></li>
-                    <li class="nav-item"><a class="ht-nav-link" href="#equipo">Equipo</a></li>
-                    <li class="nav-item"><a class="ht-nav-link" href="#contacto">Contáctanos</a></li>
-                </ul>
-                <a href="{% url 'login' %}" class="btn-ht-login">
-                    <i class="fas fa-right-to-bracket"></i>
-                    <span>Iniciar Sesión</span>
-                </a>
-            </div>
-
-            <button class="theme-toggle ms-2" id="themeToggle" type="button" aria-label="Cambiar tema" title="Cambiar tema">
-                <i class="fas fa-moon"></i>
-            </button>
-
+        <div class="collapse navbar-collapse" id="mainNav">
+          <ul class="navbar-nav mx-auto gap-1">
+            <li class="nav-item">
+              <a class="ht-nav-link active" href="#inicio">Inicio</a>
+            </li>
+            <li class="nav-item">
+              <a class="ht-nav-link" href="#modulos">Módulos</a>
+            </li>
+            <li class="nav-item">
+              <a class="ht-nav-link" href="#como-funciona">Cómo funciona</a>
+            </li>
+            <li class="nav-item">
+              <a class="ht-nav-link" href="#mision-vision">Misión & Visión</a>
+            </li>
+            <li class="nav-item">
+              <a class="ht-nav-link" href="#equipo">Equipo</a>
+            </li>
+            <li class="nav-item">
+              <a class="ht-nav-link" href="#contacto">Contáctanos</a>
+            </li>
+          </ul>
+          <a href="{% url 'login' %}" class="btn-ht-login">
+            <i class="fas fa-right-to-bracket"></i>
+            <span>Iniciar Sesión</span>
+          </a>
         </div>
-    </nav>
 
+        <button class="theme-toggle ms-2" id="themeToggle" type="button" aria-label="Cambiar tema" title="Cambiar tema"><i class="fas fa-moon"></i></button>
+      </div>
+    </nav>
 
     <!-- ── HERO ── -->
     <section class="ht-hero" id="inicio">
-        <div class="hero-grid-overlay"></div>
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
+      <div class="hero-grid-overlay"></div>
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
 
-        <div class="container-xl">
-            <div class="row align-items-center g-5">
-
-                <!-- Texto izquierda -->
-                <div class="col-lg-6">
-                    <h1 class="hero-title">
-                        Sistema Inteligente<br>
-                        de Producción<br>
-                        <span class="title-accent">Textil</span>
-                    </h1>
-                    <p class="hero-sub">
-                        Controla inventario, órdenes y producción en tiempo real
-                        para tu satélite textil. Decisiones más rápidas, menos errores,
-                        más rendimiento.
-                    </p>
-                    <div class="hero-actions">
-                        <a href="{% url 'login' %}" class="btn-hero-primary">
-                            Comenzar <i class="fas fa-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Imagen derecha -->
-                <div class="col-lg-6 d-none d-lg-block">
-                    <div class="hero-img-wrap">
-                        <img src="{% static 'img/imageninicio.jpg' %}" alt="Máquina de coser textil" class="hero-img" />
-                        <div class="hero-img-overlay"></div>
-                    </div>
-                </div>
-
+      <div class="container-xl">
+        <div class="row align-items-center g-5">
+          <!-- Texto izquierda -->
+          <div class="col-lg-6">
+            <h1 class="hero-title">
+              Sistema Inteligente<br />
+              de Producción<br />
+              <span class="title-accent">Textil</span>
+            </h1>
+            <p class="hero-sub">Controla inventario, órdenes y producción en tiempo real para tu satélite textil. Decisiones más rápidas, menos errores, más rendimiento.</p>
+            <div class="hero-actions">
+              <a href="{% url 'login' %}" class="btn-hero-primary">Comenzar <i class="fas fa-arrow-right"></i></a>
             </div>
+          </div>
+
+          <!-- Imagen derecha -->
+          <div class="col-lg-6 d-none d-lg-block">
+            <div class="hero-img-wrap">
+              <img src="{% static 'img/imageninicio.jpg' %}" alt="Máquina de coser textil" class="hero-img" />
+              <div class="hero-img-overlay"></div>
+            </div>
+          </div>
         </div>
+      </div>
     </section>
 
-
-    <!-- ── CARDS ──-->
+    <!-- ── CARDS ── -->
     <section id="soluciones" class="py-5 bg-hb-fortaleza">
-        <div class="container py-5">
-            <div class="text-center mb-5">
-                <p class="text-hb-mentalidad fw-bold text-uppercase mb-2 small tracking-wider">Problemas que resolvemos
-                </p>
-                <h2 class="fw-bold text-hb-atencion display-6">Elimina los obstáculos de tu producción</h2>
-            </div>
-
-            <div class="row row-cols-1 row-cols-md-3 justify-content-center row-cols-lg-5 g-4">
-                <div class="col">
-                    <div class="bordes card h-100 bg-hb-actitud p-4 rounded-4 hover-effect shadow">
-                        <div class="text-hb-mentalidad mb-4"><i class="bi bi-person-down display-5"></i></div>
-                        <h6 class="text-hb-atencion fw-bold mb-3">Baja productividad</h6>
-                        <p class="text-hb-atencion opacity-75 mb-0 small">Mejora el rendimiento generalizado de tus
-                            operarios.</p>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="bordes card h-100 bg-hb-actitud p-4 rounded-4 hover-effect shadow">
-                        <div class="text-hb-mentalidad mb-4"><i class="bi bi-layers display-5"></i></div>
-                        <h6 class="text-hb-atencion fw-bold mb-3">Procesos manuales</h6>
-                        <p class="text-hb-atencion opacity-75 mb-0 small">Automatiza tareas repetitivas eliminando el
-                            error humano.</p>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="bordes card h-100 bg-hb-actitud p-4 rounded-4 hover-effect shadow">
-                        <div class="text-hb-mentalidad mb-4"><i class="bi bi-bar-chart-line display-5"></i></div>
-                        <h6 class="text-hb-atencion fw-bold mb-3">Falta de monitoreo</h6>
-                        <p class="text-hb-atencion opacity-75 mb-0 small">Obtén métricas de rendimiento y visibilidad en
-                            vivo.</p>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="bordes card h-100 bg-hb-actitud p-4 rounded-4 hover-effect shadow">
-                        <div class="text-hb-mentalidad mb-4"><i class="bi bi-truck display-5"></i></div>
-                        <h6 class="text-hb-atencion fw-bold mb-3">Retrasos operativos</h6>
-                        <p class="text-hb-atencion opacity-75 mb-0 small">Garantiza los tiempos de entrega pactados con
-                            clientes.</p>
-                    </div>
-                </div>
-            </div>
+      <div class="container py-5">
+        <div class="text-center mb-5">
+          <p class="text-hb-mentalidad fw-bold text-uppercase mb-2 small tracking-wider">Problemas que resolvemos</p>
+          <h2 class="fw-bold text-hb-atencion display-6">Elimina los obstáculos de tu producción</h2>
         </div>
+
+        <div class="row row-cols-1 row-cols-md-3 justify-content-center row-cols-lg-5 g-4">
+          <div class="col">
+            <div class="bordes card h-100 bg-hb-actitud p-4 rounded-4 hover-effect shadow">
+              <div class="text-hb-mentalidad mb-4">
+                <i class="bi bi-person-down display-5"></i>
+              </div>
+              <h6 class="text-hb-atencion fw-bold mb-3">Baja productividad</h6>
+              <p class="text-hb-atencion opacity-75 mb-0 small">Mejora el rendimiento generalizado de tus operarios.</p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="bordes card h-100 bg-hb-actitud p-4 rounded-4 hover-effect shadow">
+              <div class="text-hb-mentalidad mb-4">
+                <i class="bi bi-layers display-5"></i>
+              </div>
+              <h6 class="text-hb-atencion fw-bold mb-3">Procesos manuales</h6>
+              <p class="text-hb-atencion opacity-75 mb-0 small">Automatiza tareas repetitivas eliminando el error humano.</p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="bordes card h-100 bg-hb-actitud p-4 rounded-4 hover-effect shadow">
+              <div class="text-hb-mentalidad mb-4">
+                <i class="bi bi-bar-chart-line display-5"></i>
+              </div>
+              <h6 class="text-hb-atencion fw-bold mb-3">Falta de monitoreo</h6>
+              <p class="text-hb-atencion opacity-75 mb-0 small">Obtén métricas de rendimiento y visibilidad en vivo.</p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="bordes card h-100 bg-hb-actitud p-4 rounded-4 hover-effect shadow">
+              <div class="text-hb-mentalidad mb-4">
+                <i class="bi bi-truck display-5"></i>
+              </div>
+              <h6 class="text-hb-atencion fw-bold mb-3">Retrasos operativos</h6>
+              <p class="text-hb-atencion opacity-75 mb-0 small">Garantiza los tiempos de entrega pactados con clientes.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── FEATURES ── -->
     <section class="ht-features" id="modulos">
-        <div class="container-xl">
-            <div class="text-center section-head">
-                <div class="section-eyebrow">MÓDULOS DEL SISTEMA</div>
-                <h2 class="section-title">Todo lo que necesita<br>tu planta textil</h2>
-                <p class="section-sub">
-                    Desde la entrada de materiales hasta la entrega final —
-                    cada proceso digitalizado y visible en tiempo real.
-                </p>
-            </div>
-
-            <div class="row g-4 feat-grid">
-                <div class="col-md-6 col-lg-4">
-                    <div class="feat-card fc-dark">
-                        <div class="fc-icon"><i class="fas fa-clipboard-list"></i></div>
-                        <h5>Asignación de Tareas</h5>
-                        <p>Distribuye órdenes de producción entre operarios con un clic. Seguimiento en tiempo real del
-                            avance de cada tarea.</p>
-                        <div class="fc-footer">
-                            <span class="fc-tag">Kanban Board</span>
-                            <span class="fc-tag">Notificaciones</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feat-card">
-                        <div class="fc-icon"><i class="fas fa-boxes-stacked"></i></div>
-                        <h5>Control de Inventario</h5>
-                        <p>Registra entradas y salidas de materiales. Alertas automáticas de stock bajo. Trazabilidad
-                            completa.</p>
-                        <div class="fc-footer">
-                            <span class="fc-tag">Stock mínimo</span>
-                            <span class="fc-tag">Devoluciones</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feat-card">
-                        <div class="fc-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="currentColor"
-                                class="bi bi-ui-checks" viewBox="0 0 16 16">
-                                <path
-                                    d="M7 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zM2 1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2zm.854-3.646a.5.5 0 0 1-.708 0l-1-1a.5.5 0 1 1 .708-.708l.646.647 1.646-1.647a.5.5 0 1 1 .708.708zm0 8a.5.5 0 0 1-.708 0l-1-1a.5.5 0 0 1 .708-.708l.646.647 1.646-1.647a.5.5 0 0 1 .708.708zM7 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 8a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5" />
-                            </svg>
-                        </div>
-                        <h5>Reportes de Producción</h5>
-                        <p>Visualiza KPIs clave, eficiencia por turno, rendimiento de máquinas y cuellos de botella de
-                            forma clara.</p>
-                        <div class="fc-footer">
-                            <span class="fc-tag">Exportar PDF</span>
-                            <span class="fc-tag">Gráficas</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feat-card">
-                        <div class="fc-icon"><i class="fas fa-triangle-exclamation"></i></div>
-                        <h5>Gestión de Incidencias</h5>
-                        <p>El operario reporta cualquier falla o problema. El admin la atiende de inmediato con
-                            historial completo.</p>
-                        <div class="fc-footer">
-                            <span class="fc-tag">Prioridad</span>
-                            <span class="fc-tag">Resolución</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feat-card">
-                        <div class="fc-icon"><i class="fas fa-gears"></i></div>
-                        <h5>Estado de Máquinas</h5>
-                        <p>Monitoreo del estado de cada equipo: activo, en mantenimiento o inactivo. Historial de fallas
-                            y mantenimientos.</p>
-                        <div class="fc-footer">
-                            <span class="fc-tag">Tiempo real</span>
-                            <span class="fc-tag">Mantenimiento</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feat-card fc-accent">
-                        <div class="fc-icon"><i class="fas fa-user-shield"></i></div>
-                        <h5>Control de Accesos</h5>
-                        <p>Roles diferenciados: Administrador con control total, Operario con vista simplificada.
-                            Seguridad de datos garantizada.</p>
-                        <div class="fc-footer">
-                            <span class="fc-tag">Admin</span>
-                            <span class="fc-tag">Operario</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <div class="container-xl">
+        <div class="text-center section-head">
+          <div class="section-eyebrow">MÓDULOS DEL SISTEMA</div>
+          <h2 class="section-title">Todo lo que necesita<br />tu planta textil</h2>
+          <p class="section-sub">Desde la entrada de materiales hasta la entrega final — cada proceso digitalizado y visible en tiempo real.</p>
         </div>
+
+        <div class="row g-4 feat-grid">
+          <div class="col-md-6 col-lg-4">
+            <div class="feat-card fc-dark">
+              <div class="fc-icon">
+                <i class="fas fa-clipboard-list"></i>
+              </div>
+              <h5>Asignación de Tareas</h5>
+              <p>Distribuye órdenes de producción entre operarios con un clic. Seguimiento en tiempo real del avance de cada tarea.</p>
+              <div class="fc-footer">
+                <span class="fc-tag">Kanban Board</span>
+                <span class="fc-tag">Notificaciones</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="feat-card">
+              <div class="fc-icon">
+                <i class="fas fa-boxes-stacked"></i>
+              </div>
+              <h5>Control de Inventario</h5>
+              <p>Registra entradas y salidas de materiales. Alertas automáticas de stock bajo. Trazabilidad completa.</p>
+              <div class="fc-footer">
+                <span class="fc-tag">Stock mínimo</span>
+                <span class="fc-tag">Devoluciones</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="feat-card">
+              <div class="fc-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" fill="currentColor" class="bi bi-ui-checks" viewBox="0 0 16 16">
+                  <path d="M7 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zM2 1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2zm.854-3.646a.5.5 0 0 1-.708 0l-1-1a.5.5 0 1 1 .708-.708l.646.647 1.646-1.647a.5.5 0 1 1 .708.708zm0 8a.5.5 0 0 1-.708 0l-1-1a.5.5 0 0 1 .708-.708l.646.647 1.646-1.647a.5.5 0 0 1 .708.708zM7 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 8a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5" />
+                </svg>
+              </div>
+              <h5>Reportes de Producción</h5>
+              <p>Visualiza KPIs clave, eficiencia por turno, rendimiento de máquinas y cuellos de botella de forma clara.</p>
+              <div class="fc-footer">
+                <span class="fc-tag">Exportar PDF</span>
+                <span class="fc-tag">Gráficas</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="feat-card">
+              <div class="fc-icon">
+                <i class="fas fa-triangle-exclamation"></i>
+              </div>
+              <h5>Gestión de Incidencias</h5>
+              <p>El operario reporta cualquier falla o problema. El admin la atiende de inmediato con historial completo.</p>
+              <div class="fc-footer">
+                <span class="fc-tag">Prioridad</span>
+                <span class="fc-tag">Resolución</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="feat-card">
+              <div class="fc-icon">
+                <i class="fas fa-gears"></i>
+              </div>
+              <h5>Estado de Máquinas</h5>
+              <p>Monitoreo del estado de cada equipo: activo, en mantenimiento o inactivo. Historial de fallas y mantenimientos.</p>
+              <div class="fc-footer">
+                <span class="fc-tag">Tiempo real</span>
+                <span class="fc-tag">Mantenimiento</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-4">
+            <div class="feat-card fc-accent">
+              <div class="fc-icon">
+                <i class="fas fa-user-shield"></i>
+              </div>
+              <h5>Control de Accesos</h5>
+              <p>Roles diferenciados: Administrador con control total, Operario con vista simplificada. Seguridad de datos garantizada.</p>
+              <div class="fc-footer">
+                <span class="fc-tag">Admin</span>
+                <span class="fc-tag">Operario</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── DASHBOARD PREVIEW ── -->
     <section class="ht-preview" id="demo">
-        <div class="container-xl">
-            <div class="text-center section-head">
-                <div class="section-eyebrow" style="color:var(--accent)">VISTA DEL SISTEMA</div>
-                <h2 class="section-title" style="color:#fff">Panel de control completo</h2>
-                <p class="section-sub" style="color:var(--accent)">
-                    Una interfaz clara para que admins y operarios vean exactamente lo que necesitan, sin ruido visual.
-                </p>
-            </div>
-
-            <div class="full-dash-wrap">
-                <div class="full-dash-topbar">
-                    <div class="dash-dots">
-                        <span class="dot dot-r"></span>
-                        <span class="dot dot-y"></span>
-                        <span class="dot dot-g"></span>
-                    </div>
-                    <span
-                        style="font-family:var(--ff-label);font-size:0.65rem;letter-spacing:2px;color:var(--accent);margin-left:12px">
-                        HEBRATECH · DASHBOARD ADMINISTRADOR
-                    </span>
-                    <div class="ms-auto d-flex gap-2 align-items-center">
-                        <span class="live-dot"></span>
-                        <span style="font-size:0.75rem;color:var(--accent)">En vivo</span>
-                    </div>
-                </div>
-
-                <div class="full-dash-body">
-                    <!-- Sidebar -->
-                    <div class="full-dash-sidebar">
-                        <div class="sidebar-logo"><i class="fas fa-industry"></i></div>
-                        <div class="sidebar-nav">
-                            <div class="sb-item active"><i class="fas fa-house"></i></div>
-                            <div class="sb-item"><i class="fas fa-clipboard-list"></i></div>
-                            <div class="sb-item"><i class="fas fa-boxes-stacked"></i></div>
-                            <div class="sb-item"><i class="fas fa-chart-bar"></i></div>
-                            <div class="sb-item"><i class="fas fa-triangle-exclamation"></i></div>
-                            <div class="sb-item"><i class="fas fa-gear"></i></div>
-                        </div>
-                    </div>
-
-                    <!-- Main area -->
-                    <div class="full-dash-main">
-                        <div class="fd-greeting">
-                            <div>
-                                <p class="fd-greeting-title">Buen día, Administrador <span>👋</span></p>
-                                <p class="fd-greeting-sub">Hoy tienes 8 órdenes activas · 2 incidencias pendientes</p>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="fd-btn-outline"> <i class="fas fa-file-export"> </i> Exportar</button>
-                                <button class="fd-btn-outline"> <i class="fas fa-plus"> </i> Nueva orden </button>
-                            </div>
-                        </div>
-
-                        <div class="fd-kpi-row">
-                            <div class="fd-kpi">
-                                <span class="fd-kpi-label">Producción hoy</span>
-                                <span class="fd-kpi-val">1,284 <small>und</small></span>
-                                <div class="fd-kpi-bar">
-                                    <div style="width:72%"></div>
-                                </div>
-                            </div>
-                            <div class="fd-kpi">
-                                <span class="fd-kpi-label">Eficiencia</span>
-                                <span class="fd-kpi-val">87 <small>%</small></span>
-                                <div class="fd-kpi-bar">
-                                    <div style="width:87%;background:#5a9e6f"></div>
-                                </div>
-                            </div>
-                            <div class="fd-kpi">
-                                <span class="fd-kpi-label">Incidencias abiertas</span>
-                                <span class="fd-kpi-val">2</span>
-                                <div class="fd-kpi-bar">
-                                    <div style="width:20%;background:#e8a838"></div>
-                                </div>
-                            </div>
-                            <div class="fd-kpi">
-                                <span class="fd-kpi-label">Máquinas activas</span>
-                                <span class="fd-kpi-val">18 <small>/20</small></span>
-                                <div class="fd-kpi-bar">
-                                    <div style="width:90%"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="fd-bottom-row">
-                            <div class="fd-mini-chart">
-                                <p class="fd-section-title"><i class="fas fa-chart-line"></i> Producción por hora</p>
-                                <svg viewBox="0 0 220 80" xmlns="http://www.w3.org/2000/svg">
-                                    <defs>
-                                        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stop-color="#A5C9CA" stop-opacity="0.4" />
-                                            <stop offset="100%" stop-color="#A5C9CA" stop-opacity="0" />
-                                        </linearGradient>
-                                    </defs>
-                                    <path d="M10,60 L40,45 L70,50 L100,30 L130,35 L160,20 L190,25 L210,15" fill="none"
-                                        stroke="#A5C9CA" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round" />
-                                    <path
-                                        d="M10,60 L40,45 L70,50 L100,30 L130,35 L160,20 L190,25 L210,15 L210,80 L10,80 Z"
-                                        fill="url(#lineGrad)" />
-                                    <circle cx="210" cy="15" r="3" fill="#A5C9CA" />
-                                </svg>
-                            </div>
-                            <div class="fd-tasks-mini">
-                                <p class="fd-section-title"><i class="fas fa-list-check"></i> Tareas pendientes</p>
-                                <div class="fd-task-item">
-                                    <span class="fd-task-dot" style="background:#e8a838"></span>
-                                    <span>Corte tela Oxford · Línea 3</span>
-                                </div>
-                                <div class="fd-task-item">
-                                    <span class="fd-task-dot" style="background:#5a9e6f"></span>
-                                    <span>Ensamble uniformes · Línea 1</span>
-                                </div>
-                                <div class="fd-task-item">
-                                    <span class="fd-task-dot" style="background:#395B64"></span>
-                                    <span>Control calidad · Sala 2</span>
-                                </div>
-                                <div class="fd-task-item">
-                                    <span class="fd-task-dot" style="background:#c85a5a"></span>
-                                    <span>Incidencia M04 · Pendiente</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <div class="container-xl">
+        <div class="text-center section-head">
+          <div class="section-eyebrow" style="color:var(--accent)">VISTA DEL SISTEMA</div>
+          <h2 class="section-title" style="color:#fff">Panel de control completo</h2>
+          <p class="section-sub" style="color:var(--accent)">Una interfaz clara para que admins y operarios vean exactamente lo que necesitan, sin ruido visual.</p>
         </div>
+
+        <div class="full-dash-wrap">
+          <div class="full-dash-topbar">
+            <div class="dash-dots">
+              <span class="dot dot-r"></span>
+              <span class="dot dot-y"></span>
+              <span class="dot dot-g"></span>
+            </div>
+            <span style="font-family:var(--ff-label);font-size:0.65rem;letter-spacing:2px;color:var(--accent);margin-left:12px">HEBRATECH · DASHBOARD ADMINISTRADOR</span>
+            <div class="ms-auto d-flex gap-2 align-items-center">
+              <span class="live-dot"></span>
+              <span style="font-size:0.75rem;color:var(--accent)">En vivo</span>
+            </div>
+          </div>
+
+          <div class="full-dash-body">
+            <!-- Sidebar -->
+            <div class="full-dash-sidebar">
+              <div class="sidebar-logo">
+                <i class="fas fa-industry"></i>
+              </div>
+              <div class="sidebar-nav">
+                <div class="sb-item active">
+                  <i class="fas fa-house"></i>
+                </div>
+                <div class="sb-item">
+                  <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="sb-item">
+                  <i class="fas fa-boxes-stacked"></i>
+                </div>
+                <div class="sb-item">
+                  <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="sb-item">
+                  <i class="fas fa-triangle-exclamation"></i>
+                </div>
+                <div class="sb-item">
+                  <i class="fas fa-gear"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main area -->
+            <div class="full-dash-main">
+              <div class="fd-greeting">
+                <div>
+                  <p class="fd-greeting-title">
+                    Buen día, Administrador <span>👋</span>
+                  </p>
+                  <p class="fd-greeting-sub">Hoy tienes 8 órdenes activas · 2 incidencias pendientes</p>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="fd-btn-outline"><i class="fas fa-file-export"></i> Exportar</button>
+                  <button class="fd-btn-outline"><i class="fas fa-plus"></i> Nueva orden</button>
+                </div>
+              </div>
+
+              <div class="fd-kpi-row">
+                <div class="fd-kpi">
+                  <span class="fd-kpi-label">Producción hoy</span>
+                  <span class="fd-kpi-val">1,284 <small>und</small></span>
+                  <div class="fd-kpi-bar">
+                    <div style="width:72%"></div>
+                  </div>
+                </div>
+                <div class="fd-kpi">
+                  <span class="fd-kpi-label">Eficiencia</span>
+                  <span class="fd-kpi-val">87 <small>%</small></span>
+                  <div class="fd-kpi-bar">
+                    <div style="width:87%;background:#5a9e6f"></div>
+                  </div>
+                </div>
+                <div class="fd-kpi">
+                  <span class="fd-kpi-label">Incidencias abiertas</span>
+                  <span class="fd-kpi-val">2</span>
+                  <div class="fd-kpi-bar">
+                    <div style="width:20%;background:#e8a838"></div>
+                  </div>
+                </div>
+                <div class="fd-kpi">
+                  <span class="fd-kpi-label">Máquinas activas</span>
+                  <span class="fd-kpi-val">18 <small>/20</small></span>
+                  <div class="fd-kpi-bar">
+                    <div style="width:90%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="fd-bottom-row">
+                <div class="fd-mini-chart">
+                  <p class="fd-section-title">
+                    <i class="fas fa-chart-line"></i> Producción por hora
+                  </p>
+                  <svg viewBox="0 0 220 80" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#A5C9CA" stop-opacity="0.4" />
+                        <stop offset="100%" stop-color="#A5C9CA" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M10,60 L40,45 L70,50 L100,30 L130,35 L160,20 L190,25 L210,15" fill="none" stroke="#A5C9CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M10,60 L40,45 L70,50 L100,30 L130,35 L160,20 L190,25 L210,15 L210,80 L10,80 Z" fill="url(#lineGrad)" />
+                    <circle cx="210" cy="15" r="3" fill="#A5C9CA" />
+                  </svg>
+                </div>
+                <div class="fd-tasks-mini">
+                  <p class="fd-section-title">
+                    <i class="fas fa-list-check"></i> Tareas pendientes
+                  </p>
+                  <div class="fd-task-item">
+                    <span class="fd-task-dot" style="background:#e8a838"></span>
+                    <span>Corte tela Oxford · Línea 3</span>
+                  </div>
+                  <div class="fd-task-item">
+                    <span class="fd-task-dot" style="background:#5a9e6f"></span>
+                    <span>Ensamble uniformes · Línea 1</span>
+                  </div>
+                  <div class="fd-task-item">
+                    <span class="fd-task-dot" style="background:#395B64"></span>
+                    <span>Control calidad · Sala 2</span>
+                  </div>
+                  <div class="fd-task-item">
+                    <span class="fd-task-dot" style="background:#c85a5a"></span>
+                    <span>Incidencia M04 · Pendiente</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── HOW IT WORKS ── -->
     <section class="ht-how" id="como-funciona">
-        <div class="container-xl">
-            <div class="text-center section-head">
-                <div class="section-eyebrow">FLUJO DE TRABAJO</div>
-                <h2 class="section-title">Así funciona HebraTech</h2>
-            </div>
-
-            <div class="row g-0 how-timeline">
-                <div class="col-md-4">
-                    <div class="how-step">
-                        <div class="how-num">01</div>
-                        <div class="how-icon"><i class="fas fa-user-plus"></i></div>
-                        <h5>El admin configura</h5>
-                        <p>Registra máquinas, operarios y materiales. Crea órdenes de producción y las asigna al equipo.
-                        </p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="how-step how-step-mid">
-                        <div class="how-num">02</div>
-                        <div class="how-icon"><i class="fas fa-screwdriver-wrench"></i></div>
-                        <h5>El operario ejecuta</h5>
-                        <p>Cada operario ve sus tareas asignadas, reporta avances e incidencias directamente desde su
-                            estación.</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="how-step">
-                        <div class="how-num">03</div>
-                        <div class="how-icon"><i class="fas fa-chart-pie"></i></div>
-                        <h5>El sistema registra todo</h5>
-                        <p>Producción, materiales, incidencias y rendimiento quedan guardados para consulta y análisis
-                            inmediato.</p>
-                    </div>
-                </div>
-            </div>
+      <div class="container-xl">
+        <div class="text-center section-head">
+          <div class="section-eyebrow">FLUJO DE TRABAJO</div>
+          <h2 class="section-title">Así funciona HebraTech</h2>
         </div>
+
+        <div class="row g-0 how-timeline">
+          <div class="col-md-4">
+            <div class="how-step">
+              <div class="how-num">01</div>
+              <div class="how-icon">
+                <i class="fas fa-user-plus"></i>
+              </div>
+              <h5>El admin configura</h5>
+              <p>Registra máquinas, operarios y materiales. Crea órdenes de producción y las asigna al equipo.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="how-step how-step-mid">
+              <div class="how-num">02</div>
+              <div class="how-icon">
+                <i class="fas fa-screwdriver-wrench"></i>
+              </div>
+              <h5>El operario ejecuta</h5>
+              <p>Cada operario ve sus tareas asignadas, reporta avances e incidencias directamente desde su estación.</p>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="how-step">
+              <div class="how-num">03</div>
+              <div class="how-icon">
+                <i class="fas fa-chart-pie"></i>
+              </div>
+              <h5>El sistema registra todo</h5>
+              <p>Producción, materiales, incidencias y rendimiento quedan guardados para consulta y análisis inmediato.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── Mision Y Vision ── -->
     <section id="mision-vision" class="py-5 bg-hb-actitud">
-        <div class="container py-4">
-            <div class="row row-cols-1 row-cols-md-2 g-4 justify-content-center mx-auto" style="max-width: 1000px;">
-
-                <div class="col">
-                    <div
-                        class="mv-interactive-card h-100 bg-hb-fortaleza p-4 rounded-4 shadow-lg text-center border border-light border-opacity-10">
-                        <div class="mv-initial-content">
-                            <h3 class="display-6 fw-bold text-hb-atencion mb-0">Misión</h3>
-                        </div>
-                        <div class="mv-hidden-content">
-                            <p
-                                class="text-hb-atencion fs-6 lh-base mb-0 pt-3 border-top border-light border-opacity-10">
-                                Desarrollar soluciones tecnológicas innovadoras que optimicen la organización y gestión
-                                de los satélites de confección textil, impulsando su productividad, control operativo y
-                                eficiencia competitiva en la industria.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div
-                        class="mv-interactive-card h-100 bg-hb-fortaleza p-4 rounded-4 shadow-lg text-center border border-light border-opacity-10">
-                        <div class="mv-initial-content">
-                            <i class="bi bi-rocket-takeoff display-4 text-hb-mentalidad mb-2 d-block"></i>
-                            <h3 class="display-6 fw-bold text-hb-atencion mb-0">Visión</h3>
-                        </div>
-                        <div class="mv-hidden-content">
-                            <p
-                                class="text-hb-atencion fs-6 lh-base mb-0 pt-3 border-top border-light border-opacity-10">
-                                Ser la plataforma líder en modernización textil, reconocida por transformar la
-                                manufactura y los satélites de confección mediante herramientas digitales accesibles,
-                                eficientes y de alto impacto estructural.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
+      <div class="container py-4">
+        <div class="row row-cols-1 row-cols-md-2 g-4 justify-content-center mx-auto" style="max-width: 1000px;">
+          <div class="col">
+            <div class="mv-interactive-card h-100 bg-hb-fortaleza p-4 rounded-4 shadow-lg text-center border border-light border-opacity-10">
+              <div class="mv-initial-content">
+                <h3 class="display-6 fw-bold text-hb-atencion mb-0">Misión</h3>
+              </div>
+              <div class="mv-hidden-content">
+                <p class="text-hb-atencion fs-6 lh-base mb-0 pt-3 border-top border-light border-opacity-10">Desarrollar soluciones tecnológicas innovadoras que optimicen la organización y gestión de los satélites de confección textil, impulsando su productividad, control operativo y eficiencia competitiva en la industria.</p>
+              </div>
             </div>
+          </div>
+
+          <div class="col">
+            <div class="mv-interactive-card h-100 bg-hb-fortaleza p-4 rounded-4 shadow-lg text-center border border-light border-opacity-10">
+              <div class="mv-initial-content">
+                <i class="bi bi-rocket-takeoff display-4 text-hb-mentalidad mb-2 d-block"></i>
+                <h3 class="display-6 fw-bold text-hb-atencion mb-0">Visión</h3>
+              </div>
+              <div class="mv-hidden-content">
+                <p class="text-hb-atencion fs-6 lh-base mb-0 pt-3 border-top border-light border-opacity-10">Ser la plataforma líder en modernización textil, reconocida por transformar la manufactura y los satélites de confección mediante herramientas digitales accesibles, eficientes y de alto impacto estructural.</p>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </section>
 
     <!-- ── CTA BANNER ── -->
     <section class="ht-cta">
-        <div class="cta-orb cta-orb-1"></div>
-        <div class="cta-orb cta-orb-2"></div>
-        <div class="container-xl position-relative" style="z-index:2">
-            <div class="row justify-content-center text-center">
-                <div class="col-lg-7">
-                    <div class="cta-eyebrow">LISTO PARA EMPEZAR</div>
-                    <h2 class="cta-title">Optimiza tu planta textil<br>desde hoy</h2>
-                    <p class="cta-sub">Sin configuraciones complejas. Sin papel. Sin caos. Solo producción organizada y
-                        visible.</p>
-                    <div class="cta-actions">
-                        <a href="{% url 'login' %}" class="btn-hero-primary btn-cta">
-                            Crear cuenta gratis <i class="fas fa-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
+      <div class="cta-orb cta-orb-1"></div>
+      <div class="cta-orb cta-orb-2"></div>
+      <div class="container-xl position-relative" style="z-index:2">
+        <div class="row justify-content-center text-center">
+          <div class="col-lg-7">
+            <div class="cta-eyebrow">LISTO PARA EMPEZAR</div>
+            <h2 class="cta-title">Optimiza tu planta textil<br />desde hoy</h2>
+            <p class="cta-sub">Sin configuraciones complejas. Sin papel. Sin caos. Solo producción organizada y visible.</p>
+            <div class="cta-actions">
+              <a href="{% url 'login' %}" class="btn-hero-primary btn-cta">Crear cuenta gratis <i class="fas fa-arrow-right"></i></a>
             </div>
+          </div>
         </div>
+      </div>
     </section>
 
     <!-- Desarrolladores -->
     <section class="team-section" id="equipo">
-        <div class="container">
-            <div class="text-center mb-5 fade-up">
-                <p class="section-label"
-                    style="color: var(--accent); opacity: .7; text-transform: uppercase; letter-spacing: 2px;">QUIÉNES SOMOS</p>
-                <h2 class="section-title" style="color: var(--hero-text);">El equipo detrás de HebraTech</h2>
-            </div>
-
-            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-4 justify-content-center">
-
-                <div class="col fade-up">
-                    <div class="team-card">
-                        <div class="team-avatar">
-                            <img src="{% static 'img/jorge.jpeg' %}" alt="Jorge Almanza" />
-                        </div>
-                        <div class="team-name">Jorge Almanza</div>
-                        <div class="team-role">Full Stack Developer</div>
-                        <div class="team-socials">
-                            <a href="http://github.com/jorgexalmanzax" target="_blank" rel="noopener"
-                                class="team-social-icon" aria-label="GitHub de Jorge Almanza"><i
-                                    class="fa-brands fa-github"></i></a>
-                            <a href="https://www.linkedin.com/in/jorge-almanza-torres/" target="_blank" rel="noopener" class="team-social-icon icon-linkedin"
-                                aria-label="LinkedIn de Jorge Almanza"><i class="fa-brands fa-linkedin-in"></i></a>
-                            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=jorgeformulaone@gmail.com&su=Contacto%20HebraTech&body=Hola!"  rel="noopener noreferrer" target="_blank"  class="team-social-icon icon-mail" aria-label="Correo de Jorge Almanza"><i
-                                    class="fa-solid fa-envelope"></i></a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col fade-up">
-                    <div class="team-card">
-                        <div class="team-avatar">
-                            <img src="{% static 'img/juanalba.jpeg' %}" alt="Juan Alba" />
-                        </div>
-                        <div class="team-name">Juan Alba</div>
-                        <div class="team-role">Full Stack Developer</div>
-                        <div class="team-socials">
-                            <a href="https://github.com/juanandresalbacastro2007-spec" target="_blank" rel="noopener"
-                                class="team-social-icon" aria-label="GitHub de Juan Alba"><i
-                                    class="fa-brands fa-github"></i></a>
-                            <a href="https://www.linkedin.com/in/juan-alba-650246440/?isSelfProfile=true" target="_blank" rel="noopener" class="team-social-icon icon-linkedin"
-                                aria-label="LinkedIn de Juan Alba"><i class="fa-brands fa-linkedin-in"></i></a>
-                            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=juanandresalbacastro2007@gmail.com&su=Contacto%20HebraTech&body=Hola!"  rel="noopener noreferrer" target="_blank"  class="team-social-icon icon-mail" aria-label="Correo de Juan Alba"><i
-                                    class="fa-solid fa-envelope"></i></a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col fade-up">
-                    <div class="team-card">
-                        <div class="team-avatar">
-                            <img src="{% static 'img/david.png' %}" alt="David Sierra" />
-                        </div>
-                        <div class="team-name">David Sierra</div>
-                        <div class="team-role">Full Stack Developer</div>
-                        <div class="team-socials">
-                            <a href="https://github.com/David-sierra4444" target="_blank" rel="noopener"
-                                class="team-social-icon" aria-label="GitHub de David Sierra"><i
-                                    class="fa-brands fa-github"></i></a>
-                            <a href="https://www.linkedin.com/in/david-esteban-sierra-contreras-538345337" target="_blank" rel="noopener" class="team-social-icon icon-linkedin"
-                                aria-label="LinkedIn de David Sierra"><i class="fa-brands fa-linkedin-in"></i></a>
-                            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=sierrita3123@gmail.com&su=Contacto%20HebraTech&body=Hola!"  rel="noopener noreferrer" target="_blank"  class="team-social-icon icon-mail" aria-label="Correo de David Sierra"><i
-                                    class="fa-solid fa-envelope"></i></a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col fade-up">
-                    <div class="team-card">
-                        <div class="team-avatar">
-                            <img src="{% static 'img/santiago.jpeg' %}" alt="David Cano" />
-                        </div>
-                        <div class="team-name">David Cano</div>
-                        <div class="team-role">Full Stack Developer</div>
-                        <div class="team-socials">
-                            <a href="https://github.com/ssantiagocubides-bit" target="_blank" rel="noopener"
-                                class="team-social-icon" aria-label="GitHub de David Cano"><i
-                                    class="fa-brands fa-github"></i></a>
-                            <a href="#" target="_blank" rel="noopener" class="team-social-icon icon-linkedin"
-                                aria-label="LinkedIn de David Cano"><i class="fa-brands fa-linkedin-in"></i></a>
-                            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=ssantiagocubides@gmail.com&su=Contacto%20HebraTech&body=Hola!"  rel="noopener noreferrer" target="_blank"  class="team-social-icon icon-mail"
-                                aria-label="Correo de David Cano"><i class="fa-solid fa-envelope"></i></a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col fade-up">
-                    <div class="team-card">
-                        <div class="team-avatar">
-                            <img src="{% static 'img/yeferson.jpeg' %}" alt="Yeferson Idarraga" />
-                        </div>
-                        <div class="team-name">Yeferson Idarraga</div>
-                        <div class="team-role">Full Stack Developer</div>
-                        <div class="team-socials">
-                            <a href="https://github.com/yeferson11-11" target="_blank" rel="noopener"
-                                class="team-social-icon" aria-label="GitHub de Yeferson Idarraga"><i
-                                    class="fa-brands fa-github"></i></a>
-                            <a href="https://www.linkedin.com/in/yeferson-idarraga-549222416" target="_blank"
-                                rel="noopener" class="team-social-icon icon-linkedin"
-                                aria-label="LinkedIn de Yeferson Idarraga"><i class="fa-brands fa-linkedin-in"></i></a>
-                            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=yefersonidarraga7@gmail.com&su=Contacto%20HebraTech&body=Hola!"  rel="noopener noreferrer" target="_blank"  class="team-social-icon icon-mail"
-                                aria-label="Correo de Yeferson Idarraga"><i class="fa-solid fa-envelope"></i></a>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
+      <div class="container">
+        <div class="text-center mb-5 fade-up">
+          <p class="section-label" style="color: var(--accent); opacity: .7; text-transform: uppercase; letter-spacing: 2px;">QUIÉNES SOMOS</p>
+          <h2 class="section-title" style="color: var(--hero-text);">El equipo detrás de HebraTech</h2>
         </div>
-    </section>
 
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-4 justify-content-center">
+          <div class="col fade-up">
+            <div class="team-card">
+              <div class="team-avatar">
+                <img src="{% static 'img/jorge.jpeg' %}" alt="Jorge Almanza" />
+              </div>
+              <div class="team-name">Jorge Almanza</div>
+              <div class="team-role">Full Stack Developer</div>
+              <div class="team-socials">
+                <a href="http://github.com/jorgexalmanzax" target="_blank" rel="noopener" class="team-social-icon" aria-label="GitHub de Jorge Almanza"><i class="fa-brands fa-github"></i></a>
+                <a href="https://www.linkedin.com/in/jorge-almanza-torres/" target="_blank" rel="noopener" class="team-social-icon icon-linkedin" aria-label="LinkedIn de Jorge Almanza"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=jorgeformulaone@gmail.com&su=Contacto%20HebraTech&body=Hola!" rel="noopener noreferrer" target="_blank" class="team-social-icon icon-mail" aria-label="Correo de Jorge Almanza"><i class="fa-solid fa-envelope"></i></a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col fade-up">
+            <div class="team-card">
+              <div class="team-avatar">
+                <img src="{% static 'img/juanalba.jpeg' %}" alt="Juan Alba" />
+              </div>
+              <div class="team-name">Juan Alba</div>
+              <div class="team-role">Full Stack Developer</div>
+              <div class="team-socials">
+                <a href="https://github.com/juanandresalbacastro2007-spec" target="_blank" rel="noopener" class="team-social-icon" aria-label="GitHub de Juan Alba"><i class="fa-brands fa-github"></i></a>
+                <a href="https://www.linkedin.com/in/juan-alba-650246440/?isSelfProfile=true" target="_blank" rel="noopener" class="team-social-icon icon-linkedin" aria-label="LinkedIn de Juan Alba"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=juanandresalbacastro2007@gmail.com&su=Contacto%20HebraTech&body=Hola!" rel="noopener noreferrer" target="_blank" class="team-social-icon icon-mail" aria-label="Correo de Juan Alba"><i class="fa-solid fa-envelope"></i></a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col fade-up">
+            <div class="team-card">
+              <div class="team-avatar">
+                <img src="{% static 'img/david.png' %}" alt="David Sierra" />
+              </div>
+              <div class="team-name">David Sierra</div>
+              <div class="team-role">Full Stack Developer</div>
+              <div class="team-socials">
+                <a href="https://github.com/David-sierra4444" target="_blank" rel="noopener" class="team-social-icon" aria-label="GitHub de David Sierra"><i class="fa-brands fa-github"></i></a>
+                <a href="https://www.linkedin.com/in/david-esteban-sierra-contreras-538345337" target="_blank" rel="noopener" class="team-social-icon icon-linkedin" aria-label="LinkedIn de David Sierra"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=sierrita3123@gmail.com&su=Contacto%20HebraTech&body=Hola!" rel="noopener noreferrer" target="_blank" class="team-social-icon icon-mail" aria-label="Correo de David Sierra"><i class="fa-solid fa-envelope"></i></a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col fade-up">
+            <div class="team-card">
+              <div class="team-avatar">
+                <img src="{% static 'img/santiago.jpeg' %}" alt="David Cano" />
+              </div>
+              <div class="team-name">David Cano</div>
+              <div class="team-role">Full Stack Developer</div>
+              <div class="team-socials">
+                <a href="https://github.com/ssantiagocubides-bit" target="_blank" rel="noopener" class="team-social-icon" aria-label="GitHub de David Cano"><i class="fa-brands fa-github"></i></a>
+                <a href="#" target="_blank" rel="noopener" class="team-social-icon icon-linkedin" aria-label="LinkedIn de David Cano"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=ssantiagocubides@gmail.com&su=Contacto%20HebraTech&body=Hola!" rel="noopener noreferrer" target="_blank" class="team-social-icon icon-mail" aria-label="Correo de David Cano"><i class="fa-solid fa-envelope"></i></a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col fade-up">
+            <div class="team-card">
+              <div class="team-avatar">
+                <img src="{% static 'img/yeferson.jpeg' %}" alt="Yeferson Idarraga" />
+              </div>
+              <div class="team-name">Yeferson Idarraga</div>
+              <div class="team-role">Full Stack Developer</div>
+              <div class="team-socials">
+                <a href="https://github.com/yeferson11-11" target="_blank" rel="noopener" class="team-social-icon" aria-label="GitHub de Yeferson Idarraga"><i class="fa-brands fa-github"></i></a>
+                <a href="https://www.linkedin.com/in/yeferson-idarraga-549222416" target="_blank" rel="noopener" class="team-social-icon icon-linkedin" aria-label="LinkedIn de Yeferson Idarraga"><i class="fa-brands fa-linkedin-in"></i></a>
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=yefersonidarraga7@gmail.com&su=Contacto%20HebraTech&body=Hola!" rel="noopener noreferrer" target="_blank" class="team-social-icon icon-mail" aria-label="Correo de Yeferson Idarraga"><i class="fa-solid fa-envelope"></i></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- FOOTER -->
     <footer class="bg-dark text-white p-5" id="contacto">
-        <div class="container">
-            <div class="row text-center text-md-start gy-4">
+      <div class="container">
+        <div class="row text-center text-md-start gy-4">
+          <div class="col-md-5">
+            <h3 class="fw-bold text-success" style="color: var(--accent) !important;">HebraTech</h3>
+            <p class="text-secondary mb-4" style="max-width: 350px;">Software especializado en la organización, control de producción y gestión de satélites de confección textil.</p>
 
-                <div class="col-md-5">
-                    <h3 class="fw-bold text-success" style="color: var(--accent) !important;">HebraTech</h3>
-                    <p class="text-secondary mb-4" style="max-width: 350px;">
-                        Software especializado en la organización, control de producción y gestión de satélites de
-                        confección textil.
-                    </p>
-
-                    <div class="d-flex justify-content-center justify-content-md-start gap-3 mt-3">
-                        <a href="#" class="social-btn" title="Facebook">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38">
-                                <circle cx="24" cy="24" r="24" fill="#1877F2" />
-                                <path fill="#fff"
-                                    d="M29.5 25l.7-4.5H25.8v-2.9c0-1.2.6-2.4 2.5-2.4h1.9v-3.8s-1.7-.3-3.4-.3c-3.5 0-5.7 2.1-5.7 5.9V20.5h-3.8V25h3.8v10.9c.8.1 1.5.1 2.3.1s1.6-.1 2.3-.1V25z" />
-                            </svg>
-                        </a>
-                        <a href="#" class="social-btn" title="Instagram">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38">
-                                <radialGradient id="ig1" cx="19%" cy="99%" r="108%">
-                                    <stop offset="0%" stop-color="#FFD521" />
-                                    <stop offset="5%" stop-color="#FFD521" />
-                                    <stop offset="45%" stop-color="#F3122A" />
-                                    <stop offset="70%" stop-color="#C2189A" />
-                                    <stop offset="100%" stop-color="#7024D0" />
-                                </radialGradient>
-                                <rect width="48" height="48" rx="12" fill="url(#ig1)" />
-                                <rect x="6" y="6" width="36" height="36" rx="10" fill="none" stroke="#fff"
-                                    stroke-width="2.5" />
-                                <circle cx="24" cy="24" r="8" fill="none" stroke="#fff" stroke-width="2.5" />
-                                <circle cx="34" cy="14" r="2.5" fill="#fff" />
-                            </svg>
-                        </a>
-                        <a href="#" class="social-btn" title="WhatsApp">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38">
-                                <circle cx="24" cy="24" r="24" fill="#25D366" />
-                                <path fill="#fff"
-                                    d="M24 10C16.3 10 10 16.3 10 24c0 2.4.7 4.8 1.9 6.8L10 38l7.5-1.9c2 1.1 4.2 1.7 6.5 1.7 7.7 0 14-6.3 14-14S31.7 10 24 10zm7.3 19.3c-.3.9-1.8 1.7-2.5 1.8-.6.1-1.4.1-2.3-.1-3.1-.8-5.1-3-6.8-5.4-1-1.4-1.4-2.6-1.4-3.7 0-1.2.6-2.1 1.1-2.6.5-.5 1-.6 1.4-.6h1c.3 0 .6.2.8.7l1.2 3c.2.5.1.9-.1 1.3l-.7.8c-.2.2-.2.5 0 .7 1 1.5 2.2 2.5 3.8 3.2.3.1.5.1.7-.1l.7-.9c.3-.4.7-.5 1.1-.3l2.7 1.3c.5.2.8.5.5 1.4z" />
-                            </svg>
-                        </a>
-                        <a href="mailto:contacto@hebratech.co" class="social-btn" title="Correo">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38">
-                                <rect width="48" height="48" rx="12" fill="#EA4335" />
-                                <path fill="#fff"
-                                    d="M10 16v16a2 2 0 002 2h24a2 2 0 002-2V16a2 2 0 00-2-2H12a2 2 0 00-2 2zm2 0l12 9 12-9H12zm0 16V19l12 9 12-9v13H12z" />
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="col-md-3">
-                    <h5 class="fw-bold mb-3" style="color: var(--accent);">Navegación</h5>
-                    <ul class="list-unstyled d-flex flex-column gap-2">
-                        <li><a href="#inicio" class="text-secondary text-decoration-none hover-link">Inicio</a></li>
-                        <li><a href="#soluciones" class="text-secondary text-decoration-none hover-link">Soluciones</a>
-                        </li>
-                        <li><a href="#modulos" class="text-secondary text-decoration-none hover-link">Módulos</a></li>
-                        <li><a href="#contacto" class="text-secondary text-decoration-none hover-link">Soporte
-                                Técnico</a></li>
-                    </ul>
-                </div>
-
-                <div class="col-md-4">
-                    <h5 class="fw-bold mb-3" style="color: var(--accent);">Contacto</h5>
-                    <ul class="list-unstyled d-flex flex-column gap-2 text-secondary">
-                        <li><i class="fas fa-location-dot me-2" style="color: var(--accent);"></i> Bogotá, Colombia</li>
-                        <li><i class="fas fa-phone me-2" style="color: var(--accent);"></i> +57 321 412 4927</li>
-                        <li><i class="fas fa-clock me-2" style="color: var(--accent);"></i> Lun - Vie: 8:00 AM - 6:00 PM</li>
-                    </ul>
-                </div>
-
+            <div class="d-flex justify-content-center justify-content-md-start gap-3 mt-3">
+              <a href="#" class="social-btn" title="Facebook">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38">
+                  <circle cx="24" cy="24" r="24" fill="#1877F2" />
+                  <path fill="#fff" d="M29.5 25l.7-4.5H25.8v-2.9c0-1.2.6-2.4 2.5-2.4h1.9v-3.8s-1.7-.3-3.4-.3c-3.5 0-5.7 2.1-5.7 5.9V20.5h-3.8V25h3.8v10.9c.8.1 1.5.1 2.3.1s1.6-.1 2.3-.1V25z" />
+                </svg>
+              </a>
+              <a href="#" class="social-btn" title="Instagram">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38">
+                  <radialGradient id="ig1" cx="19%" cy="99%" r="108%">
+                    <stop offset="0%" stop-color="#FFD521" />
+                    <stop offset="5%" stop-color="#FFD521" />
+                    <stop offset="45%" stop-color="#F3122A" />
+                    <stop offset="70%" stop-color="#C2189A" />
+                    <stop offset="100%" stop-color="#7024D0" />
+                  </radialGradient>
+                  <rect width="48" height="48" rx="12" fill="url(#ig1)" />
+                  <rect x="6" y="6" width="36" height="36" rx="10" fill="none" stroke="#fff" stroke-width="2.5" />
+                  <circle cx="24" cy="24" r="8" fill="none" stroke="#fff" stroke-width="2.5" />
+                  <circle cx="34" cy="14" r="2.5" fill="#fff" />
+                </svg>
+              </a>
+              <a href="#" class="social-btn" title="WhatsApp">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38">
+                  <circle cx="24" cy="24" r="24" fill="#25D366" />
+                  <path fill="#fff" d="M24 10C16.3 10 10 16.3 10 24c0 2.4.7 4.8 1.9 6.8L10 38l7.5-1.9c2 1.1 4.2 1.7 6.5 1.7 7.7 0 14-6.3 14-14S31.7 10 24 10zm7.3 19.3c-.3.9-1.8 1.7-2.5 1.8-.6.1-1.4.1-2.3-.1-3.1-.8-5.1-3-6.8-5.4-1-1.4-1.4-2.6-1.4-3.7 0-1.2.6-2.1 1.1-2.6.5-.5 1-.6 1.4-.6h1c.3 0 .6.2.8.7l1.2 3c.2.5.1.9-.1 1.3l-.7.8c-.2.2-.2.5 0 .7 1 1.5 2.2 2.5 3.8 3.2.3.1.5.1.7-.1l.7-.9c.3-.4.7-.5 1.1-.3l2.7 1.3c.5.2.8.5.5 1.4z" />
+                </svg>
+              </a>
+              <a href="mailto:contacto@hebratech.co" class="social-btn" title="Correo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38">
+                  <rect width="48" height="48" rx="12" fill="#EA4335" />
+                  <path fill="#fff" d="M10 16v16a2 2 0 002 2h24a2 2 0 002-2V16a2 2 0 00-2-2H12a2 2 0 00-2 2zm2 0l12 9 12-9H12zm0 16V19l12 9 12-9v13H12z" />
+                </svg>
+              </a>
             </div>
+          </div>
 
-            <hr class="border-secondary my-4">
+          <div class="col-md-3">
+            <h5 class="fw-bold mb-3" style="color: var(--accent);">Navegación</h5>
+            <ul class="list-unstyled d-flex flex-column gap-2">
+              <li>
+                <a href="#inicio" class="text-secondary text-decoration-none hover-link">Inicio</a>
+              </li>
+              <li>
+                <a href="#soluciones" class="text-secondary text-decoration-none hover-link">Soluciones</a>
+              </li>
+              <li>
+                <a href="#modulos" class="text-secondary text-decoration-none hover-link">Módulos</a>
+              </li>
+              <li>
+                <a href="#contacto" class="text-secondary text-decoration-none hover-link">Soporte Técnico</a>
+              </li>
+            </ul>
+          </div>
 
-            <div class="text-center text-secondary small">
-                <p class="mb-0">© 2026 HebraTech | Todos los derechos reservados.</p>
-            </div>
+          <div class="col-md-4">
+            <h5 class="fw-bold mb-3" style="color: var(--accent);">Contacto</h5>
+            <ul class="list-unstyled d-flex flex-column gap-2 text-secondary">
+              <li>
+                <i class="fas fa-location-dot me-2" style="color: var(--accent);"></i> Bogotá, Colombia
+              </li>
+              <li>
+                <i class="fas fa-phone me-2" style="color: var(--accent);"></i> +57 321 412 4927
+              </li>
+              <li>
+                <i class="fas fa-clock me-2" style="color: var(--accent);"></i> Lun - Vie: 8:00 AM - 6:00 PM
+              </li>
+            </ul>
+          </div>
         </div>
+
+        <hr class="border-secondary my-4" />
+
+        <div class="text-center text-secondary small">
+          <p class="mb-0">© 2026 HebraTech | Todos los derechos reservados.</p>
+        </div>
+      </div>
     </footer>
 
     <!-- Bootstrap JS -->
     <script>
-        // ── Modo oscuro ──
-        (function () {
-            const root = document.documentElement;
-            const toggleBtn = document.getElementById('themeToggle');
-            const icon = toggleBtn ? toggleBtn.querySelector('i') : null;
-
-            function applyTheme(theme) {
-                root.setAttribute('data-bs-theme', theme);
-                if (icon) {
-                    icon.classList.toggle('fa-moon', theme === 'light');
-                    icon.classList.toggle('fa-sun', theme === 'dark');
-                }
-            }
-
-            applyTheme(localStorage.getItem('ht-theme') || 'light');
-
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', function () {
-                    const next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-                    localStorage.setItem('ht-theme', next);
-                    applyTheme(next);
-                });
-            }
-        })();
-        // Smooth scroll para links ancla del navbar
-        document.querySelectorAll('a[href^="#"]').forEach(link => {
-            link.addEventListener('click', function (e) {
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                const target = document.querySelector(targetId);
-                if (target) {
-                    e.preventDefault();
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-                    // Cierra el menú móvil si está abierto
-                    const navCollapse = document.querySelector('#mainNav');
-                    if (navCollapse && navCollapse.classList.contains('show')) {
-                        const toggler = document.querySelector('.navbar-toggler');
-                        toggler && toggler.click();
-                    }
-                }
-            });
-        });
-        // Intersection Observer para las animaciones de aparición
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                if (e.isIntersecting) {
-                    e.target.classList.add('in-view');
-                    e.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.15 });
-
-        document.querySelectorAll('.stat-card, .feat-card, .how-step, .fd-kpi, .fade-up').forEach(el => observer.observe(el));
+      // ── Modo oscuro ──
+      ;(function () {
+        const root = document.documentElement
+        const toggleBtn = document.getElementById('themeToggle')
+        const icon = toggleBtn ? toggleBtn.querySelector('i') : null
+      
+        function applyTheme(theme) {
+          root.setAttribute('data-bs-theme', theme)
+          if (icon) {
+            icon.classList.toggle('fa-moon', theme === 'light')
+            icon.classList.toggle('fa-sun', theme === 'dark')
+          }
+        }
+      
+        applyTheme(localStorage.getItem('ht-theme') || 'light')
+      
+        if (toggleBtn) {
+          toggleBtn.addEventListener('click', function () {
+            const next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark'
+            localStorage.setItem('ht-theme', next)
+            applyTheme(next)
+          })
+        }
+      })()
     </script>
 
-</body>
-
+    <!-- Enlace al nuevo archivo home.js -->
+    <script src="{% static 'js/home.js' %}"></script>
+  </body>
 </html>
