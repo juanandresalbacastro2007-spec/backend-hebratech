@@ -173,3 +173,71 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Ocurrió un error al procesar la solicitud.');
     });
   };
+
+
+/* ── Formateadores y Máscaras en Tiempo Real ───────────── */
+document.addEventListener('DOMContentLoaded', function () {
+
+  // 1. Función para formatear valor de NIT (ej: 900.123.456-7)
+  function formatearNITVal(raw) {
+    let valor = raw.replace(/\D/g, '');
+    if (valor.length > 10) valor = valor.slice(0, 10);
+    if (!valor) return '';
+
+    let principales = valor.length === 10 ? valor.slice(0, 9) : valor;
+    let dv = valor.length === 10 ? valor.slice(9) : '';
+
+    principales = principales.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return dv ? `${principales}-${dv}` : principales;
+  }
+
+  // 2. Función para formatear Teléfono Colombia (ej: 300 123 4567 o 601 2345)
+  function formatearTelefonoVal(raw) {
+    let valor = raw.replace(/\D/g, '');
+    if (valor.length > 10) valor = valor.slice(0, 10);
+    if (!valor) return '';
+
+    // Si es un celular de 10 dígitos (ej: 300 123 4567)
+    if (valor.length > 7) {
+      return valor.replace(/(\d{3})(\d{3})(\d{0,4})/, function(_, p1, p2, p3) {
+        let res = p1;
+        if (p2) res += ' ' + p2;
+        if (p3) res += ' ' + p3;
+        return res;
+      });
+    }
+    // Si es teléfono fijo de 7 dígitos (ej: 601 2345)
+    return valor.replace(/(\d{3})(\d{0,4})/, function(_, p1, p2) {
+      return p2 ? `${p1} ${p2}` : p1;
+    });
+  }
+
+  // ── Aplicar a Inputs de Entrada (Agregar y Editar) ──────
+  document.querySelectorAll('.input-nit-mask, #nit').forEach(input => {
+    // Formatear al escribir
+    input.addEventListener('input', e => {
+      e.target.value = formatearNITVal(e.target.value);
+    });
+    // Formatear valor inicial
+    if (input.value) input.value = formatearNITVal(input.value);
+  });
+
+  document.querySelectorAll('.input-telefono-mask').forEach(input => {
+    // Formatear al escribir
+    input.addEventListener('input', e => {
+      e.target.value = formatearTelefonoVal(e.target.value);
+    });
+    // Formatear valor inicial
+    if (input.value) input.value = formatearTelefonoVal(input.value);
+  });
+
+  // ── Aplicar a Textos Renderizados en Cards y Listas ─────
+  document.querySelectorAll('.formato-nit').forEach(el => {
+    el.textContent = formatearNITVal(el.textContent);
+  });
+
+  document.querySelectorAll('.formato-telefono').forEach(el => {
+    el.textContent = formatearTelefonoVal(el.textContent);
+  });
+
+});

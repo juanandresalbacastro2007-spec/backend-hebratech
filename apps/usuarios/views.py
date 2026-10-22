@@ -40,7 +40,7 @@ def login_view(request):
         correo = request.POST.get('correo', '')
         contrasena = request.POST.get('contrasena', '')
 
-        error_generico = 'Correo o contraseña incorrectos.'
+        error_generico = '"Usuario o contraseña incorrectos. Por favor, intente de nuevo.'
 
         try:
             usuario = Usuario.objects.get(

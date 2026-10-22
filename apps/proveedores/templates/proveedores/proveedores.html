@@ -108,7 +108,7 @@
               <span class="prov-dot {% if p.estado == 'activo' %}dot-active{% else %}dot-inactive{% endif %}"></span>
               <div class="prov-item-info">
                 <strong class="prov-item-nombre">{{ p.nombreEmpresa }}</strong>
-                <span class="prov-item-nit">NIT: {{ p.nit }}</span>
+                <span class="prov-item-nit">NIT: <span class="formato-nit">{{ p.nit }}</span></span>
               </div>
               <i class="bi bi-chevron-right prov-item-arrow"></i>
             </button>
@@ -186,7 +186,7 @@
                   </div>
                   <div class="info-block">
                     <label class="info-label"><i class="bi bi-building me-1"></i>NIT</label>
-                    <div class="info-value font-mono">{{ p.nit }}</div>
+                    <div class="info-value font-mono formato-nit">{{ p.nit }}</div>
                   </div>
                   <div class="info-block">
                     <label class="info-label"><i class="bi bi-envelope-fill me-1"></i>Correo electrónico</label>
@@ -197,8 +197,8 @@
                   <div class="info-block">
                     <label class="info-label"><i class="bi bi-telephone-fill me-1"></i>Teléfono</label>
                     <div class="info-value">
-                      <a href="tel:+57{{ p.telefono }}" class="info-link">+57 {{ p.telefono }}</a>
-                    </div>
+                      <a href="tel:+57{{ p.telefono }}" class="info-link">+57 <span class="formato-telefono">{{ p.telefono }}</span></a>
+                    </div>  
                   </div>
                   <div class="info-block info-block-full">
                     <label class="info-label"><i class="bi bi-geo-alt-fill me-1"></i>Dirección comercial</label>
@@ -270,7 +270,8 @@
               </div>
               <div class="col-md-6">
                 <label class="form-label">NIT</label>
-                <input type="text" name="nit" class="form-control" value="{{ p.nit }}" required>
+                <!-- Cambiado type="text" con la clase input-nit-mask -->
+                <input type="text" name="nit" class="form-control input-nit-mask" value="{{ p.nit }}" maxlength="15" required>
               </div>
               <div class="col-md-6">
                 <label class="form-label">Persona de contacto</label>
@@ -280,7 +281,8 @@
                 <label class="form-label">Teléfono</label>
                 <div class="input-group">
                   <span class="input-group-text text-muted fw-bold">+57</span>
-                  <input type="tel" name="telefono" class="form-control" value="{{ p.telefono }}" required>
+                  <!-- Cambiado type="tel" con la clase input-telefono-mask -->
+                  <input type="tel" name="telefono" class="form-control input-telefono-mask" value="{{ p.telefono }}" maxlength="12" required>
                 </div>
               </div>
               <div class="col-12">
@@ -370,11 +372,10 @@
                   NIT
                   <span class="text-muted fw-normal" style="font-size:.75rem;">(sin dígito de verificación)</span>
                 </label>
-                <input type="tel" name="nit" class="form-control"
-                       placeholder="900123456" pattern="[0-9]{9,10}" maxlength="10"
-                       title="9 a 10 dígitos numéricos" required>
+                <input type="text" id="nit" name="nit" class="form-control"
+                  placeholder="900.123.456-7" maxlength="15" required>
                 <div class="invalid-feedback">Ingresa entre 9 y 10 dígitos numéricos.</div>
-                <div class="form-text">9 dígitos principales del NIT en Colombia</div>
+                <div class="form-text">10 dígitos principales del NIT en Colombia</div>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Persona de contacto</label>
@@ -386,9 +387,8 @@
                 <label class="form-label fw-semibold">Teléfono de contacto</label>
                 <div class="input-group has-validation">
                   <span class="input-group-text fw-bold text-muted">+57</span>
-                  <input type="tel" name="telefono" class="form-control"
-                         placeholder="300 123 4567" pattern="[0-9]{7,10}" maxlength="10"
-                         title="10 dígitos celular o 7 dígitos fijo" required>
+                  <input type="tel" name="telefono" class="form-control input-telefono-mask"
+                  placeholder="300 123 4567" maxlength="12" required>
                   <div class="invalid-feedback">Ingresa un número celular (10 dígitos) o fijo (7 dígitos).</div>
                 </div>
               </div>
