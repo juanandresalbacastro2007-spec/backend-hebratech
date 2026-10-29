@@ -1,15 +1,23 @@
 """
 Comando: revisar_retrasos
 
-Recorre ordenes, produccion y asignacion_tareas buscando registros cuya
-fecha límite ya pasó y todavía no están completados/entregados/cancelados.
-Los marca como 'Retrasado' y dispara una notificación por correo.
+Recorre ordenes, ordenes_produccion y asignacion_tareas buscando registros
+cuya fecha límite ya pasó y todavía no están completados/entregados/cancelados.
+Los marca como retrasados y dispara una notificación por correo.
+
+Estados que usa cada tabla (según el esquema de la base de datos):
+    ordenes             -> 'Retrasado'
+    ordenes_produccion  -> 'Fuera de Plazo'
+    asignacion_tareas   -> 'Retrasada'
 
 Uso manual:
     python manage.py revisar_retrasos
 
-Uso programado (ejemplos):
-    # cron (Linux/XAMPP en servidor Linux) - cada hora:
+Uso programado:
+    # PythonAnywhere: pestaña "Tasks" -> tarea diaria con el comando
+    #   /home/TUUSUARIO/.virtualenvs/MIENV/bin/python /home/TUUSUARIO/RUTA/manage.py revisar_retrasos
+
+    # cron (Linux) - cada hora:
     0 * * * * cd /ruta/al/proyecto && /ruta/al/venv/bin/python manage.py revisar_retrasos
 
     # Windows Task Scheduler:
@@ -18,19 +26,20 @@ Uso programado (ejemplos):
     #   Directorio de inicio: C:\\ruta\\al\\proyecto
 """
 
-from datetime import date
-
 from django.core.management.base import BaseCommand
 from django.core.mail import send_mail
 from django.db import connection
 from django.conf import settings
+from django.utils import timezone
 
 
 class Command(BaseCommand):
-    help = "Detecta ordenes, produccion y asignacion_tareas retrasadas y notifica."
+    help = "Detecta ordenes, ordenes_produccion y asignacion_tareas retrasadas y notifica."
 
     def handle(self, *args, **options):
-        hoy = date.today()
+        # localdate() respeta TIME_ZONE (America/Bogota); date.today() usaría
+        # la hora del servidor, que en PythonAnywhere es UTC.
+        hoy = timezone.localdate()
         total_retrasos = 0
 
         total_retrasos += self._revisar_ordenes(hoy)
@@ -79,25 +88,25 @@ class Command(BaseCommand):
         return len(filas)
 
     # ------------------------------------------------------------------
-    # PRODUCCION
+    # PRODUCCION (tabla ordenes_produccion)
     # ------------------------------------------------------------------
     def _revisar_produccion(self, hoy):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT idProduccion, idOrden
-                FROM produccion
-                WHERE fechaEstimadaFin < %s
-                  AND estado NOT IN ('Completado', 'Detenido', 'Retrasado')
+                SELECT idOrdenProduccion, idOrden
+                FROM ordenes_produccion
+                WHERE fechaEntrega < %s
+                  AND estado NOT IN ('Completado', 'Cancelada', 'Fuera de Plazo')
                 """,
                 [hoy],
             )
             filas = cursor.fetchall()
 
-            for idProduccion, idOrden in filas:
+            for idOrdenProduccion, idOrden in filas:
                 cursor.execute(
-                    "UPDATE produccion SET estado = 'Retrasado' WHERE idProduccion = %s",
-                    [idProduccion],
+                    "UPDATE ordenes_produccion SET estado = 'Fuera de Plazo' WHERE idOrdenProduccion = %s",
+                    [idOrdenProduccion],
                 )
                 # Si la producción se retrasa, la orden asociada también.
                 if idOrden:
@@ -110,7 +119,7 @@ class Command(BaseCommand):
                     )
 
         if filas:
-            self.stdout.write(f"  - {len(filas)} proceso(s) de producción marcados como retrasados.")
+            self.stdout.write(f"  - {len(filas)} proceso(s) de producción marcados como fuera de plazo.")
         return len(filas)
 
     # ------------------------------------------------------------------
@@ -159,9 +168,12 @@ class Command(BaseCommand):
             send_mail(
                 subject=asunto,
                 message=cuerpo,
-                from_email=settings.EMAIL_HOST_USER,
+                # DEFAULT_FROM_EMAIL siempre tiene valor; EMAIL_HOST_USER puede estar vacío.
+                from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[destinatario],
-                fail_silently=True,
+                # Con fail_silently=True el except de abajo nunca se ejecutaba
+                # y los fallos de correo pasaban sin avisar.
+                fail_silently=False,
             )
         except Exception as e:
             self.stderr.write(self.style.WARNING(f"No se pudo notificar a {destinatario}: {e}"))

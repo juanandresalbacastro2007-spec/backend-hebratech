@@ -1,38 +1,61 @@
-# Entorno Virtual
+# ==========================================
+# Entornos Virtuales y Variables de Entorno
+# ==========================================
 venv/
+.venv/
 ENV/
 env/
-.env
 match_env/
+.env
 
-# Python (Archivos compilados y caché)
+# ==========================================
+# Python (Archivos compilados, caché y logs)
+# ==========================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+*.log
 
-# Bases de datos locales (por seguridad y peso)
+# ==========================================
+# Archivos de Medios, Estáticos y Bases de Datos
+# ==========================================
 *.sqlite3
 *.db
+db.sqlite3
+staticfiles/
+datos.json
+sql.txt
 
-# Carpeta de desarrollo de VS Code u otros editores
+# Subidas de usuario y archivos multimedia (HebraTech)
+hebratech/media/
+hebratech/media/facturas/
+
+# ==========================================
+# Configuraciones de Editores e IDEs
+# ==========================================
 .vscode/
 .idea/
 
-# Archivos del sistema operativo
+# ==========================================
+# Archivos del Sistema Operativo
+# ==========================================
 Thumbs.db
 desktop.ini
 .DS_Store
 
-# Archivos de distribución / paquetes
+# ==========================================
+# Empaquetado, Distribución y Builds
+# ==========================================
+build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
 lib/
-lib64/+
+lib64/
 parts/
 sdist/
 var/
@@ -40,5 +63,3 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-hebratech/media/facturas/
