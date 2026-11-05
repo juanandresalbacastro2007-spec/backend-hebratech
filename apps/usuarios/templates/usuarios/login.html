@@ -2,10 +2,16 @@
 {% load static %}
 {% load socialaccount %}
 
+{% block extra_head %}
+    <link rel="icon" type="image/jpeg" href="{% static 'img/fondo_logo.jpg' %}" />
+{% endblock %}
+
 {% block title %}HebraTech | Acceder{% endblock %}
 {% block logo_text %}Iniciar Sesión{% endblock %}
 
 {% block content %}
+
+<link rel="icon" type="image/png" href="{% static 'img/fondo_logo.jpg' %}" />
 
   <button class="theme-toggle theme-toggle-fixed" id="themeToggle" type="button" aria-label="Cambiar tema" title="Cambiar tema">
     <i class="fas fa-moon"></i>

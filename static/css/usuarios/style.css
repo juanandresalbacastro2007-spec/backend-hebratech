@@ -571,6 +571,23 @@ body {
   background-size: 40px 40px;
   pointer-events: none;
 }
+
+/* Estilos adaptativos para el dashboard en pantallas de celular */
+@media (max-width: 768px) {
+  .full-dash-wrap {
+    /* Permitir que el contenedor se escale correctamente sin romper el ancho */
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  /* Reducimos la escala del dashboard de forma proporcional en móviles */
+  .full-dash-body {
+    transform: scale(0.65); /* Puedes ajustar este valor (0.5 a 0.75) según qué tan pequeño lo quieras */
+    transform-origin: top left;
+    margin-bottom: -35%; /* Compensa el espacio en blanco inferior que deja la reducción de escala */
+    width: 153.8%; /* Compensación matemática inversa al scale (100 / 0.65) para que no pierda área útil */
+  }
+}
 .full-dash-wrap {
   background: var(--dash-bg);
   border: 1px solid var(--dash-border);
