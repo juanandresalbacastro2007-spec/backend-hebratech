@@ -61,97 +61,99 @@
     <h6><i class="bi bi-receipt me-2"></i> {% if estado_filtro %}Facturas — {{ estado_filtro }}{% else %}Todas las facturas{% endif %} ({{ facturas|length }}) </h6>
   </div>
   <div class="section-card-body p-0">
-    <table class="ht-table">
-      <thead>
-        <tr>
-          <th>Nº Factura</th>
-          <th>Cliente</th>
-          <th>Orden</th>
-          <th>Fecha emisión</th>
-          <th>Fecha pago</th>
-          <th>Total</th>
-          <th>Estado</th>
-          <th class="text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for factura in facturas %}
-        <tr>
-          <td><strong>{{ factura.numeroFactura }}</strong></td>
-          <td>{{ factura.idCliente.empresa|default:factura.idCliente.nombre|default:"—" }}</td>
-          <td>#{{ factura.idOrden_id }}</td>
-          <td>{{ factura.fechaEmision|date:"d/m/Y H:i" }}</td>
-          <td>
-            {% if factura.fechaPago %}
-              {{ factura.fechaPago|date:"d/m/Y H:i" }}
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>${{ factura.total|floatformat:0 }}</td>
-          <td>
-            {% if factura.estado == 'Pagada' %}
-              <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>Pagada</span>
-            {% else %}
-              <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>Pendiente de pago</span>
-            {% endif %}
-          </td>
-          <td class="text-center">
-            <div class="btn-group btn-group-sm" role="group">
-              <a href="{% url 'admin_factura_descargar' factura.idFactura %}" class="btn btn-outline-secondary" title="Descargar PDF">
-                <i class="bi bi-file-earmark-pdf"></i>
-              </a>
-              {% if factura.estado != 'Pagada' %}
-              <button type="button" class="btn btn-outline-success"
-                      data-bs-toggle="modal" data-bs-target="#modalPagarFactura{{ factura.idFactura }}"
-                      title="Marcar como pagada">
-                <i class="bi bi-cash-coin"></i>
-              </button>
+    <div class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+      <table class="ht-table" style="min-width: 750px;">
+        <thead>
+          <tr>
+            <th>Nº Factura</th>
+            <th>Cliente</th>
+            <th>Orden</th>
+            <th>Fecha emisión</th>
+            <th>Fecha pago</th>
+            <th>Total</th>
+            <th>Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for factura in facturas %}
+          <tr>
+            <td><strong>{{ factura.numeroFactura }}</strong></td>
+            <td>{{ factura.idCliente.empresa|default:factura.idCliente.nombre|default:"—" }}</td>
+            <td>#{{ factura.idOrden_id }}</td>
+            <td>{{ factura.fechaEmision|date:"d/m/Y H:i" }}</td>
+            <td>
+              {% if factura.fechaPago %}
+                {{ factura.fechaPago|date:"d/m/Y H:i" }}
+              {% else %}
+                <span class="text-muted">—</span>
               {% endif %}
-            </div>
-          </td>
-        </tr>
+            </td>
+            <td>${{ factura.total|floatformat:0 }}</td>
+            <td>
+              {% if factura.estado == 'Pagada' %}
+                <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>Pagada</span>
+              {% else %}
+                <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>Pendiente de pago</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm" role="group">
+                <a href="{% url 'admin_factura_descargar' factura.idFactura %}" class="btn btn-outline-secondary" title="Descargar PDF">
+                  <i class="bi bi-file-earmark-pdf"></i>
+                </a>
+                {% if factura.estado != 'Pagada' %}
+                <button type="button" class="btn btn-outline-success"
+                        data-bs-toggle="modal" data-bs-target="#modalPagarFactura{{ factura.idFactura }}"
+                        title="Marcar como pagada">
+                  <i class="bi bi-cash-coin"></i>
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
 
-        {% if factura.estado != 'Pagada' %}
-        <div class="modal fade" id="modalPagarFactura{{ factura.idFactura }}" tabindex="-1" aria-hidden="true">
-          <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content" style="border-radius: 14px;">
-              <div class="modal-body text-center p-4">
-                <i class="bi bi-cash-coin text-success mb-2 d-block" style="font-size: 2.5rem;"></i>
-                <h6 class="fw-bold mb-1">¿Marcar {{ factura.numeroFactura }} como pagada?</h6>
-                <p class="text-muted small mb-3">Se registrará la fecha y hora actuales como fecha de pago.</p>
-                <form method="POST" action="{% url 'admin_factura_marcar_pagada' factura.idFactura %}">
-                  {% csrf_token %}
-                  <div class="d-flex gap-2 justify-content-center">
-                    <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-sm btn-success px-3">Sí, marcar como pagada</button>
-                  </div>
-                </form>
+          {% if factura.estado != 'Pagada' %}
+          <div class="modal fade" id="modalPagarFactura{{ factura.idFactura }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+              <div class="modal-content" style="border-radius: 14px;">
+                <div class="modal-body text-center p-4">
+                  <i class="bi bi-cash-coin text-success mb-2 d-block" style="font-size: 2.5rem;"></i>
+                  <h6 class="fw-bold mb-1">¿Marcar {{ factura.numeroFactura }} como pagada?</h6>
+                  <p class="text-muted small mb-3">Se registrará la fecha y hora actuales como fecha de pago.</p>
+                  <form method="POST" action="{% url 'admin_factura_marcar_pagada' factura.idFactura %}">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2 justify-content-center">
+                      <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="submit" class="btn btn-sm btn-success px-3">Sí, marcar como pagada</button>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        {% endif %}
+          {% endif %}
 
-        {% empty %}
-        <tr>
-          <td colspan="8" class="text-center text-muted py-5">
-            <i class="bi bi-receipt fs-1 d-block mb-2 text-secondary opacity-50"></i>
-            {% if buscar_filtro or estado_filtro %}
-              <p class="mb-1 fw-medium">No se encontraron facturas con los filtros actuales.</p>
-              <div class="mt-3">
-                <a href="{% url 'admin_facturas' %}" class="btn btn-sm btn-outline-secondary">
-                  <i class="bi bi-x-circle me-1"></i> Restablecer filtros
-                </a>
-              </div>
-            {% else %}
-              <p class="mb-0">No hay facturas registradas en el sistema.</p>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-5">
+              <i class="bi bi-receipt fs-1 d-block mb-2 text-secondary opacity-50"></i>
+              {% if buscar_filtro or estado_filtro %}
+                <p class="mb-1 fw-medium">No se encontraron facturas con los filtros actuales.</p>
+                <div class="mt-3">
+                  <a href="{% url 'admin_facturas' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i> Restablecer filtros
+                  </a>
+                </div>
+              {% else %}
+                <p class="mb-0">No hay facturas registradas en el sistema.</p>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endblock %}

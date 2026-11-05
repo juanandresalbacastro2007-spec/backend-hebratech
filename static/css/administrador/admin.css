@@ -1688,3 +1688,18 @@ a:hover .act-link { color: var(--primary); text-decoration: underline; }
   .modal-body { padding: 1rem; }
   .ht-table thead th, .ht-table tbody td { padding: .6rem .7rem; }
 }
+/* ══ FIX MÓVIL: tablas deslizables y barra superior ══ */
+@media (max-width: 992px) {
+  .section-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .section-card .ht-table { min-width: 720px; }
+  .section-card .ht-table thead th,
+  .section-card .ht-table tbody td { white-space: nowrap; }
+}
+
+@media (max-width: 768px) {
+  .topbar .input-group { max-width: none !important; width: 100% !important; }
+  .topbar .form-select { width: 100% !important; }
+  .topbar .ms-auto.d-flex { flex-wrap: wrap; width: 100%; }
+  .topbar .ms-auto.d-flex > form { width: 100%; }
+  .topbar .ms-auto.d-flex > .btn { width: 100%; justify-content: center; }
+}
