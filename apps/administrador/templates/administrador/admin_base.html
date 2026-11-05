@@ -11,6 +11,11 @@
     (function () {
       var t = localStorage.getItem('ht-theme') || 'light';
       document.documentElement.setAttribute('data-bs-theme', t);
+      try {
+        if (window.innerWidth > 768 && localStorage.getItem('ht-sidebar') === 'collapsed') {
+          document.documentElement.classList.add('sidebar-collapsed');
+        }
+      } catch (e) {}
     })();
   </script>
 
@@ -26,6 +31,9 @@
   {% block extra_css %}{% endblock %}
 </head>
 <body data-user-id="{{ usuario.pk }}">
+
+  <!-- Capa oscura (solo móvil) -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
    <!-- ══ SIDEBAR ══ -->
   <aside class="sidebar" id="sidebar">
@@ -99,8 +107,8 @@
   <!-- ══ MAIN ══ -->
   <div class="main-content">
     <header class="topbar">
-      <button type="button" class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Abrir menú">
-        <i class="bi bi-list"></i>
+      <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Mostrar u ocultar menú" aria-controls="sidebar" aria-expanded="true" title="Mostrar / ocultar menú">
+        <i class="bi bi-layout-sidebar"></i>
       </button>
       <div>
         <h5 class="topbar-title">
@@ -257,14 +265,57 @@
   </script>
 
   <script>
-function toggleSidebar() {
-  // Busca por clase .sidebar, etiqueta aside o clase .app-sidebar
-  const sidebar = document.querySelector('.sidebar, aside, .app-sidebar');
-  
-  if (sidebar) {
-    sidebar.classList.toggle('open');
-  }
-}
-</script>
+  (function () {
+    var root     = document.documentElement;
+    var sidebar  = document.getElementById('sidebar');
+    var backdrop = document.getElementById('sidebarBackdrop');
+    var btn      = document.getElementById('sidebarToggle');
+    var mobile   = window.matchMedia('(max-width: 768px)');
+    if (!sidebar || !btn) return;
+
+    function setAria(open) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+
+    function closeMobile() {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('show');
+      document.body.classList.remove('sidebar-lock');
+      if (mobile.matches) setAria(false);
+    }
+
+    function toggleSidebar() {
+      if (mobile.matches) {                       // MÓVIL: menú deslizable
+        var open = sidebar.classList.toggle('open');
+        backdrop.classList.toggle('show', open);
+        document.body.classList.toggle('sidebar-lock', open);
+        setAria(open);
+      } else {                                    // ESCRITORIO: ocultar / mostrar y recordar
+        var collapsed = root.classList.toggle('sidebar-collapsed');
+        try { localStorage.setItem('ht-sidebar', collapsed ? 'collapsed' : 'open'); } catch (e) {}
+        setAria(!collapsed);
+      }
+    }
+    window.toggleSidebar = toggleSidebar;
+
+    btn.addEventListener('click', toggleSidebar);
+    backdrop.addEventListener('click', closeMobile);
+    sidebar.addEventListener('click', function (e) {
+      if (mobile.matches && e.target.closest('a.nav-item')) closeMobile();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMobile(); });
+
+    function sync() {
+      if (mobile.matches) { root.classList.remove('sidebar-collapsed'); closeMobile(); }
+      else {
+        closeMobile();
+        var c = false;
+        try { c = localStorage.getItem('ht-sidebar') === 'collapsed'; } catch (e) {}
+        root.classList.toggle('sidebar-collapsed', c);
+        setAria(!c);
+      }
+    }
+    (mobile.addEventListener ? mobile.addEventListener('change', sync) : mobile.addListener(sync));
+    sync();
+  })();
+  </script>
 </body>
 </html>

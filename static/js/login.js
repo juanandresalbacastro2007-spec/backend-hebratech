@@ -17,27 +17,4 @@ function switchAuth() {
       input.type = input.type === 'password' ? 'text' : 'password';
     }
 
-    // ── Modo oscuro ──
-    (function () {
-      const root = document.documentElement;
-      const toggleBtn = document.getElementById('themeToggle');
-      const icon = toggleBtn ? toggleBtn.querySelector('i') : null;
-
-      function applyTheme(theme) {
-        root.setAttribute('data-bs-theme', theme);
-        if (icon) {
-          icon.classList.toggle('fa-moon', theme === 'light');
-          icon.classList.toggle('fa-sun', theme === 'dark');
-        }
-      }
-
-      applyTheme(localStorage.getItem('ht-theme') || 'light');
-
-      if (toggleBtn) {
-        toggleBtn.addEventListener('click', function () {
-          const next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-          localStorage.setItem('ht-theme', next);
-          applyTheme(next);
-        });
-      }
-    })();
+// El modo oscuro lo maneja js/theme.js (cargado globalmente desde base_auth.html).

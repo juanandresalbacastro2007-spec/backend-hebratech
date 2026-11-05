@@ -1545,3 +1545,146 @@ a:hover .act-link { color: var(--primary); text-decoration: underline; }
   50% { transform: rotate(10deg); }
 }
 @media (prefers-reduced-motion: reduce) { .ht-welcome-wave { animation: none; } }
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE GLOBAL + SIDEBAR COLAPSABLE
+   (aplica a todos los módulos: usuarios, órdenes, cotizaciones,
+    facturas, tareas, incidencias, inventario, proveedores…)
+   ══════════════════════════════════════════════════════════ */
+
+/* ── CLAVE del bug: el body es flex, y sin min-width:0 el contenido
+      se ensancha hasta el ancho de la tabla y se corta en móvil ── */
+.main-content { min-width: 0; max-width: 100%; transition: margin-left .25s ease; }
+.content-wrap { min-width: 0; max-width: 100%; }
+
+/* ── Botón de la barra lateral (icono tipo "panel", siempre visible) ── */
+.sidebar-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  padding: 0;
+  font-size: 1.25rem;
+  border-radius: 9px;
+  transition: background .15s, color .15s;
+}
+.sidebar-toggle:hover { background: var(--bg-light); color: var(--primary-dark); }
+.sidebar-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* ── Escritorio: la barra se puede ocultar y se recuerda la elección ── */
+@media (min-width: 769px) {
+  html.sidebar-collapsed .sidebar { transform: translateX(-100%); }
+  html.sidebar-collapsed .main-content { margin-left: 0; }
+}
+
+/* ── Móvil: capa oscura detrás del menú ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 99998;
+}
+@media (max-width: 768px) {
+  .sidebar-backdrop.show { display: block; }
+  body.sidebar-lock { overflow: hidden; }
+}
+
+/* ── Tablas / cards: scroll en ambos ejes, con barra SIEMPRE visible ──
+      El contenedor tiene altura máxima (no la altura de toda la tabla), así la
+      barra horizontal queda a la vista sin tener que bajar hasta el final. ── */
+.table-responsive,
+.section-card-body:not(:has(.table-responsive)):has(> table) {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: auto;                              /* Firefox */
+  scrollbar-color: var(--primary) rgba(165,201,202,.25);
+}
+/* Si ya hay un .table-responsive dentro, el scroll lo maneja ese (evita doble barra) */
+.section-card-body:has(.table-responsive) { overflow: visible; }
+
+/* Chrome / Safari / Android: barra gruesa y visible (también en iOS) */
+.table-responsive::-webkit-scrollbar,
+.section-card-body:has(> table)::-webkit-scrollbar,
+#inventarioTabs::-webkit-scrollbar { height: 12px; width: 12px; }
+.table-responsive::-webkit-scrollbar-track,
+.section-card-body:has(> table)::-webkit-scrollbar-track,
+#inventarioTabs::-webkit-scrollbar-track { background: rgba(165,201,202,.25); border-radius: 8px; }
+.table-responsive::-webkit-scrollbar-thumb,
+.section-card-body:has(> table)::-webkit-scrollbar-thumb,
+#inventarioTabs::-webkit-scrollbar-thumb {
+  background: var(--primary); border-radius: 8px;
+  border: 2px solid transparent; background-clip: padding-box;
+}
+
+@media (max-width: 992px) {
+  .ht-table { min-width: 720px; }
+  .ht-table thead th,
+  .ht-table tbody td { white-space: nowrap; }
+  .section-card-header { flex-wrap: wrap; gap: .5rem; }
+
+  /* Altura máxima = pantalla; la tabla desliza arriba/abajo y a los lados */
+  .table-responsive,
+  .section-card-body:not(:has(.table-responsive)):has(> table) {
+    max-height: calc(100dvh - 200px);
+  }
+  /* Encabezado fijo mientras se desliza verticalmente */
+  .ht-table thead th { position: sticky; top: 0; z-index: 2; }
+
+  /* Estado vacío ("No hay registros…"): centrado en la pantalla, no en los 720px */
+  .ht-table td[colspan] { text-align: left; white-space: normal; }
+  .ht-table td[colspan] > * {
+    position: sticky; left: 0;
+    width: calc(100vw - 3.5rem); max-width: 100%;
+    margin-left: auto; margin-right: auto;
+    text-align: center;
+  }
+}
+
+/* ── Barra superior: título + botones/filtros sin desbordar ── */
+@media (max-width: 768px) {
+  .topbar { flex-wrap: wrap; padding: .7rem 1rem; gap: .6rem; }
+  .topbar > div:not(.ms-auto) { min-width: 0; flex: 1 1 0; }
+  .topbar-title, .topbar-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Orden: botón menú · título · campana  /  filtros y botones en 2ª fila */
+  .sidebar-toggle { order: 0; }
+  .topbar > div:not(.ms-auto) { order: 1; }
+  .topbar > .ht-topbar-right {
+    order: 2; width: auto !important; margin-left: auto !important; flex-wrap: nowrap;
+  }
+  .topbar > .ms-auto:not(.ht-topbar-right) {
+    order: 3; width: 100%; margin-left: 0 !important; flex-wrap: wrap;
+  }
+  .topbar form { display: flex; flex-wrap: wrap; width: 100%; gap: .5rem; }
+  .topbar .input-group,
+  .topbar .form-select,
+  .topbar form > .form-select {
+    width: 100% !important;
+    max-width: none !important;
+    flex: 1 1 100%;
+  }
+  .topbar > .ms-auto:not(.ht-topbar-right) > .btn,
+  .topbar > .ms-auto:not(.ht-topbar-right) > a { flex: 1 1 auto; justify-content: center; }
+}
+
+/* ── Pestañas (inventario, etc.): deslizables en vez de apilarse ── */
+#inventarioTabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+#inventarioTabs .nav-item { flex-shrink: 0; }
+#inventarioTabs .nav-link { white-space: nowrap; }
+
+/* ── Móvil pequeño ── */
+@media (max-width: 576px) {
+  .content-wrap { padding: .85rem .65rem; }
+  .section-card-header h6 { font-size: .88rem; }
+  .modal-dialog { margin: .5rem; }
+  .modal-body { padding: 1rem; }
+  .ht-table thead th, .ht-table tbody td { padding: .6rem .7rem; }
+}

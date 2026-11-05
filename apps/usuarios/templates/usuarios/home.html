@@ -35,7 +35,15 @@
           <span>Hebra<strong>Tech</strong></span>
         </a>
 
-        <button class="navbar-toggler ht-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Menú"><i class="fas fa-bars"></i></button>
+        <!-- Acciones siempre visibles (también en móvil): Iniciar sesión · tema · menú -->
+        <div class="ht-nav-actions ms-auto d-flex align-items-center gap-2 order-lg-last">
+          <a href="{% url 'login' %}" class="btn-ht-login" aria-label="Iniciar sesión">
+            <i class="fas fa-right-to-bracket"></i>
+            <span>Iniciar sesión</span>
+          </a>
+          <button class="theme-toggle" id="themeToggle" type="button" aria-label="Cambiar tema" title="Cambiar tema"><i class="fas fa-moon"></i></button>
+          <button class="navbar-toggler ht-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Menú"><i class="fas fa-bars"></i></button>
+        </div>
 
         <div class="collapse navbar-collapse" id="mainNav">
           <ul class="navbar-nav mx-auto gap-1">
@@ -49,7 +57,7 @@
               <a class="ht-nav-link" href="#como-funciona">Cómo funciona</a>
             </li>
             <li class="nav-item">
-              <a class="ht-nav-link" href="#mision-vision">Misión & Visión</a>
+              <a class="ht-nav-link" href="#mision-vision">Misión &amp; Visión</a>
             </li>
             <li class="nav-item">
               <a class="ht-nav-link" href="#equipo">Equipo</a>
@@ -58,13 +66,7 @@
               <a class="ht-nav-link" href="#contacto">Contáctanos</a>
             </li>
           </ul>
-          <a href="{% url 'login' %}" class="btn-ht-login">
-            <i class="fas fa-right-to-bracket"></i>
-            <span>Iniciar Sesión</span>
-          </a>
         </div>
-
-        <button class="theme-toggle ms-2" id="themeToggle" type="button" aria-label="Cambiar tema" title="Cambiar tema"><i class="fas fa-moon"></i></button>
       </div>
     </nav>
 
