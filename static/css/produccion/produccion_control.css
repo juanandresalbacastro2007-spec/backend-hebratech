@@ -425,3 +425,134 @@
   border-color: var(--pc-accent) !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35) !important;
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — Módulo de Producción (móvil / tablet)
+   ══════════════════════════════════════════════════════════════ */
+
+:root { --pc-scroll-thumb: var(--pc-primary); }
+[data-bs-theme="dark"] { --pc-scroll-thumb: var(--pc-accent); }
+
+.produccion-page { min-width: 0; max-width: 100%; }
+.table-card { max-width: 100%; }
+
+/* ── Barras de scroll visibles (también en iPhone) ── */
+.tabs, .filtros-rapidos, .prod-modal-body, .detalle-body, .detalle-tabs {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pc-scroll-thumb) rgba(165, 201, 202, .25);
+}
+.tabs::-webkit-scrollbar, .filtros-rapidos::-webkit-scrollbar, .detalle-tabs::-webkit-scrollbar { height: 8px; }
+.prod-modal-body::-webkit-scrollbar, .detalle-body::-webkit-scrollbar { width: 8px; }
+.tabs::-webkit-scrollbar-track, .filtros-rapidos::-webkit-scrollbar-track, .detalle-tabs::-webkit-scrollbar-track,
+.prod-modal-body::-webkit-scrollbar-track, .detalle-body::-webkit-scrollbar-track { background: rgba(165, 201, 202, .25); border-radius: 8px; }
+.tabs::-webkit-scrollbar-thumb, .filtros-rapidos::-webkit-scrollbar-thumb, .detalle-tabs::-webkit-scrollbar-thumb,
+.prod-modal-body::-webkit-scrollbar-thumb, .detalle-body::-webkit-scrollbar-thumb { background: var(--pc-scroll-thumb); border-radius: 8px; }
+
+/* ── Barra de herramientas: título + botón + buscador sin cortarse ── */
+.table-toolbar { flex-wrap: wrap; }
+.table-toolbar h3 { flex: 1 1 auto; min-width: 0; }
+.toolbar-right { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.search-wrap { flex: 1 1 180px; min-width: 0; }
+.search-wrap input { width: 100%; }
+.filter-select { max-width: 100%; }
+
+/* ── Pestañas deslizables ── */
+.tabs { overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; }
+.tab { white-space: nowrap; flex-shrink: 0; }
+
+/* ── Tarjetas sin desbordar en pantallas angostas ── */
+.ordenes-grid   { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.operarios-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.orden-card-fechas { flex-wrap: wrap; gap: 4px 12px; }
+
+/* ── Calendario (FullCalendar) ── */
+#calendar { max-width: 100%; }
+.fc { --fc-border-color: var(--pc-border); }
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number,
+.fc .fc-list-day-text,
+.fc .fc-list-day-side-text,
+.fc .fc-list-event-title a { color: var(--pc-text); text-decoration: none; }
+.fc .fc-toolbar-title { font-family: var(--ff-display); color: var(--pc-text); }
+.fc .fc-button-primary { background: var(--pc-primary); border-color: var(--pc-primary); }
+.fc .fc-button-primary:hover { background: var(--pc-primary-hover); border-color: var(--pc-primary-hover); }
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active { background: var(--pc-primary-hover); border-color: var(--pc-primary-hover); }
+.fc .fc-button-primary:focus { box-shadow: 0 0 0 3px rgba(165, 201, 202, .45); }
+
+[data-bs-theme="dark"] .fc {
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: #1b2b30;
+  --fc-list-event-hover-bg-color: #2a4047;
+  --fc-today-bg-color: rgba(165, 201, 202, .12);
+  color: var(--pc-text);
+}
+
+/* ═════════ TABLET Y MÓVIL (≤ 768px) ═════════ */
+@media (max-width: 768px) {
+  .table-toolbar { flex-direction: column; align-items: stretch; padding: 14px; gap: 10px; }
+  .toolbar-right { width: 100%; flex-direction: column; align-items: stretch; gap: 8px; }
+  .toolbar-right .btn,
+  .toolbar-right .search-wrap,
+  .toolbar-right .filter-select { width: 100%; flex: none; }
+  .toolbar-right .btn { justify-content: center; }
+  .search-wrap input { padding-top: 10px; padding-bottom: 10px; font-size: 14px; }   /* evita el zoom de iOS al enfocar */
+  .filter-select { padding-top: 10px; padding-bottom: 10px; }
+
+  .tab { padding: 10px 14px; font-size: 13px; }
+
+  /* Calendario: barra de herramientas en varias filas */
+  #calendar { padding: 8px !important; }
+  .fc .fc-toolbar { flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  .fc .fc-toolbar-title { font-size: 1.05rem; }
+  .fc .fc-button { padding: .35em .6em; font-size: .8rem; }
+  .fc .fc-footer-toolbar { margin-top: 10px; justify-content: center; }
+  .fc .fc-list-table td { white-space: normal; }
+}
+
+/* ═════════ MODALES: el cuerpo se desliza, cabecera y botones quedan fijos ═════════ */
+@media (max-width: 768px), (max-height: 720px) {
+  .prod-modal-backdrop { padding: 10px 8px; align-items: center; }
+  .prod-modal {
+    width: 100%; max-width: 560px;
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+    display: flex; flex-direction: column;
+    overflow: hidden; margin: 0 auto;
+  }
+  .prod-modal.prod-modal-grande { width: 100%; max-width: 720px; }
+  .prod-modal-header, .prod-modal-footer, .detalle-progreso-wrap, .detalle-tabs { flex-shrink: 0; }
+  .prod-modal-body { overflow-y: auto; flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; }
+  .detalle-body    { overflow-y: auto; flex: 1 1 auto; min-height: 0; max-height: none; -webkit-overflow-scrolling: touch; }
+  .detalle-tabs    { overflow-x: auto; flex-wrap: nowrap; }
+  .detalle-tab     { white-space: nowrap; }
+}
+
+/* ═════════ MÓVIL (≤ 576px) ═════════ */
+@media (max-width: 576px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .kpi-card { flex-direction: column; justify-content: center; gap: 2px; padding: 12px 8px; }
+  .kpi-valor { font-size: 22px; }
+  .kpi-label { font-size: 11px; }
+
+  .progreso-general-header { flex-wrap: wrap; gap: 4px; }
+
+  /* Chips de filtro: una sola fila que se desliza */
+  .filtros-rapidos { flex-wrap: nowrap; overflow-x: auto; padding: 12px 14px 10px; }
+  .chip-filtro { white-space: nowrap; flex-shrink: 0; }
+
+  .ordenes-grid, .operarios-grid { padding: 12px; gap: 12px; }
+
+  .prod-modal-header { padding: 14px 16px; }
+  .prod-modal-header h3 { font-size: 15px; }
+  .prod-modal-body { padding: 16px; }
+  .prod-modal-footer { padding: 12px 16px; }
+  .prod-modal-footer .btn { flex: 1; justify-content: center; }
+  .form-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+  .detalle-progreso-wrap { padding: 0 16px 12px; }
+  .detalle-tabs { padding: 0 16px; }
+  .detalle-body { padding: 14px 16px; }
+  .resumen-grid { grid-template-columns: 1fr; gap: 10px; }
+  .historial-item { flex-direction: column; gap: 2px; }
+}

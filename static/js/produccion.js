@@ -11,10 +11,6 @@ let ORDENES_CLIENTE_CACHE = [];
 let FILTRO_ACTUAL = '';
 let calendar = null;
 
-// Cuando se edita una orden antigua cuya fecha de entrega ya pasó,
-// guardamos aquí el valor original para:
-//   1) No borrarlo silenciosamente al abrir el modal.
-//   2) Permitir guardar sin cambios aunque la fecha sea pasada.
 let _entregaHistoricaOriginal = null;
 
 // ── Utilidades ─────────────────────────────
@@ -211,6 +207,7 @@ function switchTab(nombre, el) {
       iniciarCalendario();
     } else {
       calendar.render();
+      calendar.updateSize();
     }
   }
 }
@@ -762,6 +759,17 @@ function cerrarModalDetalle() {
 // ============================================================
 // CALENDARIO (con español)
 // ============================================================
+// Calendario adaptable: en móvil se muestra la vista de lista (legible), en escritorio la cuadrícula
+let calendarEsMovil = null;
+function esMovil() { return window.matchMedia('(max-width: 768px)').matches; }
+function opcionesToolbarCalendario(movil) {
+  return movil
+    ? { header: { left: 'prev,next', center: 'title', right: 'today' },
+        footer: { center: 'listWeek,dayGridMonth' } }
+    : { header: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+        footer: false };
+}
+
 function iniciarCalendario() {
   const calendarEl = document.getElementById('calendar');
   if (!calendarEl) return;
@@ -770,19 +778,33 @@ function iniciarCalendario() {
     calendar = null;
   }
 
+  calendarEsMovil = esMovil();
+  const tb = opcionesToolbarCalendario(calendarEsMovil);
+
   calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
+    initialView: calendarEsMovil ? 'listWeek' : 'dayGridMonth',
     locale: 'es',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay'
-    },
+    headerToolbar: tb.header,
+    footerToolbar: tb.footer,
     buttonText: {
       today: 'Hoy',
       month: 'Mes',
       week: 'Semana',
-      day: 'Día'
+      day: 'Día',
+      list: 'Lista'
+    },
+    noEventsText: 'No hay órdenes en este periodo',
+    dayMaxEvents: true,
+    longPressDelay: 400,
+    eventLongPressDelay: 400,
+    windowResize: function () {
+      const movil = esMovil();
+      if (movil === calendarEsMovil) return;
+      calendarEsMovil = movil;
+      const t = opcionesToolbarCalendario(movil);
+      calendar.setOption('headerToolbar', t.header);
+      calendar.setOption('footerToolbar', t.footer);
+      calendar.changeView(movil ? 'listWeek' : 'dayGridMonth');
     },
     events: function(info, successCallback, failureCallback) {
       fetch(`${API_BASE}/eventos-calendario/`)
