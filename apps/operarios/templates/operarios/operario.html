@@ -17,57 +17,115 @@
         document.documentElement.setAttribute('data-bs-theme', t)
       })()
     </script>
+
+    <!-- Reglas CSS optimizadas para movil y pantallas grandes -->
+    <style>
+      .ht-header-wrapper {
+        background: linear-gradient(135deg, #395b64 0%, #2c444e 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 10px 14px !important;
+      }
+      .ht-navbar-top, .ht-controls-bar {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .ht-brand .brand-title { color: #ffffff !important; font-size: 1.05rem; }
+      .ht-brand .brand-sub { color: #a5c9ca !important; font-size: 0.72rem; }
+      
+      .ht-btn-custom {
+        background: rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+      }
+      .ht-btn-custom:hover {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+      }
+      .ht-icon-link {
+        color: rgba(255, 255, 255, 0.9) !important;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        transition: all 0.2s;
+        flex-shrink: 0;
+      }
+      .ht-icon-link:hover {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff !important;
+      }
+      .ht-icon-link.logout:hover {
+        background: rgba(239, 68, 68, 0.3) !important;
+        color: #f87171 !important;
+        border-color: rgba(239, 68, 68, 0.4);
+      }
+      .ht-input-clean {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border: none !important;
+        color: #1e293b !important;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        padding: 4px 8px;
+        height: 32px;
+      }
+    </style>
   </head>
 
   <body>
     <!--      ═══════════════════════════════════════════════════
-    NAVBAR SUPERIOR (sin botón de tema, solo reloj)
+    HEADER UNIFICADO (FILA SUPERIOR LIMPIA CON PERFIL/SALIR)
   ════════════════════════════════════════════════════      -->
-    <nav class="ht-navbar-top">
-      <div class="ht-navbar-inner">
-        <a href="{% url 'operarios:tablero' %}" class="ht-brand">
+    <header class="ht-header-wrapper">
+      
+      <!-- FILA 1 (ARRIBA): Logo, Reloj, Perfil y Salir (Si o si arriba) -->
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-2 border-bottom border-white border-opacity-10">
+        <!-- Logo y título -->
+        <a href="{% url 'operarios:tablero' %}" class="ht-brand text-decoration-none d-flex align-items-center gap-2">
           <div class="brand-icon">
-            <img src="{% static 'img/logo.png' %}" alt="HebraTech" />
+            <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="max-height: 32px;" />
           </div>
           <div class="d-flex flex-column">
-            <span class="brand-title">HebraTech</span>
+            <span class="brand-title fw-bold" style="line-height:1.1;">HebraTech</span>
             <span class="brand-sub">Operario</span>
           </div>
         </a>
 
-        <div class="ms-auto d-flex align-items-center gap-3">
-          <div id="topClock" class="top-clock px-3 py-2 rounded bg-white border shadow-sm fw-semibold d-flex align-items-center gap-2">
-            <i class="bi bi-clock text-primary"></i>
-            <span id="clockText">--:--:--</span>
-          </div>
+        <!-- Reloj central -->
+        <div id="topClock" class="d-none d-lg-flex align-items-center px-2 py-1 rounded bg-white text-dark shadow-sm fw-semibold gap-1" style="font-size: 0.8rem;">
+          <i class="bi bi-clock text-primary"></i>
+          <span id="clockText">--:--:--</span>
         </div>
 
-        <div class="ht-nav-actions">
-          <!-- Generar incidencia -->
-          <button class="ht-nav-btn" id="btnGenerateReport">
-            <i class="bi bi-plus-lg"></i>
-            <span class="d-none d-sm-inline">Generar Incidencia</span>
-          </button>
-
-          <!-- Ver incidencias -->
-          <button class="ht-nav-btn" type="button" id="btnVerIncidenciasGeneradas" title="Ver incidencias generadas">
-            <i class="bi bi-journal-text"></i>
-            <span class="d-none d-xl-inline">Ver incidencias generadas</span>
-          </button>
-
+        <!-- Acciones principales de Usuario y Cierre de Sesión -->
+        <div class="d-flex align-items-center gap-2 ms-auto">
+          
           <!-- Notificaciones -->
           <div class="dropdown">
-            <button class="ht-nav-btn position-relative" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Notificaciones">
+            <button class="ht-btn-custom position-relative px-2 py-1" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Notificaciones">
               <i class="bi bi-bell-fill"></i>
               <span class="ht-badge-count" id="navNotifBadge">0</span>
             </button>
-
             <div class="dropdown-menu dropdown-menu-end ht-dropdown-panel ht-dropdown-panel--wide">
               <div class="ht-dropdown-header">
                 <i class="bi bi-bell me-2"></i>
                 <span>Notificaciones</span>
               </div>
-
               <div id="navNotifContainer">
                 <div class="ht-empty-state">
                   <i class="bi bi-bell-slash"></i>
@@ -77,14 +135,14 @@
             </div>
           </div>
 
-          <div class="ht-nav-divider d-none d-md-block"></div>
+          <div class="vr bg-white opacity-25" style="height:20px;"></div>
 
-          <!-- Información de usuario -->
-          <div class="ht-profile-info d-flex align-items-center gap-2">
+          <!-- Perfil de usuario (En móvil, hacer clic en la foto/CM lleva a Editar Perfil) -->
+          <a href="{% url 'operarios:perfil' %}" class="d-flex align-items-center gap-2 text-decoration-none" title="Editar Perfil">
             {% if operario.idUsuario.fotoPerfil %}
-              <img src="{{ operario.idUsuario.fotoPerfil.url }}" class="ht-avatar" alt="Avatar" style="object-fit:cover;" />
+              <img src="{{ operario.idUsuario.fotoPerfil.url }}" class="rounded-circle border border-white" alt="Avatar" style="object-fit:cover; width:32px; height:32px;" />
             {% else %}
-              <div class="ht-avatar">
+              <div class="rounded-circle bg-white text-dark fw-bold shadow-sm" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:0.75rem;">
                 {% if operario %}
                   {{ operario.idUsuario.nombre|first|upper }}{{ operario.idUsuario.apellido|first|upper }}
                 {% else %}
@@ -93,30 +151,50 @@
               </div>
             {% endif %}
 
-            <span class="d-none d-md-inline ht-profile-name-pill">
+            <span class="d-none d-md-inline text-white fw-medium" style="font-size: 0.8rem;">
               {% if operario %}
-                {{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}
+                {{ operario.idUsuario.nombre }}
               {% else %}
                 Operario
               {% endif %}
             </span>
-          </div>
+          </a>
 
-          <!-- Editar perfil (Lápiz) -->
-          <a href="{% url 'operarios:perfil' %}" class="ht-profile-action" title="Editar perfil"><i class="bi bi-pencil-square"></i></a>
+          <!-- Botón de editar perfil (Solo visible en pantallas medianas/grandes) -->
+          <a href="{% url 'operarios:perfil' %}" class="ht-icon-link d-none d-md-inline-flex" title="Editar perfil">
+            <i class="bi bi-pencil-square"></i>
+          </a>
 
-          <!-- Cerrar sesión (Salir Blanco -> Rojo) -->
-          <a href="{% url 'logout' %}" class="ht-profile-action ht-logout-action" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></a>
+          <!-- Botón de Salir (SIEMPRE ARRIBA Y VISIBLE) -->
+          <a href="{% url 'logout' %}" class="ht-icon-link logout ms-1" title="Cerrar sesión">
+            <i class="bi bi-box-arrow-right"></i>
+          </a>
         </div>
       </div>
-    </nav>
 
-    <!--      ═══════════════════════════════════════════════════
-       BARRA DE CONTROLES Y FILTROS
-  ════════════════════════════════════════════════════      -->
-    <div class="ht-controls-bar">
-      <div class="ht-controls-inner">
-        <div class="ht-kpis-row d-none d-lg-flex">
+      <!-- FILA 2 (ABAJO): Acciones secundarias, Buscador opcional y Filtros -->
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-2">
+        <!-- Botones de Incidencia y Reportes -->
+        <div class="d-flex align-items-center gap-2">
+          <button class="ht-btn-custom" id="btnGenerateReport" title="Generar Incidencia">
+            <i class="bi bi-plus-lg"></i>
+            <span class="d-none d-sm-inline">Incidencia</span>
+          </button>
+
+          <button class="ht-btn-custom d-none d-md-inline-flex" type="button" id="btnVerIncidenciasGeneradas" title="Ver incidencias generadas">
+            <i class="bi bi-journal-text"></i>
+            <span>Reportes</span>
+          </button>
+
+          <button class="ht-btn-custom" id="btnVerHistorial" title="Ver historial">
+            <i class="bi bi-archive"></i>
+            <span class="d-none d-sm-inline">Historial</span>
+            <span class="ht-badge-count ms-1" id="historialBadgeCount">0</span>
+          </button>
+        </div>
+
+        <!-- KPIs informativos (Ocultos en pantalla reducida) -->
+        <div class="ht-kpis-row d-none d-xl-flex align-items-center gap-2">
           <button class="ht-kpi-chip ht-kpi-chip--pending" id="kpiPending" title="Ir a Pendientes">
             <span class="ht-kpi-dot"></span>
             <span class="ht-kpi-label">Pendientes</span>
@@ -139,25 +217,24 @@
           </button>
         </div>
 
-        <div class="ht-controls-right">
-          <button class="ht-btn-toggle" id="btnVerHistorial" title="Ver historial de tareas completadas">
-            <i class="bi bi-archive"></i>
-            <span>Ver historial</span>
-            <span class="ht-badge-count" id="historialBadgeCount" style="margin-left:4px;">0</span>
-          </button>
-          <div class="ht-search-wrap">
-            <i class="bi bi-search ht-search-icon"></i>
-            <input type="text" id="searchInput" class="ht-search-input" placeholder="Buscar tarea…" />
+        <!-- Filtros y Buscador (Buscador oculto en modo muy pequeño para ahorrar espacio) -->
+        <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+          <!-- Buscador Opcional (Se oculta en modo muy pequeño 'd-none d-sm-block') -->
+          <div class="position-relative d-none d-sm-block" style="width: 140px;">
+            <input type="text" id="searchInput" class="form-control form-control-sm ht-input-clean ps-4" placeholder="Buscar…" />
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-2 text-muted" style="font-size:0.75rem;"></i>
           </div>
-          <select id="filterPrio" class="ht-filter-select">
-            <option value="">Estados de las tareas</option>
+
+          <select id="filterPrio" class="form-select form-select-sm ht-input-clean" style="width: auto;">
+            <option value="">Estados</option>
             <option value="Urgente">🔴 Urgente</option>
             <option value="Alta">🟠 Alta</option>
             <option value="Media">⚪ Media</option>
             <option value="Normal">🟢 Normal</option>
           </select>
-          <select id="filterProcess" class="ht-filter-select">
-            <option value="">Tipo de tarea</option>
+
+          <select id="filterProcess" class="form-select form-select-sm ht-input-clean" style="width: auto;">
+            <option value="">Tipo</option>
             <option value="Confección">Confección</option>
             <option value="Ensamble">Ensamble</option>
             <option value="Corte">Corte</option>
@@ -165,7 +242,8 @@
           </select>
         </div>
       </div>
-    </div>
+
+    </header>
 
     <!--      ═══════════════════════════════════════════════════
        MAIN — TABLERO KANBAN
@@ -252,7 +330,7 @@
     </main>
 
     <!--      ═══════════════════════════════════════════════════
-       MODALES (tarea, incidencia, historial, etc.)
+       MODALES
   ════════════════════════════════════════════════════      -->
     <!-- Modal: Detalle de Tarea -->
     <div class="modal fade" id="taskDetailModal" tabindex="-1" aria-hidden="true">
@@ -265,9 +343,7 @@
             </div>
             <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
           </div>
-          <div class="modal-body ht-modal-body" id="taskDetailBody">
-            <!-- Se genera dinámicamente -->
-          </div>
+          <div class="modal-body ht-modal-body" id="taskDetailBody"></div>
           <div class="modal-footer ht-modal-footer">
             <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             <button type="button" class="ht-btn-primary" id="dtlBtnAction"><i class="bi bi-play-fill me-1"></i>Acción</button>
@@ -292,27 +368,19 @@
               <h5 id="startTaskTitle" style="font-family:'Fredoka',sans-serif;color:var(--primary-dark);margin-bottom:10px;">—</h5>
               <div class="ht-detail-grid" style="margin-bottom:0;">
                 <div class="ht-detail-item">
-                  <div class="ht-detail-label">
-                    <i class="bi bi-tools"></i> Operación
-                  </div>
+                  <div class="ht-detail-label"><i class="bi bi-tools"></i> Operación</div>
                   <div class="ht-detail-value" id="startTaskProcess">—</div>
                 </div>
                 <div class="ht-detail-item">
-                  <div class="ht-detail-label">
-                    <i class="bi bi-boxes"></i> Cantidad
-                  </div>
+                  <div class="ht-detail-label"><i class="bi bi-boxes"></i> Cantidad</div>
                   <div class="ht-detail-value" id="startTaskQty">—</div>
                 </div>
                 <div class="ht-detail-item">
-                  <div class="ht-detail-label">
-                    <i class="bi bi-clock"></i> Tiempo est.
-                  </div>
+                  <div class="ht-detail-label"><i class="bi bi-clock"></i> Tiempo est.</div>
                   <div class="ht-detail-value" id="startTaskTime">—</div>
                 </div>
                 <div class="ht-detail-item">
-                  <div class="ht-detail-label">
-                    <i class="bi bi-flag"></i> Prioridad
-                  </div>
+                  <div class="ht-detail-label"><i class="bi bi-flag"></i> Prioridad</div>
                   <div class="ht-detail-value" id="startTaskPrio">—</div>
                 </div>
               </div>
@@ -401,9 +469,7 @@
             <div class="ht-form-group">
               <label class="ht-label" for="reportDesc">Descripción detallada <span class="ht-required">*</span></label>
               <textarea class="ht-input ht-textarea" id="reportDesc" rows="4" maxlength="2000" placeholder="Describe qué sucedió, máquina involucrada y estado actual…"></textarea>
-              <div class="ht-field-hint">
-                <span id="descCount">0</span>/2000
-              </div>
+              <div class="ht-field-hint"><span id="descCount">0</span>/2000</div>
               <div class="ht-field-error" id="err-desc"></div>
             </div>
             <div class="ht-report-info" id="reportTareaRef" style="display:none;">
@@ -454,9 +520,7 @@
                   </tr>
                 </thead>
                 <tbody id="tableIncidenciasBody">
-                  <tr>
-                    <td colspan="6" class="text-center py-4" style="color:var(--text-muted);">Cargando incidencias…</td>
-                  </tr>
+                  <tr><td colspan="6" class="text-center py-4" style="color:var(--text-muted);">Cargando incidencias…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -555,9 +619,7 @@
                   </tr>
                 </thead>
                 <tbody id="tableHistorialBody">
-                  <tr>
-                    <td colspan="6" class="text-center py-4" style="color:var(--text-muted);">Cargando historial…</td>
-                  </tr>
+                  <tr><td colspan="6" class="text-center py-4" style="color:var(--text-muted);">Cargando historial…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -577,11 +639,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/operario.js' %}?v={% now 'U' %}"></script>
 
-    <!-- ═══════════════════════════════════════════════════════
-         BIENVENIDA FLOTANTE (una vez por sesión)
-         Va DESPUÉS de operario.js porque necesita que
-         window.mostrarBienvenida ya esté definida.
-    ═══════════════════════════════════════════════════════ -->
     {% if mostrar_bienvenida %}
     <script>
       document.addEventListener('DOMContentLoaded', function () {
@@ -620,7 +677,6 @@
           localStorage.setItem('ht-theme', theme)
         }
 
-        // El tema ya se aplicó en el <head>; aquí solo sincronizamos el ícono
         applyTheme(localStorage.getItem('ht-theme') || 'light')
 
         if (btn) {
