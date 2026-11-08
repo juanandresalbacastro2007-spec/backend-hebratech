@@ -234,3 +234,8 @@ def procesar_reset_view(request, token):
         return redirect('login')
 
     return redirect('validar_reset', token=token)
+
+
+
+def terminos_de_servicio(request):
+    return render(request, 'usuarios/terminos.html')

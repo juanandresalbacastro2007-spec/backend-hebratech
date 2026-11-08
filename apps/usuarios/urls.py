@@ -16,4 +16,7 @@ urlpatterns = [
     # --- Endpoints API REST (Google Login & JWT) ---
     path('api/auth/google/', views.GoogleLoginView.as_view(), name='google_login_api'),
     path('api/auth/', include('dj_rest_auth.urls')),
+    
+    #--- Página de Términos y Condiciones ---
+    path('terminos-de-servicio/', views.terminos_de_servicio, name='terminos_de_servicio')
 ]

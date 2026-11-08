@@ -1,0 +1,99 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Términos del servicio - HebraTech</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Roboto:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/usuarios/terminos.css' %}">
+</head>
+<body>
+<div class="layout">
+
+    <!-- IZQUIERDA: información -->
+    <main class="left-panel">
+
+        <a href="{% url 'login' %}" class="back-arrow" title="Volver al login">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+
+        <p style="font-size: 1.4rem; font-weight: 700; color: #1c2a33;" class="text-center">HebraTech</p>
+
+        <div class="terms-card">
+
+            <h1 class="mb-2 fw-bold">Términos y Condiciones de Servicio</h1>
+            <p class="small mb-4" style="color: rgba(255,255,255,0.6);">Última actualización: Noviembre 2026</p>
+
+            <hr class="border-secondary mb-4">
+
+            <!-- Sección 1 -->
+            <section class="mb-5">
+                <h3 class="h5 fw-bold mb-3" style="color: var(--accent);">1. Compromiso de Calidad y Uso del Sistema</h3>
+                <p class="text-light opacity-85" style="line-height: 1.7; font-size: 1.05rem;">
+                    HebraTech es un software integral diseñado bajo estrictos estándares de desarrollo y calidad operativa para la optimización de líneas de producción, inventarios y personal en el sector textil. El sistema ofrece un entorno robusto, seguro y libre de ruido visual para administradores y operarios.
+                </p>
+            </section>
+
+            <!-- Sección 2 -->
+            <section class="mb-5">
+                <h3 class="h5 fw-bold mb-3" style="color: var(--accent);">2. Derechos y Responsabilidades</h3>
+                <ul class="text-light opacity-85 ps-3" style="line-height: 1.7; font-size: 1.05rem;">
+                    <li class="mb-3">
+                        <strong>Uso autorizado:</strong> El usuario (ya sea administrador, operario o cliente) adquiere el derecho de utilizar la plataforma exclusivamente para los fines operativos y de gestión previstos por la empresa.
+                    </li>
+                    <li class="mb-3">
+                        <strong>Prohibiciones:</strong> Está estrictamente prohibido intentar vulnerar la seguridad del sistema, realizar ingeniería inversa, extraer código fuente, revender el acceso, o utilizar la plataforma para actividades ilícitas o ajenas a los procesos de HebraTech.
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Sección 3 -->
+            <section class="mb-5">
+                <h3 class="h5 fw-bold mb-3" style="color: var(--accent);">3. Propiedad Intelectual</h3>
+                <p class="text-light opacity-85" style="line-height: 1.7; font-size: 1.05rem;">
+                    Todo el código fuente, los entornos de desarrollo, el diseño de la interfaz, la arquitectura de bases de datos, los logotipos y la marca comercial HebraTech son propiedad exclusiva de sus creadores y desarrolladores. El usuario solo obtiene una licencia de uso temporal, limitada y no transferible; bajo ninguna circunstancia adquiere la propiedad intelectual o derechos de redistribución del software.
+                </p>
+            </section>
+
+            <!-- Sección 4 -->
+            <section class="mb-5">
+                <h3 class="h5 fw-bold mb-3" style="color: var(--accent);">4. Limitación de Responsabilidad</h3>
+                <p class="text-light opacity-85" style="line-height: 1.7; font-size: 1.05rem;">
+                    HebraTech se proporciona bajo los estándares operativos actuales para garantizar la eficiencia industrial. No obstante, los desarrolladores no se hacen responsables por pérdidas de datos derivadas de fallos en equipos locales, cortes de energía, mal uso de la plataforma por parte del usuario, o daños imprevistos ajenos al control directo del sistema.
+                </p>
+            </section>
+
+            <!-- Sección 5 -->
+            <section class="mb-0">
+                <h3 class="h5 fw-bold mb-3" style="color: var(--accent);">5. Cancelación o Suspensión de Cuenta</h3>
+                <p class="text-light opacity-85 mb-2" style="font-size: 1.05rem;">HebraTech se reserva el derecho de suspender o cancelar de manera temporal o definitiva el acceso a cualquier cuenta de usuario sin previo aviso, en caso de detectarse:</p>
+                <ul class="text-light opacity-85 ps-3" style="line-height: 1.7; font-size: 1.05rem;">
+                    <li class="mb-2">Incumplimiento de las normas de uso y seguridad.</li>
+                    <li class="mb-2">Intentos de sabotaje, manipulación no autorizada o acceso indebido a los módulos administrativos y de inventario.</li>
+                    <li class="mb-2">Uso fraudulento o contrario a los objetivos productivos del sistema.</li>
+                </ul>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- DERECHA: decoración -->
+    <aside class="right-panel">
+        <div class="task-stack">
+            <div class="task t1"><span class="circle"></span> Asignar las tareas <span class="tag">Finanzas</span></div>
+            <div class="task t2"><span class="circle"></span> Programar reunión de personal <span class="tag">Trabajo</span></div>
+            <div class="task t3"><span class="circle"></span> Comprar Materiales <span class="tag">Compras</span></div>
+        </div>
+        <div class="right-text">
+            <h2>Organiza tu empresa y tu trabajo, finalmente.</h2>
+            <p>Únete a millones de personas que confían en HebraTech para mantener la calma y el orden.</p>
+        </div>
+    </aside>
+
+</div>
+</body>
+</html>
