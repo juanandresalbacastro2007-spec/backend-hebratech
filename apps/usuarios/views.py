@@ -9,6 +9,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from .models import Usuario, PasswordResetToken
+from .recaptcha import verificar_recaptcha
 
 # Importaciones para API de Google con dj-rest-auth y allauth
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
@@ -40,7 +41,12 @@ def login_view(request):
         correo = request.POST.get('correo', '')
         contrasena = request.POST.get('contrasena', '')
 
-        error_generico = '"Usuario o contraseña incorrectos. Por favor, intente de nuevo.'
+        # Filtro anti-bots: se valida ANTES de consultar usuarios o contraseñas
+        if not verificar_recaptcha(request):
+            messages.error(request, 'Confirma que no eres un robot e inténtalo de nuevo.')
+            return render(request, 'usuarios/login.html', {'correo': correo})
+
+        error_generico = 'Usuario o contraseña incorrectos. Por favor, intente de nuevo.'
 
         try:
             usuario = Usuario.objects.get(
@@ -94,6 +100,10 @@ def registro_view(request):
             'reg_apellido': apellido,
             'reg_correo': correo,
         }
+
+        if not verificar_recaptcha(request):
+            messages.error(request, 'Confirma que no eres un robot e inténtalo de nuevo.')
+            return render(request, 'usuarios/login.html', ctx_error)
 
         if contrasena != confirmar:
             messages.error(request, 'Las contraseñas no coinciden.')

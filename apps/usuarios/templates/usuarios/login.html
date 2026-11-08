@@ -58,6 +58,9 @@
       <a href="{% url 'recuperar' %}" class="forgot-link d-block text-end mb-3">
         ¿Olvidaste tu contraseña?
       </a>
+      {% if RECAPTCHA_SITE_KEY %}
+      <div class="g-recaptcha-wrap"><div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div></div>
+      {% endif %}
       <button type="submit" class="btn-primary w-100">Iniciar sesión</button>
     </form>
 
@@ -125,6 +128,9 @@
         <input type="password" name="confirmar" class="form-control"
           placeholder="Repite tu contraseña" required>
       </div>
+      {% if RECAPTCHA_SITE_KEY %}
+      <div class="g-recaptcha-wrap"><div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div></div>
+      {% endif %}
       <button type="submit" class="btn-primary w-100">Crear cuenta</button>
     </form>
 
@@ -139,5 +145,8 @@
 {% block extra_js %}
   {# Toda la lógica (cambiar login/registro, ver contraseña y modo oscuro) vive en login.js. #}
   {# No duplicar aquí el código del tema: dos listeners se anulan entre sí. #}
+  {% if RECAPTCHA_SITE_KEY %}
+  <script src="https://www.google.com/recaptcha/api.js?hl=es" async defer></script>
+  {% endif %}
   <script src="{% static 'js/login.js' %}"></script>
 {% endblock %}

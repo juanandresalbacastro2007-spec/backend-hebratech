@@ -77,6 +77,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.usuarios.context_processors.recaptcha',
             ],
         },
     },
@@ -167,6 +168,11 @@ REST_AUTH = {
     'USE_JWT': True,
     'JWT_AUTH_HTTPONLY': False,
 }
+
+# --- reCAPTCHA v2 ("No soy un robot") ---
+# Las claves se obtienen en https://www.google.com/recaptcha/admin y van en el .env
+RECAPTCHA_SITE_KEY = config('RECAPTCHA_SITE_KEY', default='')      # pública (va en el HTML)
+RECAPTCHA_SECRET_KEY = config('RECAPTCHA_SECRET_KEY', default='')  # PRIVADA (nunca al repositorio)
 
 # --- REDIRECCIONES DE ALLAUTH ---
 LOGIN_REDIRECT_URL = '/'

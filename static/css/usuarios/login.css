@@ -397,3 +397,9 @@ h1 {
     transform: translateY(-2px) scale(1.05);
     box-shadow: 0 10px 20px rgba(0,0,0,0.3);
 }
+
+/* --- reCAPTCHA --- */
+.g-recaptcha-wrap { margin-bottom: 16px; max-width: 100%; overflow: hidden; }
+@media (max-width: 380px) {
+    .g-recaptcha { transform: scale(.88); transform-origin: 0 0; }
+}
