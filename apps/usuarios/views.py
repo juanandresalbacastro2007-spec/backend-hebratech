@@ -239,3 +239,6 @@ def procesar_reset_view(request, token):
 
 def terminos_de_servicio(request):
     return render(request, 'usuarios/terminos.html')
+
+def politicas_de_privacidad(request):
+    return render(request, 'usuarios/privacidad.html')

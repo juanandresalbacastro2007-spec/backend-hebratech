@@ -18,5 +18,9 @@ urlpatterns = [
     path('api/auth/', include('dj_rest_auth.urls')),
     
     #--- Página de Términos y Condiciones ---
-    path('terminos-de-servicio/', views.terminos_de_servicio, name='terminos_de_servicio')
-]
+    path('terminos-de-servicio/', views.terminos_de_servicio, name='terminos_de_servicio'),
+    
+    #--- Página de Políticas de Privacidad ---
+    path('politicas-de-privacidad/', views.politicas_de_privacidad, name='politicas_de_privacidad')
+
+    ]

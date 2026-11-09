@@ -1,0 +1,122 @@
+:root {
+    --accent: #A5C9CA;
+    --bg-left: #ffffff;
+    --brand-color: #1c2a33;
+    --card-bg: #1f2f35;
+    --card-border: rgba(255,255,255,.12);
+    --back-bg: #3a3f55;
+    --right-bg: linear-gradient(135deg, #e6f3f0 0%, #f2f2f2 55%, #f7f1f0 100%);
+    --task-bg: #ffffff;
+    --task-text: #34495e;
+    --right-title: #1c2a33;
+    --right-text: #3b5a63;
+    --toggle-bg: #ffffff;
+    --toggle-color: #1c2a33;
+}
+
+[data-bs-theme="dark"] {
+    --bg-left: #0f171b;
+    --brand-color: #e8f1f2;
+    --card-bg: #1a2a30;
+    --card-border: rgba(255,255,255,.10);
+    --back-bg: #2d3a40;
+    --right-bg: linear-gradient(135deg, #0d1417 0%, #141d21 55%, #181c1f 100%);
+    --task-bg: #1f2d33;
+    --task-text: #d5e3e5;
+    --right-title: #f1f6f7;
+    --right-text: #9fb8bd;
+    --toggle-bg: #1f2d33;
+    --toggle-color: #e8f1f2;  
+    --text-center: #e8f1f2;  
+}
+
+.brand-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--brand-color);
+    transition: color .3s;
+}
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: 'Outfit', sans-serif; }
+
+    .layout { display: flex; height: 100vh; }
+
+    /* ---------- Panel izquierdo ---------- */
+    .left-panel {
+        width: 45%;
+        background: var(--bg-left);
+        position: relative;
+        overflow-y: auto;
+        padding: 24px 32px 40px;
+        transition: background .3s;
+    }
+    .back-arrow {
+        position: absolute; top: 24px; left: 24px;
+        width: 40px; height: 40px; border-radius: 50%;
+        background: var(--back-bg); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        text-decoration: none; transition: transform .2s;
+    }
+    .back-arrow:hover { transform: scale(1.08); color: #fff; }
+
+    .brand {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        text-decoration: none; color: var(--brand-color);
+        font-weight: 700; font-size: 1.4rem; margin: 6px 0 28px;
+        transition: color .3s;
+    }
+    .brand img { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+
+    .terms-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 32px;
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(0,0,0,.18);
+        transition: background .3s;
+    }
+    .terms-card h1 { font-family: 'Roboto', sans-serif; font-size: 2rem; color: #fff; }
+
+    /* ---------- Panel derecho ---------- */
+    .right-panel {
+        flex: 1;
+        background: var(--right-bg);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 60px; padding: 40px;
+        transition: background .3s;
+    }
+    .task-stack { position: relative; width: 400px; height: 220px; }
+    .task {
+        position: absolute; background: var(--task-bg); color: var(--task-text);
+        border-radius: 10px; padding: 12px 18px;
+        display: flex; align-items: center; gap: 10px; font-size: .95rem;
+        box-shadow: 0 6px 18px rgba(0,0,0,.08);
+        transition: background .3s, color .3s;
+    }
+    .task .circle { width: 18px; height: 18px; border: 2px solid #7fb3b5; border-radius: 50%; }
+    .task .tag { font-size: .65rem; font-weight: 700; background: #dff0ee; color: #2c6e6a; padding: 3px 9px; border-radius: 10px; }
+    .t1 { top: 0; left: 0; }
+    .t2 { top: 70px; left: 130px; }
+    .t3 { top: 150px; left: 20px; }
+
+    .right-text { text-align: center; max-width: 360px; }
+    .right-text h2 { font-family: 'Roboto', sans-serif; font-weight: 500; font-size: 1.5rem; color: var(--right-title); }
+    .right-text p { color: var(--right-text); font-size: .95rem; }
+
+    /* ---------- Botón de tema ---------- */
+    .theme-toggle-fixed {
+        position: fixed; top: 20px; right: 24px; z-index: 50;
+        width: 42px; height: 42px; border-radius: 50%; border: none;
+        background: var(--toggle-bg); color: var(--toggle-color);
+        box-shadow: 0 4px 14px rgba(0,0,0,.15);
+        cursor: pointer; font-size: 1rem; transition: transform .2s, background .3s;
+    }
+    .theme-toggle-fixed:hover { transform: scale(1.08); }
+
+    @media (max-width: 991px) {
+        .layout { display: block; height: auto; }
+        .left-panel { width: 100%; overflow: visible; }
+        .right-panel { display: none; }
+    }
