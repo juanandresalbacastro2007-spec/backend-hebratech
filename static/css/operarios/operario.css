@@ -2001,3 +2001,20 @@ html, body {
 [data-bs-theme="dark"] .btn-link-ht { color: #a5c9ca; }
 [data-bs-theme="dark"] .ht-hist-btn--delete { color: #f28b82; border-color: #7a3b3b; }
 [data-bs-theme="dark"] .ht-hist-btn--delete:hover { background: #7a3b3b; color: #e7f6f2; }
+
+
+/* ================================================================
+   FLECHA DE LOS DESPLEGABLES DEL NAVBAR
+   .ht-input-clean usa "background: ... !important", que borraba la
+   flecha de Bootstrap (background-image). Se vuelve a poner aquí.
+   ================================================================ */
+.ht-header-wrapper .ht-hdr-filters select.ht-input-clean {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23395B64' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right .65rem center !important;
+  background-size: 12px 12px !important;
+  padding-right: 2rem;
+  cursor: pointer;
+}
