@@ -1890,3 +1890,114 @@ html, body {
 [data-bs-theme="dark"] .ht-hist-delta--warn { color: #e0a85a; }
 [data-bs-theme="dark"] .ht-hist-btn--ver,
 [data-bs-theme="dark"] .ht-hist-btn--edit { color: var(--accent); }
+
+
+/* ================================================================
+   BOTONES — mismo diseño que el módulo Administrador
+   (btn-primary-ht / btn-outline-ht / btn-link-ht)
+   Fuente Fredoka 600, radio 9px, ícono + texto, fondo #395B64
+   ================================================================ */
+.ht-btn-primary,
+.ht-btn-danger,
+.ht-card-btn-action,
+.ht-hist-btn--ver {
+  border: none;
+  border-radius: 9px;
+  padding: .5rem 1.1rem;
+  font-family: 'Fredoka', sans-serif;
+  font-size: .9rem;
+  font-weight: 600;
+  gap: .3rem;
+  transition: background .15s;
+}
+.ht-btn-primary:hover,
+.ht-btn-danger:hover,
+.ht-btn-primary:active,
+.ht-btn-danger:active { transform: none; }
+
+.ht-btn-primary,
+.ht-card-btn--start,
+.ht-hist-btn--ver { background: var(--primary); color: #fff; }
+.ht-btn-primary:hover,
+.ht-card-btn--start:hover,
+.ht-hist-btn--ver:hover { background: var(--primary-dark); color: #fff; border-color: transparent; }
+
+.ht-btn-danger { background: var(--danger); color: #fff; }
+.ht-btn-danger:hover { background: #8f222d; color: #fff; }
+
+/* Secundario = btn-outline-ht */
+.ht-btn-secondary,
+.ht-hist-btn:not(.ht-hist-btn--ver) {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  padding: .5rem 1.1rem;
+  font-family: 'Roboto', sans-serif;
+  font-size: .88rem;
+  font-weight: 400;
+  gap: .3rem;
+  transition: background .15s;
+}
+.ht-btn-secondary { display: inline-flex; align-items: center; justify-content: center; }
+.ht-btn-secondary:hover,
+.ht-hist-btn:not(.ht-hist-btn--ver):hover { background: var(--surface2); color: var(--primary-dark); border-color: var(--accent); }
+
+/* Variantes de acción dentro de las tarjetas del historial: mismo outline, color solo en el ícono */
+.ht-hist-btn { min-height: 38px; }
+.ht-hist-btn--pdf i    { color: #7c3aed; }
+.ht-hist-btn--delete   { color: var(--danger); }
+.ht-hist-btn--delete:hover { background: rgba(176,42,55,.1); color: var(--danger); border-color: var(--danger); }
+
+/* Botones de las tarjetas del tablero */
+.ht-card-btn--finish { background: var(--ok); color: #fff; }
+.ht-card-btn--finish:hover { background: #0f5f37; color: #fff; }
+.ht-card-btn--warn { border: 1px solid #fde68a; }
+
+/* Enlace de texto = btn-link-ht */
+.btn-link-ht {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--primary);
+  font-size: .8rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn-link-ht:hover { color: var(--primary-dark); text-decoration: underline; }
+
+/* Navbar (fondo teal oscuro): el botón principal se invierte para no perderse */
+.ht-header-wrapper .ht-btn-custom {
+  border-radius: 9px;
+  padding: .4rem .9rem;
+  font-family: 'Fredoka', sans-serif;
+  font-size: .85rem;
+  font-weight: 600;
+  gap: .3rem;
+}
+.ht-header-wrapper .ht-btn-custom--primary {
+  background: #ffffff !important;
+  color: #395B64 !important;
+  border-color: #ffffff !important;
+}
+.ht-header-wrapper .ht-btn-custom--primary:hover {
+  background: var(--bg-light) !important;
+  color: var(--primary-dark) !important;
+}
+
+/* Chips de filtro del historial con el mismo radio */
+.ht-hist-chip { border-radius: 9px; }
+
+/* Modo oscuro */
+[data-bs-theme="dark"] .ht-btn-secondary,
+[data-bs-theme="dark"] .ht-hist-btn:not(.ht-hist-btn--ver) { color: #a5c9ca; border-color: #395b64; }
+[data-bs-theme="dark"] .ht-btn-secondary:hover,
+[data-bs-theme="dark"] .ht-hist-btn:not(.ht-hist-btn--ver):hover { background: #395b64; color: #e7f6f2; }
+[data-bs-theme="dark"] .ht-btn-primary,
+[data-bs-theme="dark"] .ht-hist-btn--ver { background: #395b64; color: #e7f6f2; }
+[data-bs-theme="dark"] .ht-btn-primary:hover,
+[data-bs-theme="dark"] .ht-hist-btn--ver:hover { background: #4a7480; }
+[data-bs-theme="dark"] .btn-link-ht { color: #a5c9ca; }
+[data-bs-theme="dark"] .ht-hist-btn--delete { color: #f28b82; border-color: #7a3b3b; }
+[data-bs-theme="dark"] .ht-hist-btn--delete:hover { background: #7a3b3b; color: #e7f6f2; }

@@ -660,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="bi bi-clipboard-check"></i>
                     <strong>Aún no has reportado incidencias</strong>
                     <span>Cuando algo falle en tu puesto, repórtalo y aparecerá aquí.</span>
-                    <button type="button" class="btn btn-link btn-sm p-0 mt-1" data-action="crear">Reportar una incidencia</button>
+                    <button type="button" class="btn-link-ht mt-1" data-action="crear">Reportar una incidencia</button>
                 </div>`;
             return;
         }
@@ -670,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="bi bi-search"></i>
                     <strong>Sin resultados</strong>
                     <span>Ninguna incidencia coincide con tu búsqueda o filtro.</span>
-                    <button type="button" class="btn btn-link btn-sm p-0 mt-1" data-action="limpiar">Limpiar filtros</button>
+                    <button type="button" class="btn-link-ht mt-1" data-action="limpiar">Limpiar filtros</button>
                 </div>`;
             return;
         }
@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="bi bi-search"></i>
                     <strong>Sin resultados</strong>
                     <span>Ninguna tarea coincide con tu búsqueda o filtro.</span>
-                    <button type="button" class="btn btn-link btn-sm p-0 mt-1" data-action="limpiar">Limpiar filtros</button>
+                    <button type="button" class="btn-link-ht mt-1" data-action="limpiar">Limpiar filtros</button>
                 </div>`;
             return;
         }
