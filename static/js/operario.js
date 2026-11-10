@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const timerIntervals    = {};
     const alertedTasks      = new Set();
 
+    let listaReportes          = [];
+    const incFiltro            = { q: '', estado: 'todos' };
+    const histFiltro           = { q: '', proceso: '' };
+
     let pendingDeleteId        = null;
     let activeStartTaskId      = null;
     let activeFinishTaskId     = null;
@@ -35,6 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'En Progreso': document.getElementById('list-En Progreso'),
         'Completada':  document.getElementById('list-Completada'),
     };
+
+    // ─── HELPERS DE FORMATO ──────────────────────────────────────
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+    const pad4 = (id) => String(id).padStart(4, '0');
+    const fmtH = (n) => Number(n).toFixed(1).replace(/\.0$/, '');
+    const num  = (v) => (v === null || v === undefined || v === '' || isNaN(Number(v))) ? null : Number(v);
 
     // ─── INIT ────────────────────────────────────────────────────
     function init() {
@@ -50,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         configurarKpisNavbar();
         configurarPestañasMobile();
         configurarModalesAccion();
-        configurarBusquedaTablaIncidencias();
+        configurarListaIncidencias();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -461,9 +473,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             const reportes = data.reportes || [];
             reportes.forEach(rep => { cacheIncidencias[rep.idIncidencia] = rep; });
+            listaReportes = reportes;
             actualizarKpiIncidencias(reportes);
             renderizarNotificaciones(reportes);
-            renderizarTablaIncidencias(reportes);
+            renderizarIncidencias();
         } catch (err) {
             console.error(err);
         }
@@ -472,6 +485,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function actualizarKpiIncidencias(reportes) {
         const kpiEl = document.getElementById('kpiCountIncidence');
         if (kpiEl) kpiEl.textContent = reportes.length;
+        const badge = document.getElementById('reportesBadgeCount');
+        if (badge) badge.textContent = reportes.length;
     }
 
     function renderizarNotificaciones(reportes) {
@@ -544,73 +559,122 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderizarTablaIncidencias(reportes) {
-        const tbody = document.getElementById('tableIncidenciasBody');
-        if (!tbody) return;
+    const ESTADOS_INC = {
+        Pendiente: { icono: 'bi-hourglass-split', ayuda: 'Esperando revisión del administrador' },
+        Generado:  { icono: 'bi-send-check',      ayuda: 'Enviada al administrador' },
+        Revisado:  { icono: 'bi-check2-circle',   ayuda: 'El administrador ya la revisó' },
+    };
 
-        reportes.forEach(r => { cacheIncidencias[r.idIncidencia] = r; });
+    function esRespuestaNueva(r) { return !!(r.respuesta && !r.respuestaLeida); }
 
-        if (reportes.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4" style="color:var(--text-muted);">
-                No se han encontrado incidencias.</td></tr>`;
-            return;
+    function renderizarResumenIncidencias(todas) {
+        const cont = document.getElementById('incResumen');
+        if (!cont) return;
+
+        const chips = [
+            { clave: 'todos',  texto: 'Todas',               n: todas.length, extra: '' },
+            { clave: 'nuevas', texto: 'Respuesta nueva',     n: todas.filter(esRespuestaNueva).length, extra: ' ht-hist-chip--new' },
+        ];
+        Object.keys(ESTADOS_INC).forEach(est => {
+            const n = todas.filter(r => r.estado === est).length;
+            if (n > 0) chips.push({ clave: est, texto: est, n, extra: '' });
+        });
+
+        cont.innerHTML = chips.map(c => `
+            <button type="button" class="ht-hist-chip${c.extra}${incFiltro.estado === c.clave ? ' is-active' : ''}"
+                    data-filtro="${esc(c.clave)}" aria-pressed="${incFiltro.estado === c.clave}"
+                    ${ESTADOS_INC[c.clave] ? `title="${esc(ESTADOS_INC[c.clave].ayuda)}"` : ''}>
+                <span>${esc(c.texto)}</span><span class="ht-hist-chip__n">${c.n}</span>
+            </button>`).join('');
+    }
+
+    function tarjetaIncidencia(r) {
+        const info  = ESTADOS_INC[r.estado] || { icono: 'bi-circle', ayuda: '' };
+        const nueva = esRespuestaNueva(r);
+
+        const respuesta = r.respuesta
+            ? `<span class="ht-hist-reply ${nueva ? 'ht-hist-reply--new' : 'ht-hist-reply--read'}">
+                   <i class="bi bi-reply-fill"></i>${nueva ? 'Nueva respuesta del administrador' : 'Respondida por el administrador'}
+               </span>`
+            : `<span class="ht-hist-reply ht-hist-reply--none"><i class="bi bi-hourglass-split"></i>Sin respuesta todavía</span>`;
+
+        const severidad = r.severidad
+            ? `<span class="ht-hist-meta"><i class="bi bi-speedometer2"></i>Severidad ${esc(r.severidad)}</span>` : '';
+
+        return `
+            <article class="ht-hist-card" data-id="${esc(r.idIncidencia)}" data-estado="${esc(r.estado)}">
+                <div class="ht-hist-card__top">
+                    <span class="ht-hist-id">#${pad4(r.idIncidencia)}</span>
+                    <span class="ht-hist-type"><i class="bi bi-exclamation-triangle-fill"></i>${esc(r.tipoIncidencia)}</span>
+                    <span class="ht-badge-status-${esc(r.estado)}" title="${esc(info.ayuda)}"><i class="bi ${info.icono} me-1"></i>${esc(r.estado)}</span>
+                    <span class="ht-hist-date"><i class="bi bi-calendar-event"></i>${esc(r.fechaGeneracion || 'Reciente')}</span>
+                </div>
+                <p class="ht-hist-card__desc">${esc(r.descripcion)}</p>
+                <div class="ht-hist-card__meta">${severidad}</div>
+                ${respuesta}
+                <div class="ht-hist-card__actions">
+                    <button type="button" class="ht-hist-btn ht-hist-btn--ver" data-action="ver" aria-label="Ver detalle de la incidencia ${pad4(r.idIncidencia)}">
+                        <i class="bi bi-eye"></i><span>Ver detalle</span>
+                    </button>
+                    <button type="button" class="ht-hist-btn ht-hist-btn--pdf" data-action="pdf" title="Descargar PDF" aria-label="Descargar PDF de la incidencia ${pad4(r.idIncidencia)}">
+                        <i class="bi bi-file-earmark-pdf-fill"></i><span>PDF</span>
+                    </button>
+                    <button type="button" class="ht-hist-btn ht-hist-btn--edit" data-action="editar" title="Editar" aria-label="Editar la incidencia ${pad4(r.idIncidencia)}">
+                        <i class="bi bi-pencil"></i><span>Editar</span>
+                    </button>
+                    <button type="button" class="ht-hist-btn ht-hist-btn--delete" data-action="eliminar" title="Eliminar" aria-label="Eliminar la incidencia ${pad4(r.idIncidencia)}">
+                        <i class="bi bi-trash"></i><span>Eliminar</span>
+                    </button>
+                </div>
+            </article>`;
+    }
+
+    function renderizarIncidencias() {
+        const lista = document.getElementById('listaIncidencias');
+        if (!lista) return;
+
+        const todas = [...listaReportes].sort((a, b) => Number(b.idIncidencia) - Number(a.idIncidencia));
+        renderizarResumenIncidencias(todas);
+
+        const q = incFiltro.q.trim().toLowerCase();
+        const filtradas = todas.filter(r => {
+            const okEstado = incFiltro.estado === 'todos'
+                ? true
+                : incFiltro.estado === 'nuevas' ? esRespuestaNueva(r) : r.estado === incFiltro.estado;
+            if (!okEstado) return false;
+            if (!q) return true;
+            return [r.idIncidencia, pad4(r.idIncidencia), r.tipoIncidencia, r.descripcion, r.estado, r.respuesta]
+                .join(' ').toLowerCase().includes(q);
+        });
+
+        const contador = document.getElementById('incContador');
+        if (contador) {
+            contador.textContent = todas.length
+                ? `Mostrando ${filtradas.length} de ${todas.length} incidencia${todas.length !== 1 ? 's' : ''}`
+                : '';
         }
 
-        tbody.innerHTML = reportes.map(rep => `
-            <tr>
-                <td><strong>#${String(rep.idIncidencia).padStart(4, '0')}</strong></td>
-                <td><span class="ht-badge" style="background:rgba(212,146,58,.15);color:#D4923A;border-color:rgba(212,146,58,.3);">
-                    ${rep.tipoIncidencia}</span></td>
-                <td style="max-width:280px;">
-                    <span class="d-inline-block text-truncate" style="max-width:260px;">
-                        ${rep.descripcion}</span></td>
-                <td><span class="ht-badge-status-${rep.estado}">${rep.estado}</span></td>
-                <td><small style="color:var(--text-muted);">${rep.fechaGeneracion || 'Reciente'}</small></td>
-                <td class="text-end">
-                    <button class="ht-report-action-btn ht-report-action-btn--ver me-1"
-                            data-id="${rep.idIncidencia}" title="Ver detalle completo">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="ht-report-action-btn ht-report-action-btn--pdf me-1"
-                            data-id="${rep.idIncidencia}" title="Descargar PDF">
-                        <i class="bi bi-file-earmark-pdf-fill"></i>
-                    </button>
-                    <button class="ht-report-action-btn ht-report-action-btn--edit me-1"
-                            data-id="${rep.idIncidencia}" title="Editar">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="ht-report-action-btn ht-report-action-btn--delete"
-                            data-id="${rep.idIncidencia}" title="Eliminar">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>`).join('');
-
-        tbody.querySelectorAll('.ht-report-action-btn--ver').forEach(btn => {
-            btn.addEventListener('click', () => {
-                bootstrap.Modal.getInstance(document.getElementById('modalGestionIncidencias'))?.hide();
-                setTimeout(() => abrirDetalleIncidencia(btn.dataset.id), 200);
-            });
-        });
-
-        tbody.querySelectorAll('.ht-report-action-btn--edit').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const inc = cacheIncidencias[btn.dataset.id];
-                if (!inc) return;
-                const mgmt = bootstrap.Modal.getInstance(document.getElementById('modalGestionIncidencias'));
-                if (mgmt) mgmt.hide();
-                setTimeout(() => abrirModalIncidencia(inc), 200);
-            });
-        });
-        tbody.querySelectorAll('.ht-report-action-btn--delete').forEach(btn => {
-            btn.addEventListener('click', () => {
-                pendingDeleteId = btn.dataset.id;
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
-            });
-        });
-        tbody.querySelectorAll('.ht-report-action-btn--pdf').forEach(btn => {
-            btn.addEventListener('click', () => descargarPDF(btn.dataset.id));
-        });
+        if (todas.length === 0) {
+            lista.innerHTML = `
+                <div class="ht-hist-empty">
+                    <i class="bi bi-clipboard-check"></i>
+                    <strong>Aún no has reportado incidencias</strong>
+                    <span>Cuando algo falle en tu puesto, repórtalo y aparecerá aquí.</span>
+                    <button type="button" class="btn btn-link btn-sm p-0 mt-1" data-action="crear">Reportar una incidencia</button>
+                </div>`;
+            return;
+        }
+        if (filtradas.length === 0) {
+            lista.innerHTML = `
+                <div class="ht-hist-empty">
+                    <i class="bi bi-search"></i>
+                    <strong>Sin resultados</strong>
+                    <span>Ninguna incidencia coincide con tu búsqueda o filtro.</span>
+                    <button type="button" class="btn btn-link btn-sm p-0 mt-1" data-action="limpiar">Limpiar filtros</button>
+                </div>`;
+            return;
+        }
+        lista.innerHTML = filtradas.map(tarjetaIncidencia).join('');
     }
 
     function abrirModalIncidencia(incidencia = null, tareaAsociada = null, textoBase = null) {
@@ -749,14 +813,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function configurarBusquedaTablaIncidencias() {
+    function configurarListaIncidencias() {
         const input = document.getElementById('searchIncidenceModal');
-        if (!input) return;
-        input.addEventListener('input', () => {
-            const q = input.value.toLowerCase();
-            document.querySelectorAll('#tableIncidenciasBody tr').forEach(tr => {
-                tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-            });
+        input?.addEventListener('input', () => { incFiltro.q = input.value; renderizarIncidencias(); });
+
+        document.getElementById('incResumen')?.addEventListener('click', (e) => {
+            const chip = e.target.closest('[data-filtro]');
+            if (!chip) return;
+            incFiltro.estado = chip.dataset.filtro;
+            renderizarIncidencias();
+        });
+
+        const lista = document.getElementById('listaIncidencias');
+        lista?.addEventListener('click', (e) => {
+            const btn  = e.target.closest('[data-action]');
+            const card = e.target.closest('.ht-hist-card');
+            const id   = card?.dataset.id;
+            const modalGestion = () => bootstrap.Modal.getInstance(document.getElementById('modalGestionIncidencias'));
+
+            // Clic en la tarjeta (fuera de un botón) = ver detalle
+            const accion = btn ? btn.dataset.action : (card ? 'ver' : null);
+            if (!accion) return;
+
+            if (accion === 'limpiar') {
+                incFiltro.q = ''; incFiltro.estado = 'todos';
+                if (input) input.value = '';
+                renderizarIncidencias();
+            } else if (accion === 'crear') {
+                modalGestion()?.hide();
+                setTimeout(() => abrirModalIncidencia(), 300);
+            } else if (accion === 'ver' && id) {
+                modalGestion()?.hide();
+                setTimeout(() => abrirDetalleIncidencia(id), 200);
+            } else if (accion === 'editar' && id) {
+                const inc = cacheIncidencias[id];
+                if (!inc) return;
+                modalGestion()?.hide();
+                setTimeout(() => abrirModalIncidencia(inc), 200);
+            } else if (accion === 'eliminar' && id) {
+                pendingDeleteId = id;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal')).show();
+            } else if (accion === 'pdf' && id) {
+                descargarPDF(id);
+            }
         });
     }
 
@@ -830,43 +929,129 @@ document.addEventListener('DOMContentLoaded', () => {
         badge.textContent = tareas.filter(t => t.estado === 'Completada').length;
     }
 
-    function abrirHistorialTareas() {
-        const tbody = document.getElementById('tableHistorialBody');
-        if (!tbody) return;
-
-        const completadas = Object.values(cacheTareas)
+    function tareasCompletadas() {
+        return Object.values(cacheTareas)
             .filter(t => t.estado === 'Completada')
             .sort((a, b) => (b.fechaFinalizacion || '').localeCompare(a.fechaFinalizacion || ''));
+    }
 
-        if (completadas.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4" style="color:var(--text-muted);">
-                Todavía no completaste ninguna tarea.</td></tr>`;
-        } else {
-            tbody.innerHTML = completadas.map(t => `
-                <tr>
-                    <td><strong>${t.nombreTarea}</strong></td>
-                    <td>${t.proceso || '—'}</td>
-                    <td>${t.tipoPrenda && t.cantidadPrendas ? `${t.cantidadPrendas} ${t.tipoPrenda}` : '—'}</td>
-                    <td>${t.fechaFinalizacion || '—'}</td>
-                    <td>${t.horasReales != null ? `${t.horasReales} h` : '—'}</td>
-                    <td class="text-end">
-                        <button type="button" class="ht-report-action-btn ht-historial-ver-btn"
-                                data-id="${t.idAsignacion}" title="Ver tarea completada">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                    </td>
-                </tr>`).join('');
+    function renderizarResumenHistorial(todas) {
+        const cont = document.getElementById('histResumen');
+        if (!cont) return;
+
+        const horas  = todas.reduce((s, t) => s + (num(t.horasReales) || 0), 0);
+        const piezas = todas.reduce((s, t) => s + (num(t.cantidadPrendas) || 0), 0);
+        const medibles = todas.filter(t => num(t.horasReales) !== null && num(t.horasEstimadas) !== null);
+        const aTiempo  = medibles.filter(t => num(t.horasReales) <= num(t.horasEstimadas)).length;
+
+        const stat = (n, l) => `<div class="ht-hist-stat"><span class="ht-hist-stat__n">${n}</span><span class="ht-hist-stat__l">${l}</span></div>`;
+        cont.innerHTML =
+            stat(todas.length, 'Tareas completadas') +
+            stat(`${fmtH(horas)} h`, 'Horas trabajadas') +
+            stat(piezas, 'Prendas procesadas') +
+            stat(medibles.length ? `${aTiempo} de ${medibles.length}` : '—', 'Dentro del tiempo estimado');
+    }
+
+    function poblarFiltroProceso(todas) {
+        const sel = document.getElementById('histFiltroProceso');
+        if (!sel) return;
+        const procesos = [...new Set(todas.map(t => t.proceso).filter(Boolean))].sort();
+        sel.innerHTML = '<option value="">Todos los procesos</option>' +
+            procesos.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+        sel.value = procesos.includes(histFiltro.proceso) ? histFiltro.proceso : '';
+        histFiltro.proceso = sel.value;
+    }
+
+    function tarjetaHistorial(t) {
+        const real = num(t.horasReales);
+        const est  = num(t.horasEstimadas);
+
+        let tiempo = '';
+        if (real !== null) {
+            let delta = '';
+            if (est !== null) {
+                const d = real - est;
+                if (Math.abs(d) < 0.05)  delta = '<span class="ht-hist-delta ht-hist-delta--ok">Justo en el tiempo</span>';
+                else if (d < 0)          delta = `<span class="ht-hist-delta ht-hist-delta--ok">${fmtH(-d)} h menos de lo estimado</span>`;
+                else                     delta = `<span class="ht-hist-delta ht-hist-delta--warn">${fmtH(d)} h más de lo estimado</span>`;
+            }
+            tiempo = `<span class="ht-hist-time"><i class="bi bi-stopwatch-fill"></i>
+                Real ${fmtH(real)} h${est !== null ? ` · Estimado ${fmtH(est)} h` : ''} ${delta}</span>`;
         }
 
-        tbody.querySelectorAll('.ht-historial-ver-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const t = cacheTareas[btn.dataset.id];
-                if (!t) return;
-                bootstrap.Modal.getInstance(document.getElementById('modalHistorialTareas'))?.hide();
-                setTimeout(() => abrirDetalleTarea(t), 200);
-            });
+        const cantidad = t.cantidadPrendas
+            ? `<span class="ht-hist-meta"><i class="bi bi-boxes"></i>${esc(t.cantidadPrendas)} ${esc(t.tipoPrenda || 'uds')}</span>` : '';
+        const maquina = t.maquina
+            ? `<span class="ht-hist-meta"><i class="bi bi-cpu"></i>${esc(t.maquina)}</span>` : '';
+        const inicio = t.fechaInicio
+            ? `<span class="ht-hist-meta"><i class="bi bi-play-circle"></i>Inició ${esc(t.fechaInicio)}</span>` : '';
+
+        return `
+            <article class="ht-hist-card" data-id="${esc(t.idAsignacion)}" data-estado="Completada">
+                <div class="ht-hist-card__top">
+                    <span class="ht-hist-type ht-hist-type--task"><i class="bi bi-gear-fill"></i>${esc(t.proceso || 'General')}</span>
+                    ${t.prioridad ? `<span class="ht-badge ht-badge-prio-${esc(t.prioridad)}">${esc(t.prioridad)}</span>` : ''}
+                    <span class="ht-hist-date"><i class="bi bi-calendar-check"></i>Finalizada ${esc(t.fechaFinalizacion || '—')}</span>
+                </div>
+                <h6 class="ht-hist-card__title">${esc(t.nombreTarea || 'Tarea sin título')}</h6>
+                ${t.descripcionTarea ? `<p class="ht-hist-card__desc">${esc(t.descripcionTarea)}</p>` : ''}
+                <div class="ht-hist-card__meta">${maquina}${cantidad}${inicio}</div>
+                ${tiempo}
+                <div class="ht-hist-card__actions">
+                    <button type="button" class="ht-hist-btn ht-hist-btn--ver" data-action="ver" aria-label="Ver detalle de ${esc(t.nombreTarea || 'la tarea')}">
+                        <i class="bi bi-eye"></i><span>Ver detalle</span>
+                    </button>
+                </div>
+            </article>`;
+    }
+
+    function renderizarHistorialTareas() {
+        const lista = document.getElementById('listaHistorial');
+        if (!lista) return;
+
+        const todas = tareasCompletadas();
+        renderizarResumenHistorial(todas);
+
+        const q = histFiltro.q.trim().toLowerCase();
+        const filtradas = todas.filter(t => {
+            if (histFiltro.proceso && t.proceso !== histFiltro.proceso) return false;
+            if (!q) return true;
+            return [t.nombreTarea, t.proceso, t.maquina, t.tipoPrenda, t.descripcionTarea, t.fechaFinalizacion]
+                .join(' ').toLowerCase().includes(q);
         });
 
+        const contador = document.getElementById('histContador');
+        if (contador) {
+            contador.textContent = todas.length
+                ? `Mostrando ${filtradas.length} de ${todas.length} tarea${todas.length !== 1 ? 's' : ''}`
+                : '';
+        }
+
+        if (todas.length === 0) {
+            lista.innerHTML = `
+                <div class="ht-hist-empty">
+                    <i class="bi bi-trophy"></i>
+                    <strong>Todavía no completaste tareas</strong>
+                    <span>Cuando finalices una, quedará archivada aquí con su tiempo real.</span>
+                </div>`;
+            return;
+        }
+        if (filtradas.length === 0) {
+            lista.innerHTML = `
+                <div class="ht-hist-empty">
+                    <i class="bi bi-search"></i>
+                    <strong>Sin resultados</strong>
+                    <span>Ninguna tarea coincide con tu búsqueda o filtro.</span>
+                    <button type="button" class="btn btn-link btn-sm p-0 mt-1" data-action="limpiar">Limpiar filtros</button>
+                </div>`;
+            return;
+        }
+        lista.innerHTML = filtradas.map(tarjetaHistorial).join('');
+    }
+
+    function abrirHistorialTareas() {
+        poblarFiltroProceso(tareasCompletadas());
+        renderizarHistorialTareas();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalHistorialTareas')).show();
     }
 
@@ -875,11 +1060,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('linkVerHistorialDesdeColumna')?.addEventListener('click', abrirHistorialTareas);
 
         const buscador = document.getElementById('searchHistorialModal');
-        buscador?.addEventListener('input', () => {
-            const q = buscador.value.toLowerCase();
-            document.querySelectorAll('#tableHistorialBody tr').forEach(tr => {
-                tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-            });
+        buscador?.addEventListener('input', () => { histFiltro.q = buscador.value; renderizarHistorialTareas(); });
+
+        const selProceso = document.getElementById('histFiltroProceso');
+        selProceso?.addEventListener('change', () => { histFiltro.proceso = selProceso.value; renderizarHistorialTareas(); });
+
+        document.getElementById('listaHistorial')?.addEventListener('click', (e) => {
+            const btn  = e.target.closest('[data-action]');
+            const card = e.target.closest('.ht-hist-card');
+
+            if (btn?.dataset.action === 'limpiar') {
+                histFiltro.q = ''; histFiltro.proceso = '';
+                if (buscador) buscador.value = '';
+                if (selProceso) selProceso.value = '';
+                renderizarHistorialTareas();
+                return;
+            }
+            if (!card) return;
+            const t = cacheTareas[card.dataset.id];
+            if (!t) return;
+            bootstrap.Modal.getInstance(document.getElementById('modalHistorialTareas'))?.hide();
+            setTimeout(() => abrirDetalleTarea(t), 200);
         });
     }
 
