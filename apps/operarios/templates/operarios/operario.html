@@ -230,21 +230,25 @@
             <input type="search" id="searchInput" class="form-control form-control-sm ht-input-clean" placeholder="Buscar tarea…" aria-label="Buscar tarea" />
           </div>
 
-          <select id="filterPrio" class="form-select form-select-sm ht-input-clean" aria-label="Filtrar por prioridad">
-            <option value="">Prioridad</option>
-            <option value="Urgente">🔴 Urgente</option>
-            <option value="Alta">🟠 Alta</option>
-            <option value="Media">⚪ Media</option>
-            <option value="Normal">🟢 Normal</option>
-          </select>
+          <div class="ht-select-wrap">
+            <select id="filterPrio" class="form-select form-select-sm ht-input-clean" aria-label="Filtrar por prioridad">
+              <option value="">Prioridad</option>
+              <option value="Urgente">🔴 Urgente</option>
+              <option value="Alta">🟠 Alta</option>
+              <option value="Media">⚪ Media</option>
+              <option value="Normal">🟢 Normal</option>
+            </select>
+          </div>
 
-          <select id="filterProcess" class="form-select form-select-sm ht-input-clean" aria-label="Filtrar por tipo de proceso">
-            <option value="">Proceso</option>
-            <option value="Confección">Confección</option>
-            <option value="Ensamble">Ensamble</option>
-            <option value="Corte">Corte</option>
-            <option value="Planchado">Planchado</option>
-          </select>
+          <div class="ht-select-wrap">
+            <select id="filterProcess" class="form-select form-select-sm ht-input-clean" aria-label="Filtrar por tipo de proceso">
+              <option value="">Proceso</option>
+              <option value="Confección">Confección</option>
+              <option value="Ensamble">Ensamble</option>
+              <option value="Corte">Corte</option>
+              <option value="Planchado">Planchado</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -614,9 +618,11 @@
                 <i class="bi bi-search ht-search-icon"></i>
                 <input type="search" id="searchHistorialModal" class="ht-search-input" placeholder="Buscar por nombre, máquina o prenda…" aria-label="Buscar en el historial de tareas" />
               </div>
-              <select id="histFiltroProceso" class="ht-hist-select" aria-label="Filtrar por proceso">
+              <div class="ht-select-wrap ht-select-wrap--modal">
+                <select id="histFiltroProceso" class="ht-hist-select" aria-label="Filtrar por proceso">
                 <option value="">Todos los procesos</option>
               </select>
+              </div>
             </div>
 
             <p class="ht-hist-count" id="histContador" aria-live="polite"></p>

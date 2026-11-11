@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         configurarPestañasMobile();
         configurarModalesAccion();
         configurarListaIncidencias();
+        configurarSelectsAnimados();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -884,6 +885,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 ).hide();
                 setTimeout(() => abrirModalIncidencia(), 300);
             });
+    }
+
+    // Gira la flecha de los desplegables mientras la lista está abierta.
+    // Un <select> nativo no avisa si está abierto, así que se deduce de los eventos.
+    function configurarSelectsAnimados() {
+        document.querySelectorAll('.ht-select-wrap select').forEach(sel => {
+            const wrap   = sel.closest('.ht-select-wrap');
+            const cerrar = () => wrap.classList.remove('is-open');
+
+            sel.addEventListener('mousedown', () => wrap.classList.toggle('is-open'));
+            sel.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' || e.key === 'Tab') return cerrar();
+                if (e.key === 'Enter' || e.key === ' ' || (e.altKey && e.key === 'ArrowDown')) {
+                    wrap.classList.toggle('is-open');
+                }
+            });
+            sel.addEventListener('change', cerrar);
+            sel.addEventListener('blur', cerrar);
+        });
     }
 
     // ═══════════════════════════════════════════════════════════
