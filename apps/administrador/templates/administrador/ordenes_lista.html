@@ -179,18 +179,21 @@
                     <div class="invalid-feedback small">Ingresa un valor monetario válido.</div>
                   </div>
 
-                  <div class="mb-3">
-                    <label class="form-label fw-medium small">Fecha de Entrega Estimada</label>
-                    <input type="date" 
-                           name="fecha_entrega" 
-                           class="form-control fecha-entrega-input" 
-                           value="{{ orden.fechaEntregaEstimada|date:'Y-m-d' }}" 
-                           data-fecha-original="{{ orden.fechaEntregaEstimada|date:'Y-m-d' }}"
-                           data-hoy="{% now 'Y-m-d' %}"
-                           onclick="this.showPicker && this.showPicker()">
-                    <div class="invalid-feedback small">Selecciona una fecha válida (hoy o posterior).</div>
-                  </div>
-
+                    <div class="row g-2 mb-3">
+                      <div class="col-6">
+                        <label class="form-label fw-medium small">Entrega estimada: desde</label>
+                        <input type="date" name="fecha_inicio" class="form-control"
+                              value="{{ orden.fechaEstimadaInicio|date:'Y-m-d' }}">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label fw-medium small">hasta</label>
+                        <input type="date" name="fecha_entrega" class="form-control fecha-entrega-input"
+                              value="{{ orden.fechaEntregaEstimada|date:'Y-m-d' }}"
+                              data-fecha-original="{{ orden.fechaEntregaEstimada|date:'Y-m-d' }}"
+                              data-hoy="{% now 'Y-m-d' %}">
+                        <div class="invalid-feedback small">Selecciona una fecha válida (hoy o posterior).</div>
+                      </div>
+                    </div>
                   <div class="mb-3">
                     <label class="form-label fw-medium small">Prioridad</label>
                     <select name="prioridad" class="form-select">

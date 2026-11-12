@@ -22,6 +22,7 @@ from .models import (
     Notificacion,
 )
 
+from apps.core.fechas import parsear_rango
 from apps.core.decorators import login_required_rol
 
 
@@ -557,9 +558,7 @@ def registrar_orden(request):
     # rango del formulario. Si no se puede interpretar, queda en
     # None y producción/administración la define después (igual
     # que el comportamiento anterior).
-    fecha_entrega_estimada = _parsear_fecha_entrega_desde_rango(
-        fecha_rango
-    )
+    fecha_inicio_estimada, fecha_entrega_estimada = parsear_rango(fecha_rango)
 
     # --------------------------------------------------------
     # CREAR ORDEN
@@ -580,6 +579,7 @@ def registrar_orden(request):
             # Se guarda la fecha límite indicada por el cliente en
             # el selector de rango. Producción/administración puede
             # ajustarla luego si hace falta.
+            fechaEstimadaInicio=fecha_inicio_estimada,
             fechaEntregaEstimada=fecha_entrega_estimada,
 
             instrucciones=(
@@ -872,11 +872,10 @@ def editar_orden(request, idOrden):
             # no tiene rango definido), se deja el valor existente
             # tal cual para no borrar una fecha ya asignada.
             if fecha_rango:
-                fecha_entrega_estimada = (
-                    _parsear_fecha_entrega_desde_rango(fecha_rango)
-                )
-                if fecha_entrega_estimada:
-                    orden.fechaEntregaEstimada = fecha_entrega_estimada
+                inicio, fin = parsear_rango(fecha_rango)
+                if fin:
+                    orden.fechaEstimadaInicio = inicio
+                    orden.fechaEntregaEstimada = fin
 
             orden.save()
 

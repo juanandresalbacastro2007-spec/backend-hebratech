@@ -190,12 +190,12 @@
     </div>
 
     <div class="orden-meta">
-      {% if orden.idProducto %}
-        <span><i class="bi bi-tag"></i>{{ orden.idProducto.nombre }}</span>
-      {% endif %}
-      <span><i class="bi bi-calendar3"></i>{{ orden.fechaCreacion|date:"d M Y" }}</span>
-      {% if orden.fechaEntregaEstimada %}
-        <span><i class="bi bi-truck"></i>Entrega est.: {{ orden.fechaEntregaEstimada|date:"d M Y" }}</span>
+        {% if orden.fechaEstimadaInicio and orden.fechaEntregaEstimada %}
+        <span><i class="bi bi-calendar-range"></i>{{ orden.fechaEstimadaInicio|date:"Y-m-d" }} hasta {{ orden.fechaEntregaEstimada|date:"Y-m-d" }}</span>
+      {% elif orden.fechaEntregaEstimada %}
+        <span><i class="bi bi-calendar-check"></i>Entrega est.: {{ orden.fechaEntregaEstimada|date:"Y-m-d" }}</span>
+      {% else %}
+        <span><i class="bi bi-calendar3"></i>{{ orden.fechaCreacion|date:"d M Y" }}</span>
       {% endif %}
     </div>
   </div>
@@ -275,7 +275,8 @@
       {% if orden.cantidad and orden.precioUnitario %}
         {{ orden.cantidad }} u. × ${{ orden.precioUnitario|floatformat:0 }}
         &nbsp;·&nbsp;
-        <strong>Total: ${% widthratio orden.cantidad 1 orden.precioUnitario %}</strong>
+        {% widthratio orden.cantidad 1 orden.precioUnitario as total_orden %}
+        <strong>Total: ${{ total_orden|floatformat:0 }}</strong>
       {% else %}
         <span class="text-muted">Subtotal por definir</span>
       {% endif %}

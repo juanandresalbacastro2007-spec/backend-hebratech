@@ -90,27 +90,30 @@
               {% endif %}
             </td>
             <td>${{ factura.total|floatformat:0 }}</td>
-            <td>
-              {% if factura.estado == 'Pagada' %}
-                <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>Pagada</span>
-              {% else %}
-                <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>Pendiente de pago</span>
-              {% endif %}
-            </td>
-            <td class="text-center">
-              <div class="btn-group btn-group-sm" role="group">
-                <a href="{% url 'admin_factura_descargar' factura.idFactura %}" class="btn btn-outline-secondary" title="Descargar PDF">
-                  <i class="bi bi-file-earmark-pdf"></i>
-                </a>
-                {% if factura.estado != 'Pagada' %}
-                <button type="button" class="btn btn-outline-success"
-                        data-bs-toggle="modal" data-bs-target="#modalPagarFactura{{ factura.idFactura }}"
-                        title="Marcar como pagada">
-                  <i class="bi bi-cash-coin"></i>
-                </button>
+             <td>
+                {% if factura.estado == 'Pagada' %}
+                  <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>Pagada</span>
+                {% else %}
+                  <span class="badge-ht badge-pending"><i class="bi bi-clock me-1"></i>Pendiente de pago</span>
                 {% endif %}
-              </div>
-            </td>
+              </td>
+
+              <td class="text-center">
+                <div class="btn-group btn-group-sm" role="group">
+                  {% if factura.estado == 'Pagada' %}
+                    <a href="{% url 'admin_factura_descargar' factura.idFactura %}"
+                      class="btn btn-outline-secondary" title="Descargar PDF">
+                      <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
+                  {% else %}
+                    <button type="button" class="btn btn-outline-success"
+                            data-bs-toggle="modal" data-bs-target="#modalPagarFactura{{ factura.idFactura }}"
+                            title="Marcar como pagada">
+                      <i class="bi bi-cash-coin"></i>
+                    </button>
+                  {% endif %}
+                </div>
+              </td>
           </tr>
 
           {% if factura.estado != 'Pagada' %}

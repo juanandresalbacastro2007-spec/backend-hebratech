@@ -5,6 +5,7 @@ import os
 import json
 import openpyxl
 from datetime import datetime, date
+from apps.core.fechas import parsear_rango
 
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -15,6 +16,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 from xhtml2pdf import pisa
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from django.http import FileResponse
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -455,6 +459,10 @@ def cotizacion_pdf(request, idCotizacion):
     )
     return response
 
+
+
+
+
 # ── Usuarios ─────────────────────────────────────────────────
 @admin_required
 def usuarios_lista(request):
@@ -679,13 +687,20 @@ def orden_editar(request, idOrden):
         orden = get_object_or_404(Orden, pk=idOrden)
         cantidad = request.POST.get('cantidad')
         precio_unitario = request.POST.get('precio_unitario')
+        fecha_inicio = request.POST.get('fecha_inicio')
         fecha_entrega = request.POST.get('fecha_entrega')
         prioridad = request.POST.get('prioridad')
         nuevo_estado = request.POST.get('estado')
 
         orden.cantidad = int(cantidad) if cantidad and cantidad.strip() else None
         orden.precioUnitario = float(precio_unitario) if precio_unitario and precio_unitario.strip() else None
-        orden.fechaEntregaEstimada = fecha_entrega if fecha_entrega and fecha_entrega.strip() else None
+        inicio = _parsear_fecha(fecha_inicio)
+        fin = _parsear_fecha(fecha_entrega)
+        if inicio and fin and fin < inicio:
+            messages.error(request, 'La fecha final no puede ser anterior a la fecha de inicio.')
+            return redirect('admin_ordenes')
+        orden.fechaEstimadaInicio = inicio
+        orden.fechaEntregaEstimada = fin
         orden.prioridad = prioridad
 
         if nuevo_estado and nuevo_estado != orden.estado:
@@ -1057,18 +1072,20 @@ def incidencia_eliminar(request, idIncidencia):
 
 
 # ── Facturas ─────────────────────────────────────────────────
+
 @admin_required
 def facturas_lista(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
     facturas = Factura.objects.select_related('idCliente', 'idOrden').order_by('-fechaEmision')
 
-    buscar_filtro = request.GET.get('buscar', '')
+    buscar_filtro = request.GET.get('buscar', '').strip()
     if buscar_filtro:
+        termino = buscar_filtro.lstrip('#')
         facturas = facturas.filter(
-            Q(numeroFactura__icontains=buscar_filtro) |
-            Q(idCliente__nombre__icontains=buscar_filtro) |
-            Q(idCliente__empresa__icontains=buscar_filtro) |
-            Q(idOrden__idOrden__icontains=buscar_filtro)
+            Q(numeroFactura__icontains=termino) |
+            Q(idOrden__idOrden__icontains=termino) |
+            Q(idCliente__nombre__icontains=termino) |
+            Q(idCliente__empresa__icontains=termino)
         )
 
     estado_filtro = request.GET.get('estado', '')
@@ -1078,10 +1095,57 @@ def facturas_lista(request):
     return render(request, 'administrador/facturas_lista.html', {
         'usuario': usuario,
         'facturas': facturas,
-        'buscar_filtro': buscar_filtro,
         'estado_filtro': estado_filtro,
-        'seccion_activa': 'facturas',
+        'buscar_filtro': buscar_filtro,
     })
+def _dato(obj, *nombres, default='-'):
+    """Busca el primer campo que exista y tenga valor."""
+    for n in nombres:
+        v = getattr(obj, n, None)
+        if v not in (None, ''):
+            return v
+    return default
+
+
+def _generar_pdf_factura(factura, ruta):
+    os.makedirs(os.path.dirname(ruta), exist_ok=True)
+    c = canvas.Canvas(ruta, pagesize=A4)
+    ancho, alto = A4
+    y = alto - 60
+
+    c.setFont('Helvetica-Bold', 22)
+    c.drawString(50, y, 'HebraTech')
+    y -= 24
+    c.setFont('Helvetica', 11)
+    c.drawString(50, y, 'Sistema de gestión de producción textil')
+    y -= 40
+
+    c.setFont('Helvetica-Bold', 16)
+    c.drawString(50, y, f'Factura {factura.numeroFactura}')
+    y -= 35
+
+    def fmt(v):
+        return v.strftime('%d/%m/%Y %H:%M') if hasattr(v, 'strftime') else '-'
+
+    cliente = factura.idCliente
+    nombre_cliente = (getattr(cliente, 'empresa', None) or getattr(cliente, 'nombre', None) or '-')
+
+    filas = [
+        ('Cliente', nombre_cliente),
+        ('Orden', f'#{factura.idOrden_id}'),
+        ('Estado', factura.estado),
+        ('Fecha de emisión', fmt(factura.fechaEmision)),
+        ('Fecha de pago', fmt(factura.fechaPago)),
+        ('Total', f'${factura.total:,.0f}'.replace(',', '.')),
+    ]
+    for etiqueta, valor in filas:
+        c.setFont('Helvetica-Bold', 12)
+        c.drawString(50, y, f'{etiqueta}:')
+        c.setFont('Helvetica', 12)
+        c.drawString(190, y, str(valor))
+        y -= 24
+
+    c.save()
 
 
 @admin_required
@@ -1104,15 +1168,31 @@ def factura_marcar_pagada(request, idFactura):
 @admin_required
 def factura_descargar(request, idFactura):
     factura = get_object_or_404(Factura, pk=idFactura)
-    ruta = os.path.join(settings.MEDIA_ROOT, factura.rutaPDF)
-    if not os.path.exists(ruta):
-        raise Http404('El archivo de la factura no fue encontrado.')
-    return FileResponse(
-        open(ruta, 'rb'),
-        as_attachment=True,
-        filename=os.path.basename(ruta)
-    )
 
+    if factura.estado != 'Pagada':
+        messages.error(
+            request,
+            f'Primero debes marcar como pagada la factura {factura.numeroFactura} para poder descargar el PDF.'
+        )
+        return redirect('admin_facturas')
+
+    # Si no hay ruta guardada, se asigna una por defecto
+    if not factura.rutaPDF:
+        factura.rutaPDF = f'facturas/{factura.numeroFactura}.pdf'
+        factura.save()
+
+    ruta_rel = factura.rutaPDF.replace('\\', '/').lstrip('/')
+    ruta = os.path.join(settings.MEDIA_ROOT, ruta_rel)
+
+    # Si el archivo no existe, se vuelve a generar
+    if not os.path.isfile(ruta):
+        try:
+            _generar_pdf_factura(factura, ruta)
+        except Exception as e:
+            messages.error(request, f'No se pudo generar el PDF: {e}')
+            return redirect('admin_facturas')
+
+    return FileResponse(open(ruta, 'rb'), as_attachment=True, filename=os.path.basename(ruta))
 
 # ── Módulos / Placeholders externos ──────────────────────────
 @admin_required
