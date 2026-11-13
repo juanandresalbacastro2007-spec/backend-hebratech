@@ -37,20 +37,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 function switchAuth() {
-      const login = document.getElementById('login-view');
-      const register = document.getElementById('register-view');
-      const isLoginVisible = window.getComputedStyle(login).display !== 'none';
-      if (isLoginVisible) {
-        login.style.display = 'none';
-        register.style.display = 'block';
-      } else {
-        login.style.display = 'block';
-        register.style.display = 'none';
-      }
-    }
+    const loginView = document.getElementById('login-view');
+    const registerView = document.getElementById('register-view');
+    const logoText = document.querySelector('.logo-text'); // Si manejas el texto superior dinámico
 
-    function togglePass(id) {
-      const input = document.getElementById(id);
-      if (!input) return;
-      input.type = input.type === 'password' ? 'text' : 'password';
+    if (loginView.style.display === 'none') {
+        // Estamos en Registro -> Volver al Login
+        loginView.style.display = 'block';
+        registerView.style.display = 'none';
+    } else {
+        // Estamos en Login -> Ir al Registro
+        loginView.style.display = 'none';
+        registerView.style.display = 'block';
     }
+}
+
+// Función inteligente para la flecha de atrás
+function handleBack() {
+    const loginView = document.getElementById('login-view');
+    const registerView = document.getElementById('register-view');
+
+    // Si el registro está visible (significa que estamos creando cuenta)
+    if (registerView.style.display !== 'none') {
+        // En lugar de irse al home, simulamos un clic en "Inicia sesión" o llamamos a switchAuth
+        switchAuth(); 
+    } else {
+        // Si estamos en el login normal, sí lo mandamos al home
+        window.location.href = "{% url 'home' %}";
+    }
+}
