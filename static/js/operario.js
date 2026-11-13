@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let listaReportes          = [];
     const incFiltro            = { q: '', estado: 'todos' };
     const histFiltro           = { q: '', proceso: '' };
+    let estadoActual           = 'Pendiente';   // modal Pendientes / En Proceso
 
     let pendingDeleteId        = null;
     let activeStartTaskId      = null;
@@ -75,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         configurarListaIncidencias();
         configurarSelectsAnimados();
         configurarMenuLateral();
+        configurarModalEstadoTareas();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -132,6 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const total = document.getElementById('totalTasks');
         if (total) total.textContent = tareas.length;
+
+        // Si el modal de Pendientes / En Proceso está abierto, se refresca con los datos nuevos
+        const modalEstado = document.getElementById('modalEstadoTareas');
+        if (modalEstado?.classList.contains('show')) renderizarEstadoTareas();
     }
 
     function crearCard(t) {
@@ -907,14 +913,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     ).show();
                 }, 150);
             });
-
-        document.getElementById('btnCreateIncidenceFromModule')
-            ?.addEventListener('click', () => {
-                bootstrap.Modal.getInstance(
-                    document.getElementById('modalGestionIncidencias')
-                ).hide();
-                setTimeout(() => abrirModalIncidencia(), 300);
-            });
     }
 
     // Gira la flecha de los desplegables mientras la lista está abierta.
@@ -1138,6 +1136,130 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════════════════
+    // 10b. MODAL DE TAREAS PENDIENTES / EN PROCESO  (NUEVO)
+    // ═══════════════════════════════════════════════════════════
+
+    const ORDEN_PRIO = { Urgente: 0, Alta: 1, Media: 2, Normal: 3 };
+
+    const META_ESTADO = {
+        'Pendiente': {
+            eyebrow:  'Por hacer',
+            titulo:   'Tareas pendientes',
+            ayuda:    'Tareas asignadas que aún no has iniciado, las más urgentes primero. Toca una tarjeta para ver el detalle.',
+            icono:    'bi-clock-history',
+            vacioTit: '¡Todo al día!',
+            vacioTxt: 'No tienes tareas pendientes.',
+        },
+        'En Progreso': {
+            eyebrow:  'En ejecución',
+            titulo:   'Tareas en proceso',
+            ayuda:    'Tareas que ya iniciaste y siguen corriendo. Puedes finalizarlas desde aquí. Toca una tarjeta para ver el detalle.',
+            icono:    'bi-play-circle-fill',
+            vacioTit: 'Sin tareas en ejecución',
+            vacioTxt: 'Inicia una tarea pendiente para verla aquí.',
+        },
+    };
+
+    function tareasPorEstado(estado) {
+        return Object.values(cacheTareas)
+            .filter(t => t.estado === estado)
+            .sort((a, b) => (ORDEN_PRIO[a.prioridad] ?? 9) - (ORDEN_PRIO[b.prioridad] ?? 9)
+                         || Number(a.idAsignacion) - Number(b.idAsignacion));
+    }
+
+    function tarjetaEstadoTarea(t) {
+        const cantidad = t.cantidadPrendas
+            ? `<span class="ht-hist-meta"><i class="bi bi-boxes"></i>${esc(t.cantidadPrendas)} ${esc(t.tipoPrenda || 'uds')}</span>` : '';
+        const maquina = t.maquina
+            ? `<span class="ht-hist-meta"><i class="bi bi-cpu"></i>${esc(t.maquina)}</span>` : '';
+        const horas = num(t.horasEstimadas) !== null
+            ? `<span class="ht-hist-meta"><i class="bi bi-clock"></i>${fmtH(t.horasEstimadas)} h estimadas</span>` : '';
+        const inicio = t.fechaInicio
+            ? `<span class="ht-hist-meta"><i class="bi bi-calendar-event"></i>Inicio ${esc(t.fechaInicio)}</span>` : '';
+        const limite = t.fechaLimite
+            ? `<span class="ht-hist-meta"><i class="bi bi-calendar-check"></i>Límite ${esc(t.fechaLimite)}</span>` : '';
+
+        const accionPrincipal = t.estado === 'Pendiente'
+            ? `<button type="button" class="ht-hist-btn ht-hist-btn--ver" data-action="iniciar" aria-label="Iniciar ${esc(t.nombreTarea || 'la tarea')}">
+                   <i class="bi bi-play-fill"></i><span>Iniciar</span>
+               </button>`
+            : `<button type="button" class="ht-hist-btn ht-hist-btn--ver" data-action="finalizar" aria-label="Finalizar ${esc(t.nombreTarea || 'la tarea')}">
+                   <i class="bi bi-check-lg"></i><span>Finalizar</span>
+               </button>`;
+
+        return `
+            <article class="ht-hist-card" data-id="${esc(t.idAsignacion)}" data-estado="${esc(t.estado)}">
+                <div class="ht-hist-card__top">
+                    <span class="ht-hist-type ht-hist-type--task"><i class="bi bi-gear-fill"></i>${esc(t.proceso || 'General')}</span>
+                    ${t.prioridad ? `<span class="ht-badge ht-badge-prio-${esc(t.prioridad)}">${esc(t.prioridad)}</span>` : ''}
+                </div>
+                <h6 class="ht-hist-card__title">${esc(t.nombreTarea || 'Tarea sin título')}</h6>
+                ${t.descripcionTarea ? `<p class="ht-hist-card__desc">${esc(t.descripcionTarea)}</p>` : ''}
+                <div class="ht-hist-card__meta">${maquina}${cantidad}${horas}${inicio}${limite}</div>
+                <div class="ht-hist-card__actions">
+                    <button type="button" class="ht-hist-btn" data-action="ver" aria-label="Ver detalle de ${esc(t.nombreTarea || 'la tarea')}">
+                        <i class="bi bi-eye"></i><span>Ver detalle</span>
+                    </button>
+                    ${accionPrincipal}
+                </div>
+            </article>`;
+    }
+
+    function renderizarEstadoTareas() {
+        const lista = document.getElementById('listaEstadoTareas');
+        if (!lista) return;
+
+        const meta  = META_ESTADO[estadoActual];
+        const todas = tareasPorEstado(estadoActual);
+
+        if (todas.length === 0) {
+            lista.innerHTML = `
+                <div class="ht-hist-empty">
+                    <i class="bi ${meta.icono}"></i>
+                    <strong>${meta.vacioTit}</strong>
+                    <span>${meta.vacioTxt}</span>
+                </div>`;
+            return;
+        }
+        lista.innerHTML = todas.map(tarjetaEstadoTarea).join('');
+    }
+
+    function abrirModalEstadoTareas(estado) {
+        const meta = META_ESTADO[estado];
+        if (!meta) return;
+        document.activeElement?.blur();
+
+        estadoActual = estado;
+
+        document.getElementById('estadoEyebrow').textContent = meta.eyebrow;
+        document.getElementById('estadoTitulo').textContent  = meta.titulo;
+        document.getElementById('estadoAyuda').textContent   = meta.ayuda;
+
+        renderizarEstadoTareas();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEstadoTareas')).show();
+    }
+
+    function configurarModalEstadoTareas() {
+        document.getElementById('listaEstadoTareas')?.addEventListener('click', (e) => {
+            const btn  = e.target.closest('[data-action]');
+            const card = e.target.closest('.ht-hist-card');
+
+            if (!card) return;
+            const t = cacheTareas[card.dataset.id];
+            if (!t) return;
+
+            // Clic en la tarjeta (fuera de un botón) = ver detalle
+            const accion = btn ? btn.dataset.action : 'ver';
+            bootstrap.Modal.getInstance(document.getElementById('modalEstadoTareas'))?.hide();
+            setTimeout(() => {
+                if (accion === 'iniciar')         abrirModalIniciar(t);
+                else if (accion === 'finalizar')  abrirModalFinalizar(t);
+                else                              abrirDetalleTarea(t);
+            }, 250);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // 11. COLAPSAR COLUMNA COMPLETADAS
     // ═══════════════════════════════════════════════════════════
 
@@ -1182,14 +1304,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function configurarKpisNavbar() {
-        // Pendientes / En Proceso: llevan a su columna (y activan la pestaña en móvil)
-        const irA = (estado) => () => {
-            const tab = document.querySelector(`.ht-mobile-tab[data-tab="${estado}"]`);
-            if (tab && tab.offsetParent !== null) tab.click();
-            document.getElementById(`col-${estado}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        };
-        document.getElementById('kpiPending')?.addEventListener('click', irA('Pendiente'));
-        document.getElementById('kpiProgress')?.addEventListener('click', irA('En Progreso'));
+        // Pendientes / En Proceso: abren la lista de tareas de ese estado
+        document.getElementById('kpiPending')
+            ?.addEventListener('click', () => abrirModalEstadoTareas('Pendiente'));
+        document.getElementById('kpiProgress')
+            ?.addEventListener('click', () => abrirModalEstadoTareas('En Progreso'));
 
         // Completadas e Incidencias: abren su historial
         document.getElementById('kpiDone')?.addEventListener('click', abrirHistorialTareas);
@@ -1324,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => toast.remove(), 3500);
     }
 
-    // ── NUEVO: Bienvenida flotante (una vez por sesión) ──
+    // ── Bienvenida flotante (una vez por sesión) ──
     function mostrarBienvenida(nombre) {
         const wrap = document.getElementById('toastWrap');
         if (!wrap) return;

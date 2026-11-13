@@ -207,12 +207,12 @@
 
         <!-- KPIs informativos (Ocultos en pantalla reducida) -->
         <div class="ht-kpis-row d-none d-xl-flex align-items-center gap-2">
-          <button class="ht-kpi-chip ht-kpi-chip--pending" id="kpiPending" title="Ir a Pendientes">
+          <button class="ht-kpi-chip ht-kpi-chip--pending" id="kpiPending" title="Ver tareas pendientes">
             <span class="ht-kpi-dot"></span>
             <span class="ht-kpi-label">Pendientes</span>
             <strong class="ht-kpi-count" id="kpiCountPending">0</strong>
           </button>
-          <button class="ht-kpi-chip ht-kpi-chip--progress" id="kpiProgress" title="Ir a En Proceso">
+          <button class="ht-kpi-chip ht-kpi-chip--progress" id="kpiProgress" title="Ver tareas en proceso">
             <span class="ht-kpi-dot"></span>
             <span class="ht-kpi-label">En Proceso</span>
             <strong class="ht-kpi-count" id="kpiCountProgress">0</strong>
@@ -567,13 +567,10 @@
             <div class="ht-hist-summary" id="incResumen" role="group" aria-label="Filtrar incidencias por estado"></div>
 
             <div class="ht-hist-toolbar">
-              <div class="ht-search-wrap ht-hist-search">
+              <div class="ht-search-wrap ht-hist-search" style="flex:1 1 100%;width:100%;max-width:100%;">
                 <i class="bi bi-search ht-search-icon"></i>
                 <input type="search" id="searchIncidenceModal" class="ht-search-input" placeholder="Buscar por tipo, número o texto…" aria-label="Buscar incidencias" />
               </div>
-              <button type="button" class="ht-btn-secondary" id="btnCreateIncidenceFromModule">
-                <i class="bi bi-plus-lg"></i><span>Nueva incidencia</span>
-              </button>
             </div>
 
             <p class="ht-hist-count" id="incContador" aria-live="polite"></p>
@@ -636,6 +633,32 @@
               </div>
               <p id="detalleIncRespuesta" class="mb-0" style="white-space:pre-wrap;"></p>
             </div>
+          </div>
+          <div class="modal-footer ht-modal-footer">
+            <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Tareas por estado (Pendientes / En Proceso) — NUEVO -->
+    <div class="modal fade" id="modalEstadoTareas" tabindex="-1" aria-labelledby="estadoTitulo" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl modal-fullscreen-sm-down">
+        <div class="modal-content ht-modal-content">
+          <div class="modal-header ht-modal-header">
+            <div class="ht-modal-title-wrap">
+              <span class="ht-modal-eyebrow" id="estadoEyebrow">—</span>
+              <h5 class="modal-title ht-modal-title" id="estadoTitulo">—</h5>
+            </div>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body ht-modal-body">
+            <p class="ht-hist-help">
+              <i class="bi bi-info-circle"></i>
+              <span id="estadoAyuda"></span>
+            </p>
+
+            <div class="ht-hist-list" id="listaEstadoTareas"></div>
           </div>
           <div class="modal-footer ht-modal-footer">
             <button type="button" class="ht-btn-secondary" data-bs-dismiss="modal">Cerrar</button>
