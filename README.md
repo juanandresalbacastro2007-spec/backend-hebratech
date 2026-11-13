@@ -30,7 +30,7 @@ Sistema de gestión de producción textil multi-rol (administrador, operario, cl
 - 📊 Tablero Kanban para operarios con drag & drop, reporte de incidencias y edición de perfil con foto
 - 🔄 Seguimiento de pedidos en tiempo real (polling) en el portal del cliente
 - 🕓 Historial de cambios en órdenes (`django-simple-history`) y estados controlados con `django-fsm-2`
-- 🔌 API REST con `djangorestframework`, JWT (`simplejwt`) y `dj-rest-auth`
+- 🔌 API REST con `djangorestframework`, y `dj-rest-auth`
 - 🛡️ Seguridad reforzada: decoradores personalizados centralizados, protección IDOR, fijación de sesión (`cycle_key()`) y mensajes de error unificados para evitar enumeración de usuarios
 
 ## 🛠️ Stack tecnológico
@@ -38,7 +38,7 @@ Sistema de gestión de producción textil multi-rol (administrador, operario, cl
 | Categoría | Tecnología |
 |---|---|
 | Backend | Django 6.1 |
-| Base de datos | MySQL 8.0.44 (compatible con MariaDB/XAMPP) mediante PyMySQL |
+| Base de datos | MySQL 8.4 (compatible con MariaDB/XAMPP) mediante PyMySQL |
 | Autenticación social | django-allauth (Google OAuth) |
 | API | Django REST Framework, SimpleJWT, dj-rest-auth |
 | Estados e historial | django-fsm-2, django-simple-history |
