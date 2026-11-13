@@ -1,0 +1,349 @@
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HebraTech — {% block titulo %}Portal de Clientes{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{% static 'img/fondo_logo.jpg' %}" />
+
+  <script>
+    (function () {
+      var t = localStorage.getItem('ht-theme') || 'light';
+      document.documentElement.setAttribute('data-bs-theme', t);
+      try {
+        if (window.innerWidth > 768 && localStorage.getItem('ht-cl-sidebar') === 'collapsed') {
+          document.documentElement.classList.add('cl-collapsed');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Graduate&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}">
+  <link rel="stylesheet" href="{% static 'css/clientes/cliente_shell.css' %}">
+  <link rel="stylesheet" href="{% static 'css/administrador/perfil-modal.css' %}">
+  
+  <!-- CSS de Notificaciones (importado de admin.css adaptado al cliente) -->
+  <style>
+    .ht-notif { position: relative; display: flex; align-items: center; }
+    .ht-notif-btn { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(165,201,202,0.35); background: #fff; color: #395B64; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .ht-notif-btn:hover, .ht-notif-btn[aria-expanded="true"] { background: #E7F6F2; color: #2C3333; }
+    .ht-notif-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: #dc3545; color: #fff; font-size: 0.62rem; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; pointer-events: none; }
+    .ht-notif-badge[hidden] { display: none; }
+    .ht-notif-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 1300; width: 390px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; background: #fff; color: #2C3333; border: 1px solid rgba(165,201,202,0.35); border-radius: 14px; box-shadow: 0 8px 32px rgba(44,51,51,0.16); overflow: hidden; }
+    .ht-notif-panel[hidden] { display: none; }
+    .ht-notif-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px 10px; }
+    .ht-notif-head strong { font-family: 'Fredoka', sans-serif; font-size: 0.9rem; color: #2C3333; }
+    .ht-notif-link { border: none; background: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: #395B64; }
+    .ht-notif-link:hover { background: #E7F6F2; }
+    .ht-notif-link[hidden] { display: none; }
+    .ht-notif-list { list-style: none; margin: 0; padding: 8px; max-height: min(60vh, 420px); overflow-y: auto; }
+    .ht-notif-item { display: flex; align-items: stretch; gap: 2px; margin-bottom: 6px; border-left: 3px solid transparent; border-radius: 10px; background: #E7F6F2; }
+    .ht-notif--orden { border-left-color: #3b82f6; }
+    .ht-notif--factura { border-left-color: #f59e0b; }
+    .ht-notif--sistema { border-left-color: #10b981; }
+    .ht-notif-item.is-read { opacity: 0.65; }
+    .ht-notif-main { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 10px; padding: 10px; border: none; background: none; text-align: left; cursor: pointer; color: inherit; border-radius: 10px; }
+    .ht-notif-main:hover { background: rgba(127,127,127,0.08); }
+    .ht-notif-ico { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .ht-notif--orden .ht-notif-ico { background: rgba(59,130,246,0.14); color: #3b82f6; }
+    .ht-notif--factura .ht-notif-ico { background: rgba(245,158,11,0.16); color: #d97706; }
+    .ht-notif--sistema .ht-notif-ico { background: rgba(16,185,129,0.14); color: #10b981; }
+    .ht-notif-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .ht-notif-txt { font-size: 0.83rem; line-height: 1.35; font-weight: 500; word-break: break-word; }
+    .ht-notif-meta { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; opacity: 0.7; }
+    .ht-notif-toggle { flex-shrink: 0; width: 36px; border: none; background: none; cursor: pointer; border-radius: 10px; font-size: 1rem; color: #2C3333; opacity: 0.6; }
+    .ht-notif-toggle:hover { background: rgba(127,127,127,0.14); color: #395B64; opacity: 1; }
+    .ht-notif-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 20px; text-align: center; font-size: 0.86rem; font-weight: 500; opacity: 0.7; }
+    .ht-notif-empty[hidden] { display: none; }
+    [data-bs-theme="dark"] .ht-notif-btn, [data-bs-theme="dark"] .ht-notif-panel { background-color: #212b30 !important; color: #E7F6F2 !important; border-color: #395b64; }
+    [data-bs-theme="dark"] .ht-notif-head strong { color: #E7F6F2; }
+    [data-bs-theme="dark"] .ht-notif-item { background: #1a2226; }
+    [data-bs-theme="dark"] .ht-notif-meta { color: #9ab0b7; }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <div class="cl-backdrop" id="clBackdrop"></div>
+
+  <aside class="cl-sidebar" id="clSidebar">
+    <a href="{% url 'cliente_portal' %}" class="cl-brand">
+      <div class="cl-brand-icon">
+        <img src="{% static 'img/logo.png' %}" alt="HebraTech">
+      </div>
+      <div>
+        <div class="cl-brand-title">HebraTech</div>
+        <div class="cl-brand-sub">Portal de Clientes</div>
+      </div>
+    </a>
+
+    <nav class="cl-nav">
+      <div class="cl-nav-label">Acciones rápidas</div>
+
+      {% if orden_activa %}
+      <div class="cl-nav-item is-disabled" title="Completa tu orden actual antes de registrar otra.">
+        <i class="bi bi-exclamation-circle"></i> Orden #{{ orden_activa.idOrden }} en curso
+      </div>
+      {% else %}
+      <button type="button" class="cl-nav-item" data-bs-toggle="modal" data-bs-target="#newOrderModal">
+        <i class="bi bi-plus-circle-fill"></i> Nueva orden
+      </button>
+      {% endif %}
+
+      <button type="button" class="cl-nav-item" data-bs-toggle="modal" data-bs-target="#quoteModal">
+        <i class="bi bi-file-earmark-text"></i> Generar cotización
+      </button>
+
+      <div class="cl-nav-label">Mi portal</div>
+
+      <a href="{% url 'cliente_portal' %}#secMisOrdenes" class="cl-nav-item {% if seccion_activa == 'ordenes' %}active{% endif %}">
+        <i class="bi bi-truck"></i> Mis órdenes
+      </a>
+      <a href="{% url 'historial_ordenes' %}" class="cl-nav-item {% if seccion_activa == 'historial' %}active{% endif %}">
+        <i class="bi bi-clock-history"></i> Historial de órdenes
+      </a>
+      <a href="{% url 'cliente_portal' %}#secHistorialFacturas" class="cl-nav-item">
+        <i class="bi bi-receipt"></i> Mis facturas
+      </a>
+      <button type="button" class="cl-nav-item" data-bs-toggle="modal" data-bs-target="#contactModal">
+        <i class="bi bi-envelope-paper"></i> Contactar a HebraTech
+      </button>
+
+      <div class="cl-sb-footer">
+        <div class="cl-user" role="button" tabindex="0" data-bs-toggle="modal" data-bs-target="#perfilModal" title="Editar perfil">
+          <div class="cl-avatar">{{ usuario.nombre|first|upper }}</div>
+          <div class="cl-user-txt">
+            <div class="cl-user-name">{{ usuario.nombre }} {{ usuario.apellido }}</div>
+            <div class="cl-user-role">{{ cliente.empresa|default:"Cliente" }} <i class="bi bi-pencil-fill"></i></div>
+          </div>
+        </div>
+        <a href="{% url 'logout' %}" class="cl-logout">
+          <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="cl-main">
+    <header class="cl-topbar">
+      <button type="button" class="cl-toggle" id="clToggle" aria-label="Mostrar u ocultar menú" aria-controls="clSidebar" aria-expanded="true" title="Mostrar / ocultar menú">
+        <i class="bi bi-layout-sidebar"></i>
+      </button>
+      <div>
+        <h5 class="cl-title">
+          <i class="bi bi-{% block topbar_icono %}house-door{% endblock %} me-2"></i>{% block topbar_titulo %}Mi portal{% endblock %}
+        </h5>
+        <div class="cl-sub">{% block topbar_sub %}{% endblock %}</div>
+      </div>
+
+      <div class="ms-auto d-flex align-items-center gap-2">
+        {% block topbar_extra %}{% endblock %}
+
+        <!-- Notificaciones (Mount point para el JS) -->
+        <div id="notifMount" data-url="{% url 'notificaciones_json' %}" data-user-id="{{ usuario.idUsuario }}"></div>
+
+        <div class="cl-clock d-none d-md-block" id="navClock">
+          <div><i class="bi bi-clock"></i><span id="clockDisplay">--:--:--</span></div>
+          <span id="dateDisplay"></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="cl-content">
+      {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm" role="alert" style="border-radius:10px;">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+      {% block contenido %}{% endblock %}
+    </div>
+  </div>
+
+  <!-- MODALES ... (Mantén tus modales existentes aquí) -->
+  <!-- ══ MODAL — Nueva Orden ══ -->
+  <div class="modal fade" id="newOrderModal" tabindex="-1" aria-labelledby="newOrderModalLabel" aria-hidden="true">
+    <!-- Contenido original intacto -->
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
+        <form method="POST" action="{% url 'registrar_orden' %}" id="formNuevaOrden" class="needs-validation" novalidate>
+          {% csrf_token %}
+          <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
+            <h5 class="modal-title" style="font-family:var(--ff-display);" id="newOrderModalLabel"><i class="bi bi-plus-circle me-2" style="color:var(--primary);"></i>Nueva Orden de Producción</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted small mb-4">Completa los campos para registrar tu orden en el sistema de producción.</p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Producto</label>
+                <select class="form-select" name="producto" id="modalProducto" required onchange="actualizarPrecio()">
+                  <option value="" selected disabled>Seleccionar...</option>
+                  {% for producto in productos %}
+                  <option value="{{ producto.idProducto }}" data-precio="{{ producto.precio_js|unlocalize }}">{{ producto.nombre }} — ${{ producto.precio|floatformat:0 }}</option>
+                  {% endfor %}
+                </select>
+                <div class="invalid-feedback">Selecciona un producto.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Prioridad</label>
+                <select class="form-select" name="prioridad" required>
+                  <option value="" selected disabled>Seleccionar...</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Urgente">Urgente</option>
+                </select>
+                <div class="invalid-feedback">Selecciona una prioridad.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Cantidad (Unidades)</label>
+                <input type="number" class="form-control" name="cantidad" id="modalCantidad" min="1" placeholder="Ej. 200" required oninput="actualizarSubtotalOrden()">
+                <div class="invalid-feedback">Ingresa una cantidad válida.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Precio Unitario</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="text" class="form-control" id="modalPrecioDisplay" readonly style="background-color:#f8f9fa;" placeholder="Se autocompleta">
+                </div>
+              </div>
+              <div class="col-md-6 d-flex align-items-end">
+                <div class="p-3 rounded-3 w-100 d-flex justify-content-between align-items-center" style="background-color:rgba(57,91,100,0.08);border:1px dashed var(--primary);">
+                  <span class="fw-bold text-uppercase" style="font-size:0.8rem;color:var(--primary-dark);">Subtotal:</span>
+                  <span class="h5 mb-0 fw-bold text-primary" id="modalSubtotalDisplay">$0</span>
+                </div>
+              </div>
+              <div class="col-12 col-md-6">
+                <div class="rango-fechas-container">
+                  <label for="o-fecha-rango" class="rango-fechas-title fw-semibold mb-2">Fecha Estimada (Rango) *</label>
+                  <div class="input-group has-validation">
+                    <span class="input-group-text bg-white"><i class="bi bi-calendar-range"></i></span>
+                    <input type="text" id="o-fecha-rango" name="fecha_rango" class="form-control" placeholder="Seleccionar período..." required readonly autocomplete="off" />
+                    <div class="invalid-feedback">Selecciona un rango de fechas.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Instrucciones y especificaciones</label>
+                <textarea class="form-control" name="instrucciones" rows="3" maxlength="1000" placeholder="Tallas, colores, detalles de empaque, logotipos..." required></textarea>
+                <div class="invalid-feedback">Agrega instrucciones o especificaciones para la orden.</div>
+                <div class="form-text text-end">Máximo 1000 caracteres.</div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
+            <button type="button" class="btn-outline-ht" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn-primary-ht"><i class="bi bi-send me-1"></i>Registrar orden</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- (Los demás modales: Cotización, Contacto, Perfil, se mantienen exactamente igual a tu código anterior) -->
+
+  <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
+    <button id="themeToggle" class="btn btn-light rounded-circle shadow-lg border-0" style="width: 48px; height: 48px; font-size: 1.3rem; background: var(--bg-card, #fff); color: var(--primary, #395B64); transition: all 0.3s;">
+      <i class="bi bi-moon-fill" id="themeIcon"></i>
+    </button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/locale/es.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+  <script src="{% static 'js/cliente.js' %}?v=4"></script>
+
+  <script>
+    // Tema y barra lateral (igual que antes)
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById('themeToggle');
+      const icon = document.getElementById('themeIcon');
+      function applyTheme(theme) {
+        root.setAttribute('data-bs-theme', theme);
+        if (icon) icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+        localStorage.setItem('ht-theme', theme);
+      }
+      applyTheme(localStorage.getItem('ht-theme') || 'light');
+      if (btn) btn.addEventListener('click', function () {
+        applyTheme(root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark');
+      });
+    })();
+
+    (function () {
+      var root = document.documentElement;
+      var sidebar = document.getElementById('clSidebar');
+      var backdrop = document.getElementById('clBackdrop');
+      var btn = document.getElementById('clToggle');
+      var mobile = window.matchMedia('(max-width: 768px)');
+      if (!sidebar || !btn) return;
+      function setAria(open) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+      function closeMobile() {
+        sidebar.classList.remove('open'); backdrop.classList.remove('show');
+        document.body.classList.remove('cl-lock'); if (mobile.matches) setAria(false);
+      }
+      function toggleSidebar() {
+        if (mobile.matches) {
+          var open = sidebar.classList.toggle('open');
+          backdrop.classList.toggle('show', open); document.body.classList.toggle('cl-lock', open); setAria(open);
+        } else {
+          var collapsed = root.classList.toggle('cl-collapsed');
+          try { localStorage.setItem('ht-cl-sidebar', collapsed ? 'collapsed' : 'open'); } catch (e) {}
+          setAria(!collapsed);
+        }
+      }
+      btn.addEventListener('click', toggleSidebar);
+      backdrop.addEventListener('click', closeMobile);
+      sidebar.addEventListener('click', function (e) { if (mobile.matches && e.target.closest('a.cl-nav-item')) closeMobile(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMobile(); });
+      document.addEventListener('show.bs.modal', function () { if (mobile.matches) closeMobile(); });
+      var user = sidebar.querySelector('.cl-user');
+      if (user) user.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); user.click(); } });
+      function sync() {
+        if (mobile.matches) { root.classList.remove('cl-collapsed'); closeMobile(); }
+        else { closeMobile(); var c = false; try { c = localStorage.getItem('ht-cl-sidebar') === 'collapsed'; } catch (e) {} root.classList.toggle('cl-collapsed', c); setAria(!c); }
+      }
+      (mobile.addEventListener ? mobile.addEventListener('change', sync) : mobile.addListener(sync)); sync();
+    })();
+
+    (function () {
+      var m = document.getElementById('contactModal');
+      if (m) m.addEventListener('hidden.bs.modal', function () { if (typeof resetContactForm === 'function') resetContactForm(); });
+    })();
+
+    (function () {
+      var f = document.getElementById('formPerfilCliente');
+      if (!f) return;
+      var err = document.getElementById('perfilClienteError');
+      f.addEventListener('submit', function (e) {
+        var tel = (document.getElementById('perfilTelefono').value || '').trim();
+        var msg = '';
+        if (!tel) msg = 'El teléfono de contacto es requerido.';
+        else if (!/^[0-9+\-\s()]{7,}$/.test(tel)) msg = 'Ingresa un teléfono válido (mínimo 7 dígitos).';
+        if (msg) {
+          e.preventDefault(); err.textContent = msg; err.classList.remove('d-none'); err.classList.add('show-error');
+        }
+      });
+    })();
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

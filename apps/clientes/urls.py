@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # ── rutas existentes (no tocar) ──────────────────────────
+    # ── rutas existentes ─────────────────────────────────────
     path('', views.cliente_portal, name='cliente_portal'),
     path('editar-perfil/', views.editar_perfil_cliente, name='editar_perfil_cliente'),
     path('registrar/', views.registrar_orden, name='registrar_orden'),
@@ -15,7 +15,10 @@ urlpatterns = [
     path('cotizacion/<int:idCotizacion>/descargar/', views.descargar_cotizacion, name='descargar_cotizacion'),
     path('cotizacion/<int:idCotizacion>/eliminar/', views.eliminar_cotizacion, name='eliminar_cotizacion'),
 
-    # ── NUEVAS: notificaciones ───────────────────────────────
+    # ── historial de órdenes ─────────────────────────────────
+    path('historial-ordenes/', views.historial_ordenes, name='historial_ordenes'),
+
+    # ── notificaciones ───────────────────────────────────────
     path('notificaciones/', views.notificaciones_json, name='notificaciones_json'),
     path('notificaciones/<int:idNotificacion>/leer/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
 ]
