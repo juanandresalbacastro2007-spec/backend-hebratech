@@ -33,6 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeStartTaskId      = null;
     let activeFinishTaskId     = null;
 
+    // Columna "Completadas": solo se muestra la última; el resto va al historial
+    let ultimaCompletadaId     = null;   // la que el operario acaba de completar en esta sesión
+    let idCompletadaVisible    = null;   // la que se está mostrando en la columna
+
     // ─── SELECTORES ESTÁTICOS ────────────────────────────────────
     const zonas = {
         'Pendiente':   document.getElementById('list-Pendiente'),
@@ -47,6 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const pad4 = (id) => String(id).padStart(4, '0');
     const fmtH = (n) => Number(n).toFixed(1).replace(/\.0$/, '');
     const num  = (v) => (v === null || v === undefined || v === '' || isNaN(Number(v))) ? null : Number(v);
+
+    // Más reciente primero. La API entrega solo la fecha (sin hora), así que
+    // el empate del mismo día se desempata por id de asignación.
+    const masReciente = (a, b) =>
+        (b.fechaFinalizacion || '').localeCompare(a.fechaFinalizacion || '')
+        || Number(b.idAsignacion) - Number(a.idAsignacion);
 
     // ─── INIT ────────────────────────────────────────────────────
     function init() {
@@ -64,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         configurarModalesAccion();
         configurarListaIncidencias();
         configurarSelectsAnimados();
+        configurarMenuLateral();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -98,9 +109,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (zona) zona.querySelectorAll('.ht-card').forEach(c => c.remove());
         });
 
+        const completadas = tareas.filter(t => t.estado === 'Completada').sort(masReciente);
+        const visible = completadas.find(t => t.idAsignacion === ultimaCompletadaId) || completadas[0] || null;
+        idCompletadaVisible = visible ? visible.idAsignacion : null;
+
         tareas.forEach(t => {
             cacheTareas[t.idAsignacion] = t;
-            if (t.estado === 'Completada') return;
+            // Solo la última completada queda en el tablero; las demás viven en el historial
+            if (t.estado === 'Completada' && t !== visible) return;
             const card = crearCard(t);
             const zona = zonas[t.estado];
             if (!zona) return;
@@ -111,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         actualizarEmptyStates();
         actualizarContadores(tareas);
         actualizarBadgeHistorial(tareas);
+        actualizarNotaArchivo(completadas.length);
         aplicarFiltros();
 
         const total = document.getElementById('totalTasks');
@@ -120,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function crearCard(t) {
         const card = document.createElement('div');
         card.className = 'ht-card';
-        card.setAttribute('draggable', 'true');
+        card.setAttribute('draggable', t.estado === 'Completada' ? 'false' : 'true');
         card.setAttribute('data-id-asignacion', t.idAsignacion);
         card.setAttribute('data-prio', t.prioridad);
         card.setAttribute('data-estado', t.estado);
@@ -171,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="ht-badge ${compClass}">${t.complejidad || 'Media'}</span>
                 ${t.cantidadPrendas ? `<span class="ht-badge" style="background:var(--surface);border:1px solid var(--border-md);color:var(--text-muted);"><i class="bi bi-boxes me-1"></i>${t.cantidadPrendas} ${t.tipoPrenda || 'uds'}</span>` : ''}
                 <span class="ht-badge" style="background:var(--surface);border:1px solid var(--border-md);color:var(--text-muted);"><i class="bi bi-clock me-1"></i>${t.horasEstimadas}h</span>
+                ${t.estado === 'Completada' ? `<span class="ht-badge" style="background:rgba(21,115,71,.12);border:1px solid rgba(21,115,71,.35);color:var(--ok);"><i class="bi bi-check-circle-fill me-1"></i>Finalizada ${t.fechaFinalizacion || ''}</span>` : ''}
             </div>
             ${timerBlock}
             ${actionBtns ? `<div class="ht-card-actions">${actionBtns}</div>` : ''}
@@ -322,6 +340,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function cambiarEstado(idAsignacion, nuevoEstado) {
+        const completando = nuevoEstado === 'Completada';
+        const previaId    = idCompletadaVisible;
         try {
             const res = await fetch(ENDPOINTS.cambiarEstado(idAsignacion), {
                 method: 'POST',
@@ -333,7 +353,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (!res.ok) throw new Error('Error actualizando estado');
             mostrarToast(`Tarea movida a "${nuevoEstado}"`, 'ok');
+            if (completando) ultimaCompletadaId = idAsignacion;
             await cargarTareas();
+
+            // La completada anterior sale de la columna: avisar que quedó en el historial
+            if (completando && previaId && previaId !== idCompletadaVisible
+                && cacheTareas[previaId]?.estado === 'Completada') {
+                mostrarAvisoArchivada(cacheTareas[previaId]);
+            }
         } catch (err) {
             console.error(err);
             mostrarToast('No se pudo actualizar el estado', 'err');
@@ -443,6 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const btnAccion = document.getElementById('dtlBtnAction');
+        btnAccion.disabled = false;
         if (t.estado === 'Pendiente') {
             btnAccion.innerHTML = '<i class="bi bi-play-fill me-1"></i>Iniciar tarea';
             btnAccion.onclick = () => {
@@ -486,8 +514,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function actualizarKpiIncidencias(reportes) {
         const kpiEl = document.getElementById('kpiCountIncidence');
         if (kpiEl) kpiEl.textContent = reportes.length;
-        const badge = document.getElementById('reportesBadgeCount');
-        if (badge) badge.textContent = reportes.length;
+        ['reportesBadgeCount', 'drawerReportesBadge'].forEach(id => {
+            const b = document.getElementById(id);
+            if (b) b.textContent = reportes.length;
+        });
     }
 
     function renderizarNotificaciones(reportes) {
@@ -944,15 +974,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════════════════════════
 
     function actualizarBadgeHistorial(tareas) {
-        const badge = document.getElementById('historialBadgeCount');
-        if (!badge) return;
-        badge.textContent = tareas.filter(t => t.estado === 'Completada').length;
+        const n = tareas.filter(t => t.estado === 'Completada').length;
+        ['historialBadgeCount', 'drawerHistorialBadge'].forEach(id => {
+            const b = document.getElementById(id);
+            if (b) b.textContent = n;
+        });
     }
 
     function tareasCompletadas() {
         return Object.values(cacheTareas)
             .filter(t => t.estado === 'Completada')
-            .sort((a, b) => (b.fechaFinalizacion || '').localeCompare(a.fechaFinalizacion || ''));
+            .sort(masReciente);
     }
 
     function renderizarResumenHistorial(todas) {
@@ -1078,6 +1110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function configurarHistorialTareas() {
         document.getElementById('btnVerHistorial')?.addEventListener('click', abrirHistorialTareas);
         document.getElementById('linkVerHistorialDesdeColumna')?.addEventListener('click', abrirHistorialTareas);
+        document.getElementById('linkVerHistorialDesdeNota')?.addEventListener('click', abrirHistorialTareas);
 
         const buscador = document.getElementById('searchHistorialModal');
         buscador?.addEventListener('input', () => { histFiltro.q = buscador.value; renderizarHistorialTareas(); });
@@ -1126,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tareas.forEach(t => { if (counts[t.estado] !== undefined) counts[t.estado]++; });
 
         const countCompletadaEl = document.getElementById('count-Completada');
-        if (countCompletadaEl) countCompletadaEl.textContent = 0;
+        if (countCompletadaEl) countCompletadaEl.textContent = Math.min(counts['Completada'], 1);
 
         ['Pendiente', 'En Progreso'].forEach(e => {
             const el = document.getElementById(`count-${e}`);
@@ -1149,22 +1182,94 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function configurarKpisNavbar() {
-        const scrollA = (estado) => () => {
-            const col = document.getElementById(`col-${estado}`);
-            if (col) col.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Pendientes / En Proceso: llevan a su columna (y activan la pestaña en móvil)
+        const irA = (estado) => () => {
+            const tab = document.querySelector(`.ht-mobile-tab[data-tab="${estado}"]`);
+            if (tab && tab.offsetParent !== null) tab.click();
+            document.getElementById(`col-${estado}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         };
-        document.getElementById('kpiPending')
-            ?.addEventListener('click', scrollA('Pendiente'));
-        document.getElementById('kpiProgress')
-            ?.addEventListener('click', scrollA('En Progreso'));
-        document.getElementById('kpiDone')
-            ?.addEventListener('click', scrollA('Completada'));
+        document.getElementById('kpiPending')?.addEventListener('click', irA('Pendiente'));
+        document.getElementById('kpiProgress')?.addEventListener('click', irA('En Progreso'));
+
+        // Completadas e Incidencias: abren su historial
+        document.getElementById('kpiDone')?.addEventListener('click', abrirHistorialTareas);
         document.getElementById('kpiIncidence')
             ?.addEventListener('click', () => {
                 bootstrap.Modal.getOrCreateInstance(
                     document.getElementById('modalGestionIncidencias')
                 ).show();
             });
+    }
+
+    // ── Menú lateral (móvil/tablet) ──────────────────────────
+    function configurarMenuLateral() {
+        const el = document.getElementById('menuLateral');
+        if (!el) return;
+        const drawer = bootstrap.Offcanvas.getOrCreateInstance(el);
+
+        const acciones = {
+            'nueva-incidencia':      () => abrirModalIncidencia(),
+            'historial-incidencias': () => bootstrap.Modal.getOrCreateInstance(document.getElementById('modalGestionIncidencias')).show(),
+            'historial-tareas':      () => abrirHistorialTareas(),
+        };
+
+        el.querySelectorAll('[data-ht-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const fn = acciones[btn.dataset.htAction];
+                if (!fn) return;
+                // Se ejecuta cuando el menú terminó de cerrarse, para no apilar overlays
+                el.addEventListener('hidden.bs.offcanvas', fn, { once: true });
+                drawer.hide();
+            });
+        });
+
+        // Si la pantalla pasa a modo escritorio, el menú lateral se cierra solo
+        window.matchMedia('(min-width: 992px)').addEventListener('change', e => {
+            if (e.matches) drawer.hide();
+        });
+    }
+
+    // ── Columna Completadas: nota + aviso de archivado ───────
+    function actualizarNotaArchivo(totalCompletadas) {
+        const nota = document.getElementById('archiveNote');
+        if (!nota) return;
+        const archivadas = Math.max(0, totalCompletadas - 1);
+        nota.hidden = archivadas === 0;
+        document.getElementById('archiveNoteCount').textContent = archivadas;
+        document.getElementById('archiveNoteTxt').textContent =
+            archivadas === 1 ? 'tarea anterior archivada en el historial.'
+                             : 'tareas anteriores archivadas en el historial.';
+    }
+
+    function mostrarAvisoArchivada(tarea) {
+        const wrap = document.getElementById('toastWrap');
+        if (!wrap) return;
+
+        const el = document.createElement('div');
+        el.className = 'ht-toast ht-toast--archive';
+        el.setAttribute('role', 'status');
+        el.innerHTML = `
+            <i class="bi bi-archive-fill"></i>
+            <div class="ht-archive-toast-body">
+                <strong>Tarea guardada en el historial</strong>
+                <span class="ht-archive-toast-name"></span>
+                <button type="button" class="btn-link-ht">Ver historial →</button>
+            </div>
+            <button type="button" class="ht-archive-toast-close" aria-label="Cerrar"><i class="bi bi-x"></i></button>`;
+        el.querySelector('.ht-archive-toast-name').textContent =
+            `«${tarea.nombreTarea || 'Tarea'}» salió de Completadas y quedó archivada.`;
+        el.querySelector('.btn-link-ht').addEventListener('click', () => { el.remove(); abrirHistorialTareas(); });
+        el.querySelector('.ht-archive-toast-close').addEventListener('click', () => el.remove());
+        wrap.appendChild(el);
+        setTimeout(() => el.remove(), 9000);
+
+        // Destacar un momento la nota de la columna
+        const nota = document.getElementById('archiveNote');
+        if (nota) {
+            nota.classList.remove('flash');
+            void nota.offsetWidth;
+            nota.classList.add('flash');
+        }
     }
 
     // ═══════════════════════════════════════════════════════════

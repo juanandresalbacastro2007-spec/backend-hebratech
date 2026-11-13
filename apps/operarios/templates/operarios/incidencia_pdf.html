@@ -1,0 +1,39 @@
+{% extends "pdf/base_pdf.html" %}
+
+{% block doc_tipo %}Reporte de incidencia{% endblock %}
+
+{% block titulo %}Incidencia #{{ numero }}{% endblock %}
+
+{% block extra_css %}
+  .respuesta { background: #fff; border: 1px dashed var(--primario); border-left: 4px solid var(--primario); }
+  .texto { white-space: pre-wrap; }
+{% endblock %}
+
+{% block contenido %}
+  <table>
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>Estado</th>
+        <th>Fecha del reporte</th>
+        <th>Operario</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ incidencia.tipoIncidencia }}</td>
+        <td>{{ incidencia.estado }}</td>
+        <td>{{ incidencia.fechaGeneracion|date:"d/m/Y"|default:"—" }}</td>
+        <td>{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Descripción</h2>
+  <div class="box texto">{{ incidencia.descripcion }}</div>
+
+  {% if incidencia.respuesta %}
+  <h2>Respuesta del administrador</h2>
+  <div class="box respuesta texto">{{ incidencia.respuesta }}</div>
+  {% endif %}
+{% endblock %}

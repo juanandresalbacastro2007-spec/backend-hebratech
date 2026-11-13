@@ -104,7 +104,7 @@
       </ul>
 
       <!-- Controles derechos — cambian con la pestaña activa -->
-      <div class="d-flex align-items-center gap-2 pe-3 py-2" id="controles-productos">
+      <div class="d-flex align-items-center flex-wrap gap-2 pe-3 py-2" id="controles-productos">
         <form method="GET" action="{% url 'admin_inventario' %}" class="d-flex align-items-center">
           <input type="hidden" name="tab" value="productos">
           <div class="input-group input-group-sm" style="max-width:240px;">
@@ -113,11 +113,11 @@
                    placeholder="Buscar producto..." value="{{ buscar_filtro|default:'' }}">
           </div>
         </form>
-        <a href="{% url 'exportar_inventario_excel' %}" class="btn btn-sm btn-outline-secondary" title="Exportar Excel">
-          <i class="bi bi-file-earmark-excel"></i>
+        <a href="{% url 'exportar_inventario_excel' %}" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1" title="Exportar a Excel">
+          <i class="bi bi-file-earmark-excel"></i><span class="d-none d-md-inline">Excel</span>
         </a>
-        <a href="{% url 'exportar_inventario_pdf' %}" class="btn btn-sm btn-outline-secondary" title="Exportar PDF">
-          <i class="bi bi-file-earmark-pdf"></i>
+        <a href="{% url 'exportar_inventario_pdf' %}" class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1" title="Exportar a PDF">
+          <i class="bi bi-file-earmark-pdf"></i><span class="d-none d-md-inline">PDF</span>
         </a>
         <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEgresos">
           <i class="bi bi-box-arrow-up me-1"></i>Egreso masivo

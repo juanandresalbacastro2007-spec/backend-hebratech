@@ -1,0 +1,66 @@
+{% extends "pdf/base_pdf.html" %}
+
+{% block doc_tipo %}Inventario{% endblock %}
+{% block titulo %}Reporte General de Inventario{% endblock %}
+
+{% block extra_css %}
+  .kpis { width: 100%; margin: 0 0 12pt; background: var(--claro); border: 1px solid var(--acento); }
+  .kpis td { text-align: center; padding: 7pt 10pt; border-bottom: none; background: transparent; }
+  .kpis td + td { border-left: 1px solid var(--acento); }
+  .kpi-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4pt; color: var(--primario); }
+  .kpi-valor { font-family: "Fredoka"; font-weight: 600; font-size: 12pt; color: var(--oscuro); margin-top: 2pt; }
+  .data tr { break-inside: avoid; }
+  .c { text-align: center; }
+  .b { font-weight: 700; }
+  .bajo { color: #78281F; background: #FADBD8; padding: 1pt 5pt; border-radius: 3pt; font-weight: 700; }
+{% endblock %}
+
+{% block contenido %}
+
+  <table class="kpis">
+    <tr>
+      <td width="50%">
+        <div class="kpi-label">Registros de inventario</div>
+        <div class="kpi-valor">{{ items|length }}</div>
+      </td>
+      <td width="50%">
+        <div class="kpi-label">Por debajo del mínimo</div>
+        <div class="kpi-valor">{{ bajo_minimo }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <table class="data">
+    <thead>
+      <tr>
+        <th width="9%"  class="c">ID</th>
+        <th width="37%">Producto</th>
+        <th width="16%" class="c">Disponible</th>
+        <th width="16%" class="c">Mínimo</th>
+        <th width="22%">Ubicación</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td class="c">{{ item.idInventario }}</td>
+        <td>{% if item.producto %}{{ item.producto.nombre }}{% else %}N/A{% endif %}</td>
+        <td class="c b">
+          {% if item.cantidadDisponible < item.minimoDefinido %}
+            <span class="bajo">{{ item.cantidadDisponible }}</span>
+          {% else %}
+            {{ item.cantidadDisponible }}
+          {% endif %}
+        </td>
+        <td class="c">{{ item.minimoDefinido }}</td>
+        <td>{{ item.ubicacion|default:"N/A" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="c muted" style="padding: 24pt;">No hay registros de inventario.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}

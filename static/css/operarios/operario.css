@@ -2049,3 +2049,78 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .ht-select-wrap::after { transition: none; }
 }
+
+/* ================================================================
+   COMPLETADAS: última tarea + nota de archivo + aviso
+   ================================================================ */
+.ht-card[data-estado="Completada"] { border-left: 3px solid var(--ok); cursor: default; }
+
+.ht-archive-note {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  margin: 0 12px 12px; padding: 10px 12px;
+  background: var(--surface2); border: 1px dashed var(--border-md);
+  border-radius: var(--radius-sm);
+  font-size: .8rem; color: var(--text-muted);
+}
+.ht-archive-note[hidden] { display: none; }
+.ht-archive-note > i { color: var(--primary); }
+.ht-archive-note strong { color: var(--text); }
+.ht-archive-note .btn-link-ht { margin-left: auto; }
+.ht-archive-note.flash { animation: htArchiveFlash 1.6s ease 2; }
+@keyframes htArchiveFlash {
+  0%, 100% { background: var(--surface2); border-color: var(--border-md); }
+  50%      { background: rgba(21,115,71,.18); border-color: var(--ok); }
+}
+
+.ht-toast.ht-toast--archive {
+  align-items: flex-start; max-width: 360px;
+  border-left-color: var(--ok); box-shadow: 0 10px 28px rgba(0,0,0,.22);
+}
+.ht-toast--archive > i { color: var(--ok); margin-top: 2px; }
+.ht-archive-toast-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ht-archive-toast-body strong { font-size: .88rem; }
+.ht-archive-toast-body span   { font-size: .8rem; color: var(--text-muted); }
+.ht-archive-toast-body .btn-link-ht { align-self: flex-start; margin-top: 4px; }
+.ht-archive-toast-close {
+  all: unset; cursor: pointer; margin-left: auto; padding: 0 2px;
+  color: var(--text-muted); font-size: 1.1rem; line-height: 1;
+}
+.ht-archive-toast-close:hover { color: var(--text); }
+
+/* ================================================================
+   MENÚ LATERAL (móvil/tablet) — en escritorio el menú sigue arriba
+   ================================================================ */
+.ht-hamburger { cursor: pointer; padding: 0; }
+
+.ht-drawer.offcanvas {
+  --bs-offcanvas-width: 285px;
+  background: linear-gradient(180deg, #395b64 0%, #2c444e 100%);
+  color: #fff;
+  border-right: 0;
+}
+.ht-drawer-head {
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  padding: 14px 16px;
+}
+.ht-drawer-user { color: #a5c9ca; }
+.ht-drawer-body { display: flex; flex-direction: column; gap: 4px; padding: 12px; }
+
+.ht-drawer-item {
+  all: unset; box-sizing: border-box;
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  color: rgba(255,255,255,.92); font-size: .95rem; font-weight: 500;
+  cursor: pointer; text-decoration: none;
+  transition: background .15s;
+}
+.ht-drawer-item i { font-size: 1.1rem; width: 22px; text-align: center; color: #a5c9ca; }
+.ht-drawer-item:hover, .ht-drawer-item:focus-visible { background: rgba(255,255,255,.12); color: #fff; }
+.ht-drawer-item:focus-visible { outline: 2px solid #a5c9ca; outline-offset: 1px; }
+.ht-drawer-item.is-active { background: rgba(165,201,202,.2); color: #fff; }
+.ht-drawer-item--logout:hover { background: rgba(239,68,68,.25); color: #fecaca; }
+.ht-drawer-item--logout:hover i { color: #fecaca; }
+.ht-drawer-sep { border: 0; border-top: 1px solid rgba(255,255,255,.14); margin: 8px 4px; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ht-archive-note.flash { animation: none; }
+}

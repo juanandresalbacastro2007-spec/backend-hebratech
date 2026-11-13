@@ -1,0 +1,58 @@
+{% extends "pdf/base_pdf.html" %}
+
+{% block doc_tipo %}Cotización{% endblock %}
+{% block titulo %}Cotización #{{ cot.idCotizacion }}{% endblock %}
+
+{% block extra_css %}
+  .info { width: 100%; margin: 0 0 14pt; }
+  .info td { border-bottom: none; background: transparent; padding: 2pt 0; }
+  .info td.k { width: 18%; font-weight: 700; color: var(--primario); }
+  .items .der { text-align: right; }
+  .totales { width: 45%; margin: 0 0 18pt auto; break-inside: avoid; }
+  .t-final { display: flex; justify-content: space-between; align-items: center; background: var(--primario);
+             border-radius: 6pt; padding: 8pt 12pt; }
+  .t-final .t-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5pt; color: var(--acento); }
+  .t-final .t-valor { font-family: "Fredoka"; font-weight: 600; font-size: 14pt; color: #fff; }
+{% endblock %}
+
+{% block contenido %}
+
+  <table class="info">
+    {% if cot.idCliente %}
+    <tr><td class="k">Cliente</td><td>{{ cot.idCliente }}</td></tr>
+    {% if cot.idCliente.nit %}<tr><td class="k">NIT</td><td>{{ cot.idCliente.nit }}</td></tr>{% endif %}
+    {% endif %}
+    <tr><td class="k">Fecha</td><td>{{ fecha|date:"d/m/Y H:i" }}</td></tr>
+  </table>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:44%;">Producto</th>
+        <th style="width:14%;" class="der">Cantidad</th>
+        <th style="width:21%;" class="der">Precio unitario</th>
+        <th style="width:21%;" class="der">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ producto_nombre }}</td>
+        <td class="der">{{ cantidad }}</td>
+        <td class="der">{{ precio_unitario }}</td>
+        <td class="der">{{ subtotal }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totales">
+    <div class="t-final">
+      <span class="t-label">Subtotal estimado</span>
+      <span class="t-valor">{{ subtotal }}</span>
+    </div>
+  </div>
+
+  <div class="box">
+    Valor estimado sujeto a confirmación por parte de HebraTech.
+  </div>
+
+{% endblock %}

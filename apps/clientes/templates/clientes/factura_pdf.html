@@ -1,390 +1,100 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<style>
-  /* ── Reset y base ───────────────────────────────── */
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+{% extends "pdf/base_pdf.html" %}
 
-  body {
-    font-family: Helvetica, Arial, sans-serif;
-    font-size: 12px;
-    color: #2C3333;
-    background: #fff;
-    padding: 30px 36px;
-  }
+{% block doc_tipo %}Factura de venta{% endblock %}
+{% block titulo %}Factura {{ factura.numeroFactura }}{% endblock %}
 
-  /* ── Encabezado ─────────────────────────────────── */
-  .factura-header {
-    display: table;
-    width: 100%;
-    border-bottom: 3px solid #395B64;
-    padding-bottom: 18px;
-    margin-bottom: 22px;
-  }
+{% block extra_css %}
+  .emision { color: var(--primario); font-size: 9pt; margin: -4pt 0 12pt; }
 
-  .header-left, .header-right {
-    display: table-cell;
-    vertical-align: middle;
-  }
+  /* Banda de estado */
+  .banda { display: flex; justify-content: space-between; background: var(--primario);
+           border-radius: 6pt; padding: 8pt 14pt; margin-bottom: 14pt; break-inside: avoid; }
+  .banda-item.der { text-align: right; }
+  .lbl { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5pt; color: var(--acento); }
+  .val { font-size: 10pt; color: #fff; margin-top: 1pt; }
 
-  .header-right { text-align: right; }
+  /* Emisor / receptor */
+  .partes { display: flex; gap: 12pt; margin-bottom: 14pt; break-inside: avoid; }
+  .parte { flex: 1; border: 1px solid var(--acento); border-radius: 6pt; padding: 10pt 12pt; }
+  .parte-titulo { font-family: "Fredoka"; font-weight: 500; font-size: 8.5pt; text-transform: uppercase;
+                  letter-spacing: 0.5pt; color: var(--primario); border-bottom: 1px solid var(--acento);
+                  padding-bottom: 4pt; margin-bottom: 6pt; }
+  .parte-linea { font-size: 9.5pt; margin-bottom: 2pt; }
+  .sello { display: inline-block; border: 2px solid var(--primario); color: var(--primario); border-radius: 4pt;
+           padding: 1pt 7pt; font-size: 8.5pt; font-weight: 700; letter-spacing: 0.6pt; margin-top: 4pt; }
 
-  .empresa-nombre {
-    font-size: 22px;
-    font-weight: 700;
-    color: #395B64;
-    letter-spacing: -0.3px;
-  }
+  /* Ítems */
+  .items .der { text-align: right; }
+  .prod-nombre { font-weight: 700; color: var(--oscuro); }
+  .prod-detalle { font-size: 8.5pt; color: #6b7b7e; margin-top: 1pt; }
 
-  .empresa-subtitulo {
-    font-size: 10px;
-    color: #6a8a8e;
-    margin-top: 2px;
-    letter-spacing: 0.4px;
-  }
+  /* Totales */
+  .totales { width: 45%; margin: 0 0 14pt auto; break-inside: avoid; }
+  .t-row { display: flex; justify-content: space-between; padding: 4pt 0;
+           border-bottom: 1px solid var(--acento); font-size: 9.5pt; }
+  .t-row .t-label { color: var(--primario); }
+  .t-final { display: flex; justify-content: space-between; align-items: center; background: var(--primario);
+             border-radius: 6pt; padding: 8pt 12pt; margin-top: 6pt; }
+  .t-final .t-label { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5pt; color: var(--acento); }
+  .t-final .t-valor { font-family: "Fredoka"; font-weight: 600; font-size: 14pt; color: #fff; }
 
-  .factura-numero {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1A2F3B;
-  }
+  /* Instrucciones y pie */
+  .box-titulo { font-family: "Fredoka"; font-weight: 500; font-size: 9pt; color: var(--primario); margin-bottom: 3pt; }
+  .pie { display: flex; justify-content: space-between; border-top: 1px solid var(--acento);
+         padding-top: 8pt; margin-top: 14pt; font-size: 8pt; color: #6b7b7e; break-inside: avoid; }
+  .pie .der { text-align: right; }
+  .legal { text-align: center; font-size: 7.5pt; color: #8a9a9d; margin-top: 6pt; line-height: 1.5; }
+{% endblock %}
 
-  .factura-etiqueta {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #A5C9CA;
-    margin-bottom: 2px;
-  }
+{% block contenido %}
 
-  .factura-fecha {
-    font-size: 10px;
-    color: #6a8a8e;
-    margin-top: 4px;
-  }
+  <div class="emision">
+    Emitida el {{ factura.fechaEmision|date:"d \d\e F \d\e Y" }} a las {{ factura.fechaEmision|date:"H:i" }}
+  </div>
 
-  /* ── Banda de estado ─────────────────────────────── */
-  .banda-estado {
-    background: #395B64;
-    border-radius: 6px;
-    padding: 8px 16px;
-    margin-bottom: 22px;
-    display: table;
-    width: 100%;
-  }
-
-  .banda-col {
-    display: table-cell;
-    vertical-align: middle;
-    color: #A5C9CA;
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-  }
-
-  .banda-col span {
-    display: block;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 400;
-    letter-spacing: 0;
-    text-transform: none;
-    margin-top: 1px;
-  }
-
-  .banda-col.derecha { text-align: right; }
-
-  /* ── Sección de partes ───────────────────────────── */
-  .partes-grid {
-    display: table;
-    width: 100%;
-    margin-bottom: 22px;
-  }
-
-  .parte-col {
-    display: table-cell;
-    width: 48%;
-    vertical-align: top;
-    padding: 14px 16px;
-    border: 1px solid #dce8e9;
-    border-radius: 8px;
-  }
-
-  .parte-col.derecha { margin-left: 4%; }
-
-  /* xhtml2pdf no soporta margin entre celdas table-cell,
-     usamos un separador invisible */
-  .parte-spacer {
-    display: table-cell;
-    width: 4%;
-  }
-
-  .parte-titulo {
-    font-size: 8px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
-    color: #A5C9CA;
-    border-bottom: 1px solid #e0eef0;
-    padding-bottom: 5px;
-    margin-bottom: 8px;
-  }
-
-  .parte-linea {
-    font-size: 11px;
-    color: #2C3333;
-    margin-bottom: 3px;
-    line-height: 1.5;
-  }
-
-  .parte-linea strong { color: #1A2F3B; }
-
-  /* ── Tabla de ítems ──────────────────────────────── */
-  .tabla-items {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 4px;
-  }
-
-  .tabla-items thead tr {
-    background: #395B64;
-  }
-
-  .tabla-items thead th {
-    color: #A5C9CA;
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    padding: 9px 12px;
-    text-align: left;
-  }
-
-  .tabla-items thead th.der { text-align: right; }
-
-  .tabla-items tbody td {
-    padding: 10px 12px;
-    font-size: 11.5px;
-    border-bottom: 1px solid #e9f0f1;
-    vertical-align: middle;
-    color: #2C3333;
-  }
-
-  .tabla-items tbody td.der { text-align: right; }
-
-  .tabla-items tbody tr:last-child td { border-bottom: none; }
-
-  .producto-nombre { font-weight: 600; color: #1A2F3B; }
-  .producto-detalle { font-size: 10px; color: #7a9a9e; margin-top: 1px; }
-
-  /* ── Bloque de totales ───────────────────────────── */
-  .totales-wrap {
-    display: table;
-    width: 100%;
-    margin-bottom: 22px;
-  }
-
-  .totales-spacer { display: table-cell; width: 55%; }
-
-  .totales-box {
-    display: table-cell;
-    width: 45%;
-    vertical-align: top;
-  }
-
-  .total-row-normal {
-    display: table;
-    width: 100%;
-    padding: 5px 0;
-    border-bottom: 1px solid #e9f0f1;
-  }
-
-  .total-row-normal .t-label,
-  .total-row-normal .t-valor {
-    display: table-cell;
-    font-size: 11px;
-  }
-
-  .total-row-normal .t-label { color: #6a8a8e; }
-  .total-row-normal .t-valor { text-align: right; color: #2C3333; font-weight: 500; }
-
-  .total-final {
-    display: table;
-    width: 100%;
-    background: #395B64;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-top: 6px;
-  }
-
-  .total-final .t-label,
-  .total-final .t-valor {
-    display: table-cell;
-    vertical-align: middle;
-  }
-
-  .total-final .t-label {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: #A5C9CA;
-  }
-
-  .total-final .t-valor {
-    text-align: right;
-    font-size: 16px;
-    font-weight: 700;
-    color: #fff;
-  }
-
-  /* ── Instrucciones ───────────────────────────────── */
-  .instrucciones-box {
-    background: #f4f9fa;
-    border: 1px solid #dce8e9;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 22px;
-  }
-
-  .instrucciones-titulo {
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: #A5C9CA;
-    margin-bottom: 5px;
-  }
-
-  .instrucciones-texto {
-    font-size: 11px;
-    color: #2C3333;
-    line-height: 1.6;
-  }
-
-  /* ── Pie de página ───────────────────────────────── */
-  .factura-footer {
-    border-top: 1px solid #dce8e9;
-    padding-top: 14px;
-    display: table;
-    width: 100%;
-  }
-
-  .footer-izq, .footer-der {
-    display: table-cell;
-    vertical-align: middle;
-    font-size: 9px;
-    color: #9ab;
-  }
-
-  .footer-der { text-align: right; }
-
-  .footer-legal {
-    font-size: 8.5px;
-    color: #bcc;
-    text-align: center;
-    margin-top: 8px;
-    line-height: 1.5;
-  }
-
-  /* ── Sello estado ────────────────────────────────── */
-  .sello-emitida {
-    display: inline-block;
-    border: 2px solid #395B64;
-    color: #395B64;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-  }
-</style>
-</head>
-<body>
-
-  <!-- ══ ENCABEZADO ══════════════════════════════════ -->
-  <div class="factura-header">
-    <div class="header-left">
-      <div class="empresa-nombre">HebraTech</div>
-      <div class="empresa-subtitulo">SISTEMA DE GESTIÓN TEXTIL</div>
+  <div class="banda">
+    <div class="banda-item">
+      <div class="lbl">Orden de producción</div>
+      <div class="val">#{{ orden.idOrden }}</div>
     </div>
-    <div class="header-right">
-      <div class="factura-etiqueta">Factura de venta</div>
-      <div class="factura-numero">{{ factura.numeroFactura }}</div>
-      <div class="factura-fecha">
-        Emitida el {{ factura.fechaEmision|date:"d \d\e F \d\e Y" }}
-        a las {{ factura.fechaEmision|date:"H:i" }}
-      </div>
+    <div class="banda-item">
+      <div class="lbl">Prioridad</div>
+      <div class="val">{{ orden.prioridad }}</div>
+    </div>
+    <div class="banda-item">
+      <div class="lbl">Estado</div>
+      <div class="val">{{ orden.estado }}</div>
+    </div>
+    <div class="banda-item der">
+      <div class="lbl">Fecha de creación</div>
+      <div class="val">{{ orden.fechaCreacion|date:"d/m/Y" }}</div>
     </div>
   </div>
 
-  <!-- ══ BANDA DE ESTADO ════════════════════════════ -->
-  <div class="banda-estado">
-    <div class="banda-col">
-      Orden de producción
-      <span>#{{ orden.idOrden }}</span>
-    </div>
-    <div class="banda-col">
-      Prioridad
-      <span>{{ orden.prioridad }}</span>
-    </div>
-    <div class="banda-col">
-      Estado
-      <span>{{ orden.estado }}</span>
-    </div>
-    <div class="banda-col derecha">
-      Fecha de creación
-      <span>{{ orden.fechaCreacion|date:"d/m/Y" }}</span>
-    </div>
-  </div>
-
-  <!-- ══ EMISOR / RECEPTOR ══════════════════════════ -->
-  <div class="partes-grid">
-    <div class="parte-col">
+  <div class="partes">
+    <div class="parte">
       <div class="parte-titulo">Emitido por</div>
       <div class="parte-linea"><strong>HebraTech S.A.S.</strong></div>
       <div class="parte-linea">NIT: 901.234.567-8</div>
       <div class="parte-linea">contacto@hebratech.com</div>
       <div class="parte-linea">Bogotá, Colombia</div>
-      <div class="parte-linea" style="margin-top:6px;">
-        <span class="sello-emitida">{{ factura.estado|upper }}</span>
-      </div>
+      <span class="sello">{{ factura.estado|upper }}</span>
     </div>
-    <div class="parte-spacer"></div>
-    <div class="parte-col">
+    <div class="parte">
       <div class="parte-titulo">Facturado a</div>
       {% with c=orden.idCliente %}
-        {% if c.empresa %}
-        <div class="parte-linea"><strong>{{ c.empresa }}</strong></div>
-        {% endif %}
-        {% if c.nombre %}
-        <div class="parte-linea">Contacto: {{ c.nombre }}</div>
-        {% endif %}
-        {% if c.nit %}
-        <div class="parte-linea">NIT: {{ c.nit }}</div>
-        {% endif %}
-        {% if c.correoElectronico %}
-        <div class="parte-linea">{{ c.correoElectronico }}</div>
-        {% endif %}
-        {% if c.telefono %}
-        <div class="parte-linea">Tel: {{ c.telefono }}</div>
-        {% endif %}
-        {% if c.direccion %}
-        <div class="parte-linea">{{ c.direccion }}</div>
-        {% endif %}
-        {% if c.ciudad %}
-        <div class="parte-linea">{{ c.ciudad }}</div>
-        {% endif %}
+        {% if c.empresa %}<div class="parte-linea"><strong>{{ c.empresa }}</strong></div>{% endif %}
+        {% if c.nombre %}<div class="parte-linea">Contacto: {{ c.nombre }}</div>{% endif %}
+        {% if c.nit %}<div class="parte-linea">NIT: {{ c.nit }}</div>{% endif %}
+        {% if c.correoElectronico %}<div class="parte-linea">{{ c.correoElectronico }}</div>{% endif %}
+        {% if c.telefono %}<div class="parte-linea">Tel: {{ c.telefono }}</div>{% endif %}
+        {% if c.direccion %}<div class="parte-linea">{{ c.direccion }}</div>{% endif %}
+        {% if c.ciudad %}<div class="parte-linea">{{ c.ciudad }}</div>{% endif %}
       {% endwith %}
     </div>
   </div>
 
-  <!-- ══ TABLA DE ÍTEMS ═════════════════════════════ -->
-  <table class="tabla-items">
+  <table class="items">
     <thead>
       <tr>
         <th style="width:40%;">Producto / Descripción</th>
@@ -396,71 +106,51 @@
     <tbody>
       <tr>
         <td>
-          <div class="producto-nombre">
+          <div class="prod-nombre">
             {% if orden.idProducto %}{{ orden.idProducto.nombre }}{% else %}Producto textil{% endif %}
           </div>
           {% if orden.instrucciones and orden.instrucciones != "Sin instrucciones" %}
-          <div class="producto-detalle">{{ orden.instrucciones|truncatechars:80 }}</div>
+          <div class="prod-detalle">{{ orden.instrucciones|truncatechars:80 }}</div>
           {% endif %}
-          <div class="producto-detalle">Prioridad: {{ orden.prioridad }}</div>
+          <div class="prod-detalle">Prioridad: {{ orden.prioridad }}</div>
         </td>
         <td class="der">{{ orden.cantidad }}</td>
-        <td class="der">
-          ${{ orden.precioUnitario|floatformat:"2g" }}
-        </td>
-        <td class="der">
-          ${{ subtotal|floatformat:"2g" }}
-        </td>
+        <td class="der">${{ orden.precioUnitario|floatformat:"2g" }}</td>
+        <td class="der">${{ subtotal|floatformat:"2g" }}</td>
       </tr>
     </tbody>
   </table>
 
-  <!-- ══ TOTALES ════════════════════════════════════ -->
-  <div class="totales-wrap">
-    <div class="totales-spacer"></div>
-    <div class="totales-box">
-      <div class="total-row-normal">
-        <div class="t-label">Subtotal</div>
-        <div class="t-valor">${{ subtotal|floatformat:"2g" }}</div>
-      </div>
-      <div class="total-row-normal">
-        <div class="t-label">IVA (0%)</div>
-        <div class="t-valor">$0</div>
-      </div>
-      <div class="total-row-normal" style="border-bottom:none;">
-        <div class="t-label">Descuentos</div>
-        <div class="t-valor">$0</div>
-      </div>
-      <div class="total-final">
-        <div class="t-label">Total a pagar</div>
-        <div class="t-valor">${{ subtotal|floatformat:"2g" }}</div>
-      </div>
+  <div class="totales">
+    <div class="t-row"><span class="t-label">Subtotal</span><span>${{ subtotal|floatformat:"2g" }}</span></div>
+    <div class="t-row"><span class="t-label">IVA (0%)</span><span>$0</span></div>
+    <div class="t-row" style="border-bottom:none;"><span class="t-label">Descuentos</span><span>$0</span></div>
+    <div class="t-final">
+      <span class="t-label">Total a pagar</span>
+      <span class="t-valor">${{ subtotal|floatformat:"2g" }}</span>
     </div>
   </div>
 
-  <!-- ══ INSTRUCCIONES ESPECIALES (si las hay) ══════ -->
   {% if orden.instrucciones and orden.instrucciones != "Sin instrucciones" %}
-  <div class="instrucciones-box">
-    <div class="instrucciones-titulo">Instrucciones y especificaciones técnicas</div>
-    <div class="instrucciones-texto">{{ orden.instrucciones }}</div>
+  <div class="box">
+    <div class="box-titulo">Instrucciones y especificaciones técnicas</div>
+    {{ orden.instrucciones }}
   </div>
   {% endif %}
 
-  <!-- ══ PIE DE PÁGINA ══════════════════════════════ -->
-  <div class="factura-footer">
-    <div class="footer-izq">
+  <div class="pie">
+    <div>
       HebraTech S.A.S. — NIT 901.234.567-8<br>
       contacto@hebratech.com · Bogotá, Colombia
     </div>
-    <div class="footer-der">
+    <div class="der">
       Factura {{ factura.numeroFactura }}<br>
       Orden #{{ orden.idOrden }}
     </div>
   </div>
-  <div class="footer-legal">
+  <div class="legal">
     Este documento es generado automáticamente por el sistema de gestión de HebraTech.
     Válido como comprobante de orden de producción. Conserva este documento para tus registros contables.
   </div>
 
-</body>
-</html>
+{% endblock %}

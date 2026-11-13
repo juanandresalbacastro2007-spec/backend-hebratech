@@ -1,4 +1,5 @@
 {% extends "administrador/admin_base.html" %}
+{% load humanize %}
 
 {% block titulo %}Facturas{% endblock %}
 {% block topbar_titulo %}Facturas{% endblock %}
@@ -89,7 +90,7 @@
                 <span class="text-muted">—</span>
               {% endif %}
             </td>
-            <td>${{ factura.total|floatformat:0 }}</td>
+            <td><strong>${{ factura.total|floatformat:0|intcomma }}</strong></td>
              <td>
                 {% if factura.estado == 'Pagada' %}
                   <span class="badge-ht badge-success"><i class="bi bi-check-circle me-1"></i>Pagada</span>
@@ -102,8 +103,8 @@
                 <div class="btn-group btn-group-sm" role="group">
                   {% if factura.estado == 'Pagada' %}
                     <a href="{% url 'admin_factura_descargar' factura.idFactura %}"
-                      class="btn btn-outline-secondary" title="Descargar PDF">
-                      <i class="bi bi-file-earmark-pdf"></i>
+                      class="btn btn-danger d-inline-flex align-items-center gap-1" title="Descargar PDF">
+                      <i class="bi bi-file-earmark-pdf"></i><span class="d-none d-md-inline">PDF</span>
                     </a>
                   {% else %}
                     <button type="button" class="btn btn-outline-success"

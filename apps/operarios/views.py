@@ -1,6 +1,7 @@
 # apps/operarios/views.py
 
 import json
+import logging
 from datetime import date, datetime
 
 from django.contrib.auth.hashers import check_password, make_password
@@ -10,6 +11,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import AsignacionTarea, Incidencia, Operario
+
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -393,8 +396,9 @@ def api_marcar_respuesta_leida(request, id_incidencia):
 
 def generar_pdf_reporte(request, id_incidencia):
     """
-    Genera un PDF sencillo de la incidencia usando ReportLab.
-    Si ReportLab no está instalado, devuelve el reporte como texto plano.
+    Genera el PDF de la incidencia con WeasyPrint (misma base visual que las
+    facturas, vía apps.core.pdf). Si WeasyPrint/GTK no está disponible, devuelve
+    el reporte como texto plano para no dejar al operario sin descarga.
     """
     operario = _get_operario(request)
     if not operario:
@@ -405,58 +409,30 @@ def generar_pdf_reporte(request, id_incidencia):
         idIncidencia=id_incidencia,
         idOperario=operario,
     )
+    numero = str(incidencia.idIncidencia).zfill(4)
 
     try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.lib.units import cm
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-        import io
-
-        buffer = io.BytesIO()
-        doc    = SimpleDocTemplate(buffer, pagesize=A4,
-                                   leftMargin=2*cm, rightMargin=2*cm,
-                                   topMargin=2*cm, bottomMargin=2*cm)
-        styles = getSampleStyleSheet()
-        story  = []
-
-        story.append(Paragraph('HebraTech — Reporte de Incidencia', styles['Title']))
-        story.append(Spacer(1, 0.5*cm))
-        story.append(Paragraph(f'<b>ID:</b> #{str(incidencia.idIncidencia).zfill(4)}', styles['Normal']))
-        story.append(Paragraph(f'<b>Tipo:</b> {incidencia.tipoIncidencia}', styles['Normal']))
-        story.append(Paragraph(f'<b>Estado:</b> {incidencia.estado}', styles['Normal']))
-        story.append(Paragraph(f'<b>Fecha:</b> {incidencia.fechaGeneracion}', styles['Normal']))
-        story.append(Spacer(1, 0.4*cm))
-        story.append(Paragraph('<b>Descripción:</b>', styles['Normal']))
-        story.append(Paragraph(incidencia.descripcion, styles['Normal']))
-        story.append(Spacer(1, 0.4*cm))
-        story.append(Paragraph(
-            f'<b>Operario:</b> {operario.idUsuario.nombre} {operario.idUsuario.apellido}',
-            styles['Normal'],
-        ))
-
-        doc.build(story)
-        buffer.seek(0)
-
-        nombre_archivo = f'HebraTech_Incidencia_{str(incidencia.idIncidencia).zfill(4)}.pdf'
-        response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
-        return response
-
-    except ImportError:
-        contenido = (
-            f'HebraTech — Reporte de Incidencia\n'
-            f'{"=" * 40}\n'
-            f'ID:          #{str(incidencia.idIncidencia).zfill(4)}\n'
-            f'Tipo:        {incidencia.tipoIncidencia}\n'
-            f'Estado:      {incidencia.estado}\n'
-            f'Fecha:       {incidencia.fechaGeneracion}\n'
-            f'Operario:    {operario.idUsuario.nombre} {operario.idUsuario.apellido}\n\n'
-            f'Descripción:\n{incidencia.descripcion}\n'
+        from apps.core.pdf import render_pdf
+        return render_pdf(
+            request,
+            'operarios/incidencia_pdf.html',
+            {'incidencia': incidencia, 'operario': operario, 'numero': numero},
+            f'HebraTech_Incidencia_{numero}.pdf',
+            descargar=True,
         )
-        response = HttpResponse(contenido, content_type='text/plain; charset=utf-8')
-        response['Content-Disposition'] = (
-            f'attachment; filename="HebraTech_Incidencia_'
-            f'{str(incidencia.idIncidencia).zfill(4)}.txt"'
-        )
-        return response
+    except (ImportError, RuntimeError) as exc:
+        logger.warning('PDF de incidencia %s no generado con WeasyPrint: %s', numero, exc)
+
+    contenido = (
+        f'HebraTech — Reporte de Incidencia\n'
+        f'{"=" * 40}\n'
+        f'ID:          #{numero}\n'
+        f'Tipo:        {incidencia.tipoIncidencia}\n'
+        f'Estado:      {incidencia.estado}\n'
+        f'Fecha:       {incidencia.fechaGeneracion}\n'
+        f'Operario:    {operario.idUsuario.nombre} {operario.idUsuario.apellido}\n\n'
+        f'Descripción:\n{incidencia.descripcion}\n'
+    )
+    response = HttpResponse(contenido, content_type='text/plain; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="HebraTech_Incidencia_{numero}.txt"'
+    return response

@@ -10,7 +10,6 @@ from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 
-from xhtml2pdf import pisa
 
 from .models import (
     Orden,
@@ -24,6 +23,13 @@ from .models import (
 
 from apps.core.fechas import parsear_rango
 from apps.core.decorators import login_required_rol
+from apps.core.pdf import (
+    TEMPLATE_FACTURA,
+    TEMPLATE_COTIZACION,
+    guardar_pdf,
+    guardar_factura_pdf,
+    render_pdf,
+)
 
 
 # ============================================================
@@ -95,17 +101,15 @@ def _generar_factura_pdf(orden):
         f'F-{datetime.now().strftime("%Y%m%d")}-{orden.idOrden:04d}'
     )
 
-    html = render_to_string(
-        'clientes/factura_pdf.html',
-        {
-            'orden': orden,
-            'subtotal': subtotal,
-            'factura': {
-                'numeroFactura': numero_factura,
-                'fechaEmision': datetime.now(),
-            },
-        }
-    )
+    contexto = {
+        'orden': orden,
+        'subtotal': subtotal,
+        'factura': {
+            'numeroFactura': numero_factura,
+            'fechaEmision': datetime.now(),
+            'estado': 'Pendiente de pago',
+        },
+    }
 
     carpeta = os.path.join(
         settings.MEDIA_ROOT,
@@ -124,11 +128,11 @@ def _generar_factura_pdf(orden):
         nombre_archivo
     )
 
-    with open(ruta_absoluta, 'wb') as f:
-        pisa.CreatePDF(
-            html,
-            dest=f
-        )
+    guardar_pdf(
+        TEMPLATE_FACTURA,
+        contexto,
+        ruta_absoluta
+    )
 
     factura = Factura.objects.create(
         idOrden=orden,
@@ -972,12 +976,16 @@ def descargar_factura(request, idFactura):
         factura.rutaPDF
     )
 
-    if not os.path.exists(ruta):
-
-        raise Http404(
-            'El archivo de la factura '
-            'no fue encontrado.'
-        )
+    # Se regenera siempre para que salga con el diseño oficial vigente.
+    # Si falla y ya existe un archivo previo, se entrega ese.
+    try:
+        guardar_factura_pdf(factura, ruta)
+    except Exception:
+        if not os.path.exists(ruta):
+            raise Http404(
+                'El archivo de la factura '
+                'no fue encontrado.'
+            )
 
     return FileResponse(
         open(ruta, 'rb'),
@@ -1197,3 +1205,69 @@ def marcar_notificacion_leida(
             },
             status=404
         )
+# ============================================================
+# DESCARGAR COTIZACIÓN (PDF)
+# ============================================================
+
+@cliente_required
+def descargar_cotizacion(request, idCotizacion):
+
+    usuario_id = request.session['usuario_id']
+
+    cotizacion = get_object_or_404(
+        Cotizacion,
+        idCotizacion=idCotizacion,
+        idCliente__idUsuario=usuario_id
+    )
+
+    contexto = {
+        'cotizacion': cotizacion,
+        'cliente': cotizacion.idCliente,
+        'producto': cotizacion.idProducto,
+        'subtotal': cotizacion.subtotalEstimado,
+    }
+
+    nombre_archivo = f'cotizacion-{cotizacion.idCotizacion:04d}.pdf'
+
+    try:
+        return render_pdf(
+            request,
+            TEMPLATE_COTIZACION,
+            contexto,
+            nombre_archivo,
+            descargar=True,
+        )
+    except Exception as e:
+        messages.error(
+            request,
+            f'No se pudo generar el PDF de la cotización: {str(e)}'
+        )
+        return redirect('cliente_portal')
+
+
+# ============================================================
+# ELIMINAR COTIZACIÓN
+# ============================================================
+
+@cliente_required
+def eliminar_cotizacion(request, idCotizacion):
+
+    if request.method != 'POST':
+        return redirect('cliente_portal')
+
+    usuario_id = request.session['usuario_id']
+
+    cotizacion = get_object_or_404(
+        Cotizacion,
+        idCotizacion=idCotizacion,
+        idCliente__idUsuario=usuario_id
+    )
+
+    cotizacion.delete()
+
+    messages.success(
+        request,
+        f'Cotización #{idCotizacion} eliminada correctamente.'
+    )
+
+    return redirect('cliente_portal')

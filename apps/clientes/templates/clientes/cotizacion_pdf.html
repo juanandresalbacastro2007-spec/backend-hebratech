@@ -1,0 +1,49 @@
+{% extends "pdf/base_pdf.html" %}
+{% load humanize %}
+
+{% block doc_tipo %}Cotización{% endblock %}
+
+{% block titulo %}Cotización #{{ cotizacion.idCotizacion }}{% endblock %}
+
+{% block contenido %}
+  <table>
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Fecha de la cotización</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ cliente.empresa|default:cliente.nombre }}</td>
+        <td>{{ cotizacion.fechaCreacion|date:"d/m/Y H:i" }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Detalle</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th style="text-align:right;">Cantidad</th>
+        <th style="text-align:right;">P. unitario</th>
+        <th style="text-align:right;">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ cotizacion.idProducto.nombre|default:"—" }}</td>
+        <td style="text-align:right;">{{ cotizacion.cantidad|intcomma }}</td>
+        <td style="text-align:right;">${{ precio_unitario|floatformat:0|intcomma }}</td>
+        <td style="text-align:right;">${{ cotizacion.subtotalEstimado|floatformat:0|intcomma }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="total">Subtotal estimado: ${{ cotizacion.subtotalEstimado|floatformat:0|intcomma }}</p>
+
+  <div class="box">
+    <span class="muted">Valor estimado sujeto a confirmación por parte de HebraTech.</span>
+  </div>
+{% endblock %}

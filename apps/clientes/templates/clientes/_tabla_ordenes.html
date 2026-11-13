@@ -111,6 +111,56 @@
 }
 .orden-acciones { display: flex; gap: 6px; align-items: center; }
 
+/* ── Lista: orden activa primero, historial oculto ───────── */
+.ordenes-list { display: flex; flex-direction: column; padding: 1rem; counter-reset: hist; }
+.ordenes-list > .orden-activa { order: 0; }
+.ordenes-list > .sin-activa  { order: -1; }
+.ordenes-list > .hist-toggle { order: 1; }
+
+/* Oculto pero "renderizado": así el contador CSS sigue contando las órdenes del historial */
+.ordenes-list > .orden-hist {
+  order: 2; counter-increment: hist;
+  max-height: 0; opacity: 0; margin: 0; border-width: 0;
+  visibility: hidden; pointer-events: none;
+}
+#contenedorOrdenes.hist-open .ordenes-list > .orden-hist {
+  max-height: none; opacity: 1; margin-bottom: 1rem; border-width: 1px;
+  visibility: visible; pointer-events: auto;
+}
+.ordenes-list > .orden-hist .orden-tracker-header { background: transparent; }
+
+.sin-activa {
+  display: none; align-items: center; gap: .8rem;
+  padding: .9rem 1.1rem; margin-bottom: 1rem;
+  background: var(--bg-mid, #D4EDE8); border: 1px dashed var(--border-solid, #A5C9CA);
+  border-radius: 12px; font-size: .85rem; color: var(--primary-dark, #2C3333);
+}
+.sin-activa i { font-size: 1.4rem; color: var(--primary, #395B64); }
+.sin-activa span { display: block; font-size: .78rem; opacity: .75; }
+.ordenes-list:not(:has(.orden-activa)) > .sin-activa { display: flex; }
+
+.hist-toggle {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  align-self: flex-start; margin: 0 0 1rem;
+  background: transparent; color: var(--primary, #395B64);
+  border: 1px solid var(--border-solid, #A5C9CA); border-radius: 9px;
+  padding: .45rem .95rem; font-family: var(--ff-body, 'Roboto', sans-serif);
+  font-size: .85rem; cursor: pointer; transition: background .15s;
+}
+.hist-toggle:hover { background: var(--bg-light, #E7F6F2); color: var(--primary-dark, #2C3333); }
+.hist-toggle .lbl-hide { display: none; }
+.hist-toggle .hist-count::after {
+  content: counter(hist);
+  display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 999px;
+  background: var(--primary, #395B64); color: #fff; font-size: .7rem; font-weight: 700; text-align: center;
+}
+.hist-toggle .hist-chev { font-size: .75rem; transition: transform .2s; }
+#contenedorOrdenes.hist-open .hist-toggle .lbl-show { display: none; }
+#contenedorOrdenes.hist-open .hist-toggle .lbl-hide { display: inline; }
+#contenedorOrdenes.hist-open .hist-toggle .hist-chev { transform: rotate(180deg); }
+.ordenes-list:not(:has(.orden-hist)) > .hist-toggle { display: none; }
+[data-bs-theme="dark"] .hist-toggle .hist-count::after { color: var(--primary-deep, #12181b); }
+
 /* ── Modo oscuro ──────────────────────────────────────────── */
 [data-bs-theme="dark"] .orden-tracker-card {
   border-color: var(--border-solid);
@@ -170,8 +220,9 @@
 [data-bs-theme="dark"] .step-wrap.done .step-date { color: var(--accent); opacity: 1; }
 </style>
 
+<div class="ordenes-list">
 {% for orden in ordenes %}
-<div class="orden-tracker-card">
+<div class="orden-tracker-card {% if orden.estado == 'Entregado' or orden.estado == 'Cancelado' %}orden-hist{% else %}orden-activa{% endif %}">
 
   <!-- Cabecera -->
   <div class="orden-tracker-header">
@@ -285,14 +336,14 @@
     <div class="orden-acciones">
       {% if orden.estado == 'Pendiente' %}
         <a href="{% url 'editar_orden' orden.idOrden %}"
-           class="btn btn-sm btn-outline-primary">
-          <i class="bi bi-pencil me-1"></i>Editar
+           class="btn-outline-ht btn-sm-ht">
+          <i class="bi bi-pencil"></i>Editar
         </a>
         <button type="button"
-                class="btn btn-sm btn-outline-danger"
+                class="btn-outline-danger-ht btn-sm-ht"
                 data-bs-toggle="modal"
                 data-bs-target="#deleteModal{{ orden.idOrden }}">
-          <i class="bi bi-trash me-1"></i>Cancelar
+          <i class="bi bi-trash"></i>Cancelar
         </button>
 
         <div class="modal fade" id="deleteModal{{ orden.idOrden }}" tabindex="-1" aria-hidden="true">
@@ -305,8 +356,8 @@
                 <form method="POST" action="{% url 'eliminar_orden' orden.idOrden %}">
                   {% csrf_token %}
                   <div class="d-flex gap-2 justify-content-center mt-3">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Volver</button>
-                    <button type="submit" class="btn btn-danger">Sí, cancelar</button>
+                    <button type="button" class="btn-outline-ht" data-bs-dismiss="modal">Volver</button>
+                    <button type="submit" class="btn-danger-ht">Sí, cancelar</button>
                   </div>
                 </form>
               </div>
@@ -322,12 +373,28 @@
 </div>
 {% endfor %}
 
+  <!-- Sin orden activa (se muestra solo si todas están en el historial) -->
+  <div class="sin-activa">
+    <i class="bi bi-check2-circle"></i>
+    <div><strong>No tienes una orden activa.</strong><span>Tus órdenes anteriores están en el historial.</span></div>
+  </div>
+
+  <!-- Historial: las órdenes entregadas o canceladas quedan ocultas hasta que se pida verlas -->
+  <button type="button" class="hist-toggle" onclick="toggleHistorialOrdenes()">
+    <i class="bi bi-clock-history"></i>
+    <span class="lbl-show">Ver historial de órdenes</span>
+    <span class="lbl-hide">Ocultar historial</span>
+    <span class="hist-count"></span>
+    <i class="bi bi-chevron-down hist-chev"></i>
+  </button>
+</div>
+
 {% else %}
 <div class="text-center text-muted py-5">
   <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
   <p class="mb-3">No tienes órdenes registradas aún.</p>
-  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newOrderModal">
-    <i class="bi bi-plus-circle me-1"></i>Registrar primera orden
+  <button class="btn-primary-ht btn-sm-ht" data-bs-toggle="modal" data-bs-target="#newOrderModal">
+    <i class="bi bi-plus-circle"></i>Registrar primera orden
   </button>
 </div>
 {% endif %}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Fredoka"; font-weight: 500; src: url("{{ fonts_uri }}/Fredoka-Medium.ttf"); }
+  @font-face { font-family: "Fredoka"; font-weight: 600; src: url("{{ fonts_uri }}/Fredoka-SemiBold.ttf"); }
+  @font-face { font-family: "Roboto";  font-weight: 400; src: url("{{ fonts_uri }}/Roboto-Regular.ttf"); }
+  @font-face { font-family: "Roboto";  font-weight: 700; src: url("{{ fonts_uri }}/Roboto-Bold.ttf"); }
+
+  :root {
+    --oscuro: #2C3333;
+    --primario: #395B64;
+    --acento: #A5C9CA;
+    --claro: #E7F6F2;
+  }
+
+  @page {
+    size: A4;
+    margin: 32mm 16mm 22mm 16mm;
+    @top-left     { content: element(encabezado); }
+    @top-right    { content: "{% block doc_tipo %}Documento{% endblock %}"; font: 600 10pt "Fredoka"; color: #395B64; }
+    @bottom-left  { content: "Generado el {{ doc_fecha|date:'d/m/Y' }}"; font: 400 8pt "Roboto"; color: #395B64; }
+    @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 400 8pt "Roboto"; color: #395B64; }
+  }
+
+  #encabezado { position: running(encabezado); }
+  #encabezado img { height: 14mm; }
+
+  body { font-family: "Roboto", sans-serif; font-size: 10pt; color: var(--oscuro); line-height: 1.4; }
+  h1 { font-family: "Fredoka"; font-weight: 600; font-size: 20pt; color: var(--oscuro);
+       border-bottom: 3px solid var(--primario); padding-bottom: 4pt; margin: 0 0 10pt; }
+  h2 { font-family: "Fredoka"; font-weight: 500; font-size: 13pt; color: var(--primario); margin: 14pt 0 4pt; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8pt 0; }
+  th { background: var(--primario); color: #fff; text-align: left; padding: 6pt; font-size: 9pt; font-weight: 700; }
+  td { padding: 6pt; border-bottom: 1px solid var(--acento); }
+  tr:nth-child(even) td { background: var(--claro); }
+
+  .total { text-align: right; font-family: "Fredoka"; font-weight: 600; font-size: 13pt; color: var(--primario); }
+  .box { background: var(--claro); border-left: 4px solid var(--primario); padding: 7pt 10pt; margin: 8pt 0; }
+  .muted { color: #6b7b7e; font-size: 8.5pt; }
+
+  {% block extra_css %}{% endblock %}
+</style>
+</head>
+<body>
+  <div id="encabezado"><img src="{{ logo_uri }}" alt="HebraTech"></div>
+
+  <h1>{% block titulo %}{% endblock %}</h1>
+  {% block contenido %}{% endblock %}
+</body>
+</html>

@@ -96,6 +96,12 @@
       
       <!-- FILA 1 (ARRIBA): Logo, Reloj, Perfil y Salir (Si o si arriba) -->
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-2 border-bottom border-white border-opacity-10">
+        <!-- Menú lateral (solo móvil/tablet) -->
+        <button type="button" class="ht-icon-link ht-hamburger d-lg-none" data-bs-toggle="offcanvas"
+                data-bs-target="#menuLateral" aria-controls="menuLateral" aria-label="Abrir menú">
+          <i class="bi bi-list" style="font-size:1.25rem;"></i>
+        </button>
+
         <!-- Logo y título -->
         <a href="{% url 'operarios:tablero' %}" class="ht-brand text-decoration-none d-flex align-items-center gap-2">
           <div class="brand-icon">
@@ -177,7 +183,7 @@
       <div class="ht-hdr-row2">
 
         <!-- Acciones: en móvil solo íconos con contador; desde 576px muestran el texto -->
-        <div class="ht-hdr-actions" role="group" aria-label="Acciones rápidas">
+        <div class="ht-hdr-actions d-none d-lg-flex" role="group" aria-label="Acciones rápidas">
           <button type="button" class="ht-btn-custom ht-btn-custom--primary" id="btnGenerateReport"
                   title="Reportar una nueva incidencia" aria-label="Reportar una nueva incidencia">
             <i class="bi bi-plus-lg"></i>
@@ -211,7 +217,7 @@
             <span class="ht-kpi-label">En Proceso</span>
             <strong class="ht-kpi-count" id="kpiCountProgress">0</strong>
           </button>
-          <button class="ht-kpi-chip ht-kpi-chip--done" id="kpiDone" title="Ir a Completadas">
+          <button class="ht-kpi-chip ht-kpi-chip--done" id="kpiDone" title="Abrir historial de tareas">
             <span class="ht-kpi-dot"></span>
             <span class="ht-kpi-label">Completadas</span>
             <strong class="ht-kpi-count" id="kpiCountDone">0</strong>
@@ -253,6 +259,45 @@
       </div>
 
     </header>
+
+    <!-- ═══ MENÚ LATERAL (móvil y tablet; en escritorio el menú queda arriba) ═══ -->
+    <div class="offcanvas offcanvas-start ht-drawer" tabindex="-1" id="menuLateral" aria-labelledby="menuLateralTitulo">
+      <div class="offcanvas-header ht-drawer-head">
+        <div class="d-flex align-items-center gap-2" style="min-width:0;">
+          <img src="{% static 'img/logo.png' %}" alt="" style="max-height:34px;" />
+          <div class="d-flex flex-column" style="line-height:1.15;min-width:0;">
+            <span class="fw-bold" id="menuLateralTitulo">HebraTech</span>
+            <small class="ht-drawer-user text-truncate">
+              {% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% else %}Operario{% endif %}
+            </small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="offcanvas" aria-label="Cerrar menú"></button>
+      </div>
+      <nav class="offcanvas-body ht-drawer-body" aria-label="Menú del operario">
+        <a href="{% url 'operarios:tablero' %}" class="ht-drawer-item is-active">
+          <i class="bi bi-kanban"></i><span>Tablero</span>
+        </a>
+        <button type="button" class="ht-drawer-item" data-ht-action="nueva-incidencia">
+          <i class="bi bi-plus-lg"></i><span>Nueva incidencia</span>
+        </button>
+        <button type="button" class="ht-drawer-item" data-ht-action="historial-incidencias">
+          <i class="bi bi-journal-text"></i><span>Historial de incidencias</span>
+          <span class="ht-badge-count ms-auto" id="drawerReportesBadge">0</span>
+        </button>
+        <button type="button" class="ht-drawer-item" data-ht-action="historial-tareas">
+          <i class="bi bi-archive"></i><span>Historial de tareas</span>
+          <span class="ht-badge-count ms-auto" id="drawerHistorialBadge">0</span>
+        </button>
+        <hr class="ht-drawer-sep" />
+        <a href="{% url 'operarios:perfil' %}" class="ht-drawer-item">
+          <i class="bi bi-pencil-square"></i><span>Editar perfil</span>
+        </a>
+        <a href="{% url 'logout' %}" class="ht-drawer-item ht-drawer-item--logout">
+          <i class="bi bi-box-arrow-right"></i><span>Cerrar sesión</span>
+        </a>
+      </nav>
+    </div>
 
     <!--      ═══════════════════════════════════════════════════
        MAIN — TABLERO KANBAN
@@ -330,9 +375,14 @@
             <div class="ht-col-empty" id="empty-Completada">
               <i class="bi bi-trophy"></i>
               <strong>¡Al día!</strong>
-              <span>Las tareas que completas se archivan automáticamente.</span>
+              <span>Aquí queda tu última tarea completada; las anteriores pasan al historial.</span>
               <button type="button" class="btn-link-ht mt-1" id="linkVerHistorialDesdeColumna">Ver historial →</button>
             </div>
+          </div>
+          <div class="ht-archive-note" id="archiveNote" hidden>
+            <i class="bi bi-archive-fill"></i>
+            <span><strong id="archiveNoteCount">0</strong> <span id="archiveNoteTxt">tareas anteriores archivadas en el historial.</span></span>
+            <button type="button" class="btn-link-ht" id="linkVerHistorialDesdeNota">Ver historial →</button>
           </div>
         </div>
       </div>

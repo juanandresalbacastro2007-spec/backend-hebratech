@@ -7,66 +7,92 @@
 {% block topbar_sub %}Cotizaciones generadas por el administrador{% endblock %}
 
 {% block topbar_extra %}
-<div class="ms-auto">
-  <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaCotizacion">
+<div class="ms-auto d-flex gap-2">
+  <button type="button" class="btn btn-primary-ht d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#modalNuevaCotizacion">
     <i class="bi bi-plus-lg me-1"></i>Nueva cotización
   </button>
 </div>
 {% endblock %}
 
 {% block contenido %}
-<div class="card shadow-sm">
-  <div class="card-header">
-    <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Cotizaciones</h6>
+
+<!-- Mensajes Flash de Django -->
+{% if messages %}
+  <div class="messages-wrapper mb-3">
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert" style="border-radius: 10px;">
+        {% if message.tags == 'success' %}
+          <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+        {% elif message.tags == 'error' or message.tags == 'danger' %}
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger"></i>
+        {% elif message.tags == 'warning' %}
+          <i class="bi bi-exclamation-diamond-fill me-2 fs-5 text-warning"></i>
+        {% else %}
+          <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
+        {% endif %}
+        <div>{{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
   </div>
-  <div class="card-body p-0">
-    {% if cotizaciones %}
-    <div class="table-responsive">
-      <table class="table table-hover mb-0 align-middle">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Producto</th>
-            <th>Cantidad</th>
-            <th>Subtotal estimado</th>
-            <th>Fecha</th>
-            <th class="text-end">PDF</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for cot in cotizaciones %}
-          <tr>
-            <td><strong>#{{ cot.idCotizacion }}</strong></td>
-            <td>{{ cot.idProducto.nombre|default:"—" }}</td>
-            <td>{{ cot.cantidad }}</td>
-            <td>${{ cot.subtotalEstimado|floatformat:0|intcomma }}</td>
-            <td>{{ cot.fechaCreacion|date:"d/m/Y H:i" }}</td>
-            <td class="text-end">
-              <a href="{% url 'admin_cotizacion_pdf' cot.idCotizacion %}" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div class="text-center text-muted py-5">
-      <i class="bi bi-file-earmark-text fs-1 d-block mb-2 opacity-25"></i>
-      <p class="mb-0">No hay cotizaciones registradas.</p>
-    </div>
-    {% endif %}
+{% endif %}
+
+<div class="section-card">
+  <div class="section-card-header">
+    <h6><i class="bi bi-file-earmark-text me-2"></i>Todas las cotizaciones ({{ cotizaciones|length }})</h6>
+  </div>
+  <div class="section-card-body p-0">
+    <table class="ht-table">
+      <thead>
+        <tr>
+          <th># Cotización</th>
+          <th>Producto</th>
+          <th>Cantidad</th>
+          <th>Subtotal estimado</th>
+          <th>Fecha</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cot in cotizaciones %}
+        <tr>
+          <td><strong>#{{ cot.idCotizacion }}</strong></td>
+          <td>{{ cot.idProducto.nombre|default:"—" }}</td>
+          <td>{{ cot.cantidad }}</td>
+          <td><strong>${{ cot.subtotalEstimado|floatformat:0|intcomma }}</strong></td>
+          <td>{{ cot.fechaCreacion|date:"d/m/Y H:i" }}</td>
+          <td class="text-center">
+            <a href="{% url 'admin_cotizacion_pdf' cot.idCotizacion %}"
+               class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1" title="Descargar PDF">
+              <i class="bi bi-file-earmark-pdf"></i><span class="d-none d-md-inline">PDF</span>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-5">
+            <i class="bi bi-file-earmark-text fs-1 d-block mb-2 text-secondary opacity-50"></i>
+            <p class="mb-1 fw-medium">No hay cotizaciones registradas.</p>
+            <div class="mt-3">
+              <button type="button" class="btn btn-sm btn-primary-ht" data-bs-toggle="modal" data-bs-target="#modalNuevaCotizacion">
+                <i class="bi bi-plus-lg me-1"></i> Generar la primera cotización
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 
 <!-- ══ MODAL: NUEVA COTIZACIÓN ══ -->
 <div class="modal fade" id="modalNuevaCotizacion" tabindex="-1" aria-labelledby="modalNuevaCotizacionLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:16px;">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalNuevaCotizacionLabel">
-          <i class="bi bi-file-earmark-text me-2"></i>Generar Cotización
+    <div class="modal-content" style="border-radius: 12px; overflow: hidden;">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title" id="modalNuevaCotizacionLabel" style="font-family: 'Fredoka', sans-serif;">
+          <i class="bi bi-file-earmark-text me-2 text-primary"></i>Generar Cotización
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
@@ -79,24 +105,24 @@
           <div class="alert alert-danger d-none" id="cotError" role="alert"></div>
 
           <div class="mb-3">
-            <label class="form-label fw-semibold">Producto</label>
+            <label class="form-label fw-medium small">Producto</label>
             <select class="form-select" name="producto" id="cotProducto" required>
               <option value="" disabled selected>Seleccionar...</option>
               {% for p in productos %}
               <option value="{{ p.idProducto }}" data-precio="{{ p.precio|unlocalize }}">{{ p.nombre }} — ${{ p.precio|floatformat:0|intcomma }}</option>
               {% endfor %}
             </select>
-            <div class="invalid-feedback">Selecciona un producto.</div>
+            <div class="invalid-feedback small">Selecciona un producto.</div>
           </div>
 
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label fw-semibold">Cantidad (Unidades)</label>
+              <label class="form-label fw-medium small">Cantidad (Unidades)</label>
               <input type="number" class="form-control" name="cantidad" id="cotCantidad" min="1" placeholder="Ej. 200" required>
-              <div class="invalid-feedback">Ingresa una cantidad válida.</div>
+              <div class="invalid-feedback small">Ingresa una cantidad válida.</div>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-semibold">Precio Unitario</label>
+              <label class="form-label fw-medium small">Precio Unitario</label>
               <div class="input-group">
                 <span class="input-group-text">$</span>
                 <input type="text" class="form-control" id="cotPrecio" readonly placeholder="Se autocompleta">
@@ -111,9 +137,9 @@
           </div>
 
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="cotBtnGuardar">
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-sm btn-primary px-3" id="cotBtnGuardar">
             <i class="bi bi-file-earmark-plus me-1"></i>Generar cotización
           </button>
         </div>
@@ -123,14 +149,14 @@
       <div id="cotExito" class="d-none">
         <div class="modal-body text-center py-4">
           <i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>
-          <h5 class="mt-2 mb-1">Cotización generada</h5>
+          <h5 class="mt-2 mb-1" style="font-family: 'Fredoka', sans-serif;">Cotización generada</h5>
           <p class="text-muted mb-3">Ya puedes descargar el PDF.</p>
-          <a href="#" id="cotPdfLink" class="btn btn-primary">
-            <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+          <a href="#" id="cotPdfLink" class="btn btn-danger d-inline-flex align-items-center gap-1">
+            <i class="bi bi-file-earmark-pdf"></i>Descargar PDF
           </a>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
         </div>
       </div>
 

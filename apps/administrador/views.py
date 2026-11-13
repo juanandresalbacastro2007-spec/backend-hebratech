@@ -1,6 +1,5 @@
 # apps/administrador/views.py
 
-import io
 import os
 import json
 import openpyxl
@@ -10,14 +9,7 @@ from apps.core.fechas import parsear_rango
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
 
-from xhtml2pdf import pisa
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 from django.http import FileResponse
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -31,7 +23,6 @@ from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils.html import escape
 from apps.clientes.models import Cotizacion
 from django_fsm import can_proceed
 
@@ -41,6 +32,7 @@ from .models import (
     MovimientoStock,
 )
 from apps.core.decorators import login_required_rol
+from apps.core.pdf import render_pdf, guardar_factura_pdf
 from apps.produccion.models import OrdenProduccion
 
 
@@ -65,6 +57,12 @@ TRANSICIONES_ORDEN = {
 # ── Estados de Orden que se consideran finalizados (no se ofrecen
 #    al asignar/editar tareas, ni cuentan como "activas") ──────────
 ESTADOS_ORDEN_FINALIZADOS = ['Cancelado', 'Entregado']
+
+# ── Estados de OrdenProduccion que ya no cuentan como "en curso" ──
+ESTADOS_PRODUCCION_FINALIZADOS = ['Completado', 'Cancelada']
+
+# ── Etiquetas que ve el usuario en el módulo Órdenes (el dashboard usa las mismas) ──
+ETIQUETAS_ESTADO_ORDEN = {'Procesando': 'En producción', 'Retrasado': 'Atrasado'}
 
 
 # ── Ubicaciones predefinidas del inventario ─────────────────
@@ -116,6 +114,21 @@ def _calcular_nivel_stock(disponible: int, minimo: int) -> int:
 
 
 # ── Portal principal ─────────────────────────────────────────
+def _fmt_fecha_corta(valor):
+    """date/datetime -> 'dd/mm/aaaa' o 'dd/mm/aaaa HH:MM' (hora local)."""
+    if not valor:
+        return ''
+    if hasattr(valor, 'hour'):
+        if timezone.is_aware(valor):
+            valor = timezone.localtime(valor)
+        return valor.strftime('%d/%m/%Y %H:%M')
+    return valor.strftime('%d/%m/%Y')
+
+
+def _plural(n, singular, plural):
+    return f'{n} {singular if n == 1 else plural}'
+
+
 @admin_required
 def admin_portal(request):
     usuario = Usuario.objects.get(idUsuario=request.session['usuario_id'])
@@ -129,23 +142,28 @@ def admin_portal(request):
     usuarios_pendientes = Usuario.objects.filter(estado='pendiente').count()
     total_cotizaciones = Cotizacion.objects.filter(idCliente__isnull=True).count()
 
-    ultimas_ordenes = Orden.objects.order_by('-fechaCreacion')[:5]
-    ultimas_asignaciones = AsignacionTarea.objects.order_by('-fechaAsignacion')[:5]
+    ultimas_ordenes = Orden.objects.select_related('idCliente').order_by('-fechaCreacion')[:5]
+    ultimas_asignaciones = AsignacionTarea.objects.select_related(
+        'idTarea', 'idOperario__idUsuario'
+    ).order_by('-fechaAsignacion')[:5]
 
-    # ── KPIs exclusivos ──
-    Produccion = _safe_import('apps.produccion.models', 'Produccion')
+    # ── KPIs por módulo ──
     Proveedor = _safe_import('apps.proveedores.models', 'Proveedor')
 
-    ordenes_urgentes = Orden.objects.filter(prioridad='Urgente').count()
-    incidencias_abiertas = (
-        Incidencia.objects.filter(estado='Pendiente').count()
-        + Incidencia.objects.filter(estado='En Progreso').count()
+    # Urgentes = solo las que siguen abiertas (una urgente ya entregada/cancelada no requiere nada)
+    ordenes_urgentes = (
+        Orden.objects.filter(prioridad='Urgente')
+        .exclude(estado__in=ESTADOS_ORDEN_FINALIZADOS)
+        .count()
     )
+    incidencias_abiertas = Incidencia.objects.filter(
+        estado__in=['Pendiente', 'En Progreso']
+    ).count()
     productos_catalogo = Producto.objects.count()
-    produccion_activa = (
-        _count(Produccion, estado='En Progreso') + _count(Produccion, estado='Pendiente')
-        if Produccion else 0
-    )
+    # El modelo real es OrdenProduccion (antes se buscaba "Produccion", que ya no existe → siempre 0)
+    produccion_activa = OrdenProduccion.objects.exclude(
+        estado__in=ESTADOS_PRODUCCION_FINALIZADOS
+    ).count()
     total_proveedores = _count(Proveedor) if Proveedor else None
 
     # ── Inventario / Facturas (misma regla de "stock bajo" que usan las pestañas del módulo) ──
@@ -160,53 +178,54 @@ def admin_portal(request):
     # ── Actividad reciente unificada ──
     actividad = []
 
+    def _agregar(titulo, detalle, fecha, estado, modulo, etiqueta=None):
+        if not fecha:
+            return
+        actividad.append({
+            'titulo': titulo,
+            'detalle': detalle,
+            'ts': str(fecha),                       # solo para ordenar
+            'fecha': _fmt_fecha_corta(fecha),       # lo que se muestra
+            'estado': estado,
+            'estado_label': etiqueta or estado,
+            'modulo': modulo,
+        })
+
     for o in Orden.objects.select_related('idCliente').order_by('-fechaCreacion')[:5]:
-        cliente_nombre = '—'
         try:
             cliente_nombre = o.idCliente.empresa or o.idCliente.nombre or '—'
         except Exception:
-            pass
-        actividad.append({
-            'icono': '🧾',
-            'titulo': f'Orden #{o.idOrden} · {cliente_nombre}',
-            'detalle': f'Estado: {o.estado} · Prioridad: {o.prioridad}',
-            'fecha': str(o.fechaCreacion) if o.fechaCreacion else None,
-            'estado': o.estado,
-            'modulo': 'admin_ordenes',
-        })
+            cliente_nombre = '—'
+        etiqueta = ETIQUETAS_ESTADO_ORDEN.get(o.estado, o.estado)
+        _agregar(
+            f'Orden #{o.idOrden} · {cliente_nombre}',
+            f'Estado: {etiqueta} · Prioridad: {o.prioridad}',
+            o.fechaCreacion, o.estado, 'admin_ordenes', etiqueta,
+        )
 
-    if Produccion:
+    for p in OrdenProduccion.objects.select_related('idProducto').order_by('-fechaCreacion')[:5]:
         try:
-            for p in Produccion.objects.select_related('idProducto').order_by('-fechaInicio')[:5]:
-                actividad.append({
-                    'icono': '🧵',
-                    'titulo': f'Producción: {p.idProducto.nombre}',
-                    'detalle': f'{p.cantidadRequerida} unidades',
-                    'fecha': str(p.fechaInicio) if p.fechaInicio else None,
-                    'estado': p.estado,
-                    'modulo': 'produccion_portal',
-                })
+            nombre_producto = p.idProducto.nombre
         except Exception:
-            pass
+            nombre_producto = '—'
+        _agregar(
+            f'Producción {p.numero} · {nombre_producto}',
+            f'Estado: {p.estado}',
+            p.fechaCreacion, p.estado, 'admin_produccion',
+        )
 
-    try:
-        for i in Incidencia.objects.order_by('-idIncidencia')[:5]:
-            actividad.append({
-                'icono': '⚠️',
-                'titulo': getattr(i, 'tipoIncidencia', None) or (getattr(i, 'descripcion', '') or 'Incidencia')[:60],
-                'detalle': f'Estado: {getattr(i, "estado", "—")}',
-                'fecha': str(getattr(i, 'fechaGeneracion', '') or ''),
-                'estado': getattr(i, 'estado', None),
-                'modulo': 'admin_incidencias',
-            })
-    except Exception:
-        pass
+    for i in Incidencia.objects.order_by('-fechaGeneracion')[:5]:
+        titulo = getattr(i, 'tipoIncidencia', None) or (getattr(i, 'descripcion', '') or 'Incidencia')[:60]
+        _agregar(
+            titulo,
+            f'Estado: {getattr(i, "estado", "—")}',
+            getattr(i, 'fechaGeneracion', None), getattr(i, 'estado', None), 'admin_incidencias',
+        )
 
-    actividad = [a for a in actividad if a['fecha']]
-    actividad.sort(key=lambda a: a['fecha'], reverse=True)
+    actividad.sort(key=lambda a: a['ts'], reverse=True)
     actividad_reciente = actividad[:10]
 
-    # ── Alertas operativas ──
+    # ── Alertas operativas (campana y avisos flotantes) ──
     alertas = []
     hoy = date.today()
 
@@ -248,12 +267,39 @@ def admin_portal(request):
             'modulo': 'admin_inventario',
         })
 
+    # ── Lo "puntual" de cada módulo vive en SU tarjeta (sin sección aparte de "atención") ──
+    partes_ordenes = []
+    if ordenes_urgentes:
+        partes_ordenes.append(_plural(ordenes_urgentes, 'urgente', 'urgentes'))
+    if ordenes_pendientes:
+        partes_ordenes.append(_plural(ordenes_pendientes, 'pendiente', 'pendientes'))
+
+    kpi = {
+        'ordenes': {'hint': ' · '.join(partes_ordenes) or 'Sin pendientes'},
+        'tareas': {
+            'alert': 'warning' if tareas_pendientes else 'ok',
+            'hint': '' if tareas_pendientes else 'Al día',
+        },
+        'incidencias': {
+            'alert': 'danger' if incidencias_abiertas else 'ok',
+            'hint': '' if incidencias_abiertas else 'Sin incidencias abiertas',
+        },
+        'inventario': {
+            'hint': f'{stock_bajo} con stock bajo' if stock_bajo else 'Stock en orden',
+        },
+        'usuarios': {
+            'hint': f'{usuarios_pendientes} por aprobar' if usuarios_pendientes else '',
+            'qs': '?estado=pendiente' if usuarios_pendientes else '',
+        },
+    }
+
     # Bienvenida flotante: solo la primera vez por inicio de sesión
     mostrar_bienvenida = not request.session.get('bienvenida_mostrada', False)
     request.session['bienvenida_mostrada'] = True
 
     return render(request, 'administrador/admin_portal.html', {
         'usuario': usuario,
+        'seccion_activa': 'dashboard',
         'mostrar_bienvenida': mostrar_bienvenida,
         'total_usuarios': total_usuarios,
         'total_clientes': total_clientes,
@@ -275,6 +321,7 @@ def admin_portal(request):
         'stock_bajo': stock_bajo,
         'total_facturas': total_facturas,
         'actividad_reciente': actividad_reciente,
+        'kpi': kpi,
         'alertas': json.dumps(alertas),
     })
 
@@ -360,104 +407,19 @@ def cotizacion_pdf(request, idCotizacion):
     if timezone.is_aware(fecha):
         fecha = timezone.localtime(fecha)
 
-    primario = colors.HexColor('#395B64')
-    suave = colors.HexColor('#E7F6F2')
-    borde = colors.HexColor('#A5C9CA')
-
-    estilos = getSampleStyleSheet()
-    st_marca = ParagraphStyle('CotMarca', parent=estilos['Title'],
-                              textColor=primario, alignment=0, fontSize=22, leading=26)
-    st_num = ParagraphStyle('CotNum', parent=estilos['Normal'],
-                            fontSize=14, alignment=2, leading=26)
-    st_txt = ParagraphStyle('CotTxt', parent=estilos['Normal'], fontSize=10, leading=13)
-    st_nota = ParagraphStyle('CotNota', parent=estilos['Normal'], fontSize=8,
-                             textColor=colors.grey)
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer, pagesize=letter,
-        leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50,
-        title=f'Cotización #{cot.idCotizacion}'
+    return render_pdf(
+        request,
+        'administrador/cotizacion_pdf.html',
+        {
+            'cot': cot,
+            'fecha': fecha,
+            'producto_nombre': cot.idProducto.nombre if cot.idProducto else '—',
+            'cantidad': f'{cot.cantidad:,}'.replace(',', '.'),
+            'precio_unitario': _fmt_cop(cot.precioUnitario),
+            'subtotal': _fmt_cop(cot.subtotalEstimado),
+        },
+        f'Cotizacion_{cot.idCotizacion}.pdf',
     )
-
-    elementos = []
-
-    # Encabezado
-    encabezado = Table(
-        [[Paragraph('HebraTech', st_marca),
-          Paragraph(f'Cotización #{cot.idCotizacion}', st_num)]],
-        colWidths=[256, 256]
-    )
-    encabezado.setStyle(TableStyle([
-        ('LINEBELOW', (0, 0), (-1, 0), 1, borde),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-    ]))
-    elementos += [encabezado, Spacer(1, 16)]
-
-    # Datos del cliente
-    filas_info = []
-    if cot.idCliente:
-        filas_info.append([Paragraph('<b>Cliente:</b>', st_txt),
-                           Paragraph(escape(str(cot.idCliente)), st_txt)])
-        if cot.idCliente.nit:
-            filas_info.append([Paragraph('<b>NIT:</b>', st_txt),
-                               Paragraph(escape(cot.idCliente.nit), st_txt)])
-    filas_info.append([Paragraph('<b>Fecha:</b>', st_txt),
-                       Paragraph(fecha.strftime('%d/%m/%Y %H:%M'), st_txt)])
-    info = Table(filas_info, colWidths=[70, 442])
-    info.setStyle(TableStyle([('BOTTOMPADDING', (0, 0), (-1, -1), 3)]))
-    elementos += [info, Spacer(1, 18)]
-
-    # Detalle
-    nombre_producto = cot.idProducto.nombre if cot.idProducto else '—'
-    detalle = Table(
-        [
-            ['Producto', 'Cantidad', 'Precio unitario', 'Subtotal'],
-            [Paragraph(escape(nombre_producto), st_txt),
-             f'{cot.cantidad:,}'.replace(',', '.'),
-             _fmt_cop(cot.precioUnitario),
-             _fmt_cop(cot.subtotalEstimado)],
-        ],
-        colWidths=[232, 70, 105, 105]
-    )
-    detalle.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), primario),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BACKGROUND', (0, 1), (-1, 1), suave),
-        ('GRID', (0, 0), (-1, -1), 0.5, borde),
-        ('TOPPADDING', (0, 0), (-1, -1), 7),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
-    ]))
-    elementos += [detalle, Spacer(1, 14)]
-
-    # Total
-    total = Table(
-        [['Subtotal estimado:', _fmt_cop(cot.subtotalEstimado)]],
-        colWidths=[150, 105], hAlign='RIGHT'
-    )
-    total.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 12),
-        ('TEXTCOLOR', (0, 0), (-1, -1), primario),
-        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-    ]))
-    elementos += [total, Spacer(1, 30)]
-
-    elementos.append(Paragraph(
-        'Valor estimado sujeto a confirmación por parte de HebraTech.', st_nota
-    ))
-
-    doc.build(elementos)
-
-    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-    response['Content-Disposition'] = (
-        f'attachment; filename="Cotizacion_{cot.idCotizacion}.pdf"'
-    )
-    return response
 
 
 
@@ -1107,47 +1069,6 @@ def _dato(obj, *nombres, default='-'):
     return default
 
 
-def _generar_pdf_factura(factura, ruta):
-    os.makedirs(os.path.dirname(ruta), exist_ok=True)
-    c = canvas.Canvas(ruta, pagesize=A4)
-    ancho, alto = A4
-    y = alto - 60
-
-    c.setFont('Helvetica-Bold', 22)
-    c.drawString(50, y, 'HebraTech')
-    y -= 24
-    c.setFont('Helvetica', 11)
-    c.drawString(50, y, 'Sistema de gestión de producción textil')
-    y -= 40
-
-    c.setFont('Helvetica-Bold', 16)
-    c.drawString(50, y, f'Factura {factura.numeroFactura}')
-    y -= 35
-
-    def fmt(v):
-        return v.strftime('%d/%m/%Y %H:%M') if hasattr(v, 'strftime') else '-'
-
-    cliente = factura.idCliente
-    nombre_cliente = (getattr(cliente, 'empresa', None) or getattr(cliente, 'nombre', None) or '-')
-
-    filas = [
-        ('Cliente', nombre_cliente),
-        ('Orden', f'#{factura.idOrden_id}'),
-        ('Estado', factura.estado),
-        ('Fecha de emisión', fmt(factura.fechaEmision)),
-        ('Fecha de pago', fmt(factura.fechaPago)),
-        ('Total', f'${factura.total:,.0f}'.replace(',', '.')),
-    ]
-    for etiqueta, valor in filas:
-        c.setFont('Helvetica-Bold', 12)
-        c.drawString(50, y, f'{etiqueta}:')
-        c.setFont('Helvetica', 12)
-        c.drawString(190, y, str(valor))
-        y -= 24
-
-    c.save()
-
-
 @admin_required
 def factura_marcar_pagada(request, idFactura):
     if request.method == 'POST':
@@ -1184,11 +1105,12 @@ def factura_descargar(request, idFactura):
     ruta_rel = factura.rutaPDF.replace('\\', '/').lstrip('/')
     ruta = os.path.join(settings.MEDIA_ROOT, ruta_rel)
 
-    # Si el archivo no existe, se vuelve a generar
-    if not os.path.isfile(ruta):
-        try:
-            _generar_pdf_factura(factura, ruta)
-        except Exception as e:
+    # Se regenera siempre para que salga con el diseño oficial vigente.
+    # Si falla y ya existe un archivo previo, se entrega ese.
+    try:
+        guardar_factura_pdf(factura, ruta)
+    except Exception as e:
+        if not os.path.isfile(ruta):
             messages.error(request, f'No se pudo generar el PDF: {e}')
             return redirect('admin_facturas')
 
@@ -1293,13 +1215,12 @@ def exportar_ordenes_pdf(request):
     if estado_filtro:
         ordenes = ordenes.filter(estado=estado_filtro)
 
-    html_string = render_to_string('administrador/ordenes_pdf.html', {'ordenes': ordenes})
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="HebraTech_Reporte_Ordenes.pdf"'
-    pisa_status = pisa.CreatePDF(html_string, dest=response)
-    if pisa_status.err:
-        return HttpResponse('Hubo un error al generar el PDF', status=500)
-    return response
+    return render_pdf(
+        request,
+        'administrador/ordenes_pdf.html',
+        {'ordenes': ordenes},
+        'HebraTech_Reporte_Ordenes.pdf',
+    )
 
 
 # ── Inventario y Materiales ──────────────────────────────────
@@ -1948,55 +1869,17 @@ def registrar_egresos_masivo(request):
 # ── EXPORTACIÓN DE INVENTARIO ────────────────────────────────
 @admin_required
 def exportar_inventario_pdf(request):
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="inventario_hebratech.pdf"'
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    elements = []
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'TitleStyle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        textColor=colors.HexColor("#1A252C"),
-        alignment=1,
-        spaceAfter=15
+    items = list(Inventario.objects.all().select_related('producto'))
+    bajo_minimo = sum(
+        1 for i in items
+        if (i.cantidadDisponible or 0) < (i.minimoDefinido or 0)
     )
-
-    elements.append(Paragraph("<b>Reporte General de Inventario - HebraTech</b>", title_style))
-    elements.append(Spacer(1, 10))
-
-    data = [["ID", "Producto", "Disponible", "Mínimo", "Ubicación"]]
-    items = Inventario.objects.all().select_related('producto')
-
-    for item in items:
-        data.append([
-            str(item.idInventario),
-            item.producto.nombre if item.producto else 'N/A',
-            str(item.cantidadDisponible),
-            str(item.minimoDefinido),
-            item.ubicacion or 'N/A'
-        ])
-
-    t = Table(data, colWidths=[40, 180, 80, 80, 110])
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2C3E50")),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8F9FA")])
-    ]))
-
-    elements.append(t)
-    doc.build(elements)
-
-    pdf = buffer.getvalue()
-    buffer.close()
-    response.write(pdf)
-    return response
+    return render_pdf(
+        request,
+        'administrador/inventario_pdf.html',
+        {'items': items, 'bajo_minimo': bajo_minimo},
+        'inventario_hebratech.pdf',
+    )
 
 
 @admin_required
