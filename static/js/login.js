@@ -57,12 +57,15 @@ function handleBack() {
     const loginView = document.getElementById('login-view');
     const registerView = document.getElementById('register-view');
 
-    // Si el registro está visible (significa que estamos creando cuenta)
-    if (registerView.style.display !== 'none') {
-        // En lugar de irse al home, simulamos un clic en "Inicia sesión" o llamamos a switchAuth
-        switchAuth(); 
+    // Comprobamos cuál de los dos formularios está visible actualmente en la pantalla
+    const isRegisterVisible = registerView && registerView.style.display !== 'none';
+
+    if (isRegisterVisible) {
+        // Si estamos viendo el formulario de Registro, la flecha nos devuelve al Login
+        registerView.style.display = 'none';
+        loginView.style.display = 'block';
     } else {
-        // Si estamos en el login normal, sí lo mandamos al home
-        window.location.href = "{% url 'home' %}";
+        // Si estamos viendo el formulario de Login, la flecha nos manda directo al Home
+        window.location.href = homeUrl;
     }
 }
