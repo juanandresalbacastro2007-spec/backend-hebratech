@@ -150,12 +150,6 @@ def _adjuntar_logo(mensaje):
 
 
 def recuperar_view(request):
-    """
-    POST: intenta enviar el correo. Siempre renderiza la vista de éxito
-    (seguridad: no revelar si el correo existe o no) y SIEMPRE devuelve
-    el mismo template con success=True para que el usuario vea la tarjeta
-    verde "Correo enviado".
-    """
     if request.method == 'POST':
         correo = request.POST.get('correo', '').strip()
         ctx = {'success': True, 'email': correo}
@@ -189,7 +183,8 @@ def recuperar_view(request):
                     from_email=None,
                     to=[usuario.correoElectronico],
                 )
-                mensaje.mixed_subtype = 'related'
+                
+                # ⚠️ AQUÍ ESTABA EL ERROR: Se eliminó la línea mensaje.mixed_subtype = 'related'
 
                 tiene_logo = _adjuntar_logo(mensaje)
 
@@ -202,8 +197,6 @@ def recuperar_view(request):
                 mensaje.send(fail_silently=False)
 
             except Exception as exc:
-                # No filtramos al usuario si el envío falla por SMTP.
-                # Solo lo dejamos en el log para diagnóstico.
                 logger.exception(
                     'Error enviando correo de recuperación a %s: %s', correo, exc
                 )
