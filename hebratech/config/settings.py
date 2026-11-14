@@ -53,8 +53,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',  # Requerido por allauth
-    'simple_history.middleware.HistoryRequestMiddleware',  # para guardar el usuario que hizo el cambio
+    'allauth.account.middleware.AccountMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
     'apps.core.middleware.RoleSecurityMiddleware',
 ]
 
@@ -86,8 +86,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'hebratech.config.wsgi.application'
 
 # --- BASE DE DATOS ---
-# DB_ENGINE=mysql  -> MySQL (desarrollo local, como antes)
-# DB_ENGINE=sqlite -> SQLite (por defecto; útil para el despliegue)
 DB_ENGINE = config('DB_ENGINE', default='sqlite')
 
 if DB_ENGINE == 'mysql':
@@ -102,7 +100,6 @@ if DB_ENGINE == 'mysql':
         }
     }
 
-    # --- PARCHE DE COMPATIBILIDAD MARIADB/MYSQL (solo aplica con MySQL) ---
     from django.db.backends.mysql.features import DatabaseFeatures
     from django.db.backends.mysql.base import DatabaseWrapper
 
@@ -146,16 +143,44 @@ MEDIA_ROOT = BASE_DIR / 'hebratech' / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- CONFIGURACIÓN DE CORREO ELECTRÓNICO ---
-# En despliegue gratuito el SMTP puede estar bloqueado: usa el backend "console" en el .env
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+# =============================================================================
+# CONFIGURACIÓN DE CORREO ELECTRÓNICO
+# =============================================================================
+# ⚠️ IMPORTANTE sobre PythonAnywhere:
+#   - El plan FREE **bloquea** SMTP (puertos 25, 465, 587, 2525) hacia el exterior.
+#   - Por eso el default es "console": imprime el correo entero en el log de
+#     PythonAnywhere. Esto permite probar el flujo completo sin enviar correo real.
+#   - Para envío real, usa un proveedor con API HTTP (SendGrid, Brevo, Resend)
+#     o pide whitelist a PythonAnywhere (solo cuentas de pago).
+#
+# Variables de entorno (.env):
+#   EMAIL_BACKEND        = django.core.mail.backends.console.EmailBackend  (default)
+#                        | django.core.mail.backends.smtp.EmailBackend
+#   EMAIL_HOST           = smtp.sendgrid.net | smtp-relay.brevo.com | ...
+#   EMAIL_PORT           = 587 | 2525 | 465
+#   EMAIL_USE_TLS        = True | False
+#   EMAIL_USE_SSL        = True | False
+#   EMAIL_HOST_USER      = usuario del proveedor
+#   EMAIL_HOST_PASSWORD  = API key del proveedor
+#   DEFAULT_FROM_EMAIL   = 'HebraTech <no-reply@tudominio.com>'
+# =============================================================================
+EMAIL_BACKEND = config(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.console.EmailBackend',
+)
+
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)  # segundos
 
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = 'HebraTech <hebratechoficial@gmail.com>'
+DEFAULT_FROM_EMAIL = config(
+    'DEFAULT_FROM_EMAIL',
+    default='HebraTech <hebratechoficial@gmail.com>',
+)
 
 # --- CONFIGURACIÓN DE REST FRAMEWORK Y JWT ---
 REST_FRAMEWORK = {
@@ -169,15 +194,14 @@ REST_AUTH = {
     'JWT_AUTH_HTTPONLY': False,
 }
 
-# --- reCAPTCHA v2 ("No soy un robot") ---
-# Las claves se obtienen en https://www.google.com/recaptcha/admin y van en el .env
-RECAPTCHA_SITE_KEY = config('RECAPTCHA_SITE_KEY', default='')      # pública (va en el HTML)
-RECAPTCHA_SECRET_KEY = config('RECAPTCHA_SECRET_KEY', default='')  # PRIVADA (nunca al repositorio)
+# --- reCAPTCHA v2 ---
+RECAPTCHA_SITE_KEY = config('RECAPTCHA_SITE_KEY', default='')
+RECAPTCHA_SECRET_KEY = config('RECAPTCHA_SECRET_KEY', default='')
 
 # --- REDIRECCIONES DE ALLAUTH ---
 LOGIN_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'
-SOCIALACCOUNT_LOGIN_ON_GET = True  # Permite clic directo en enlaces <a> para iniciar sesión con Google
+SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_ADAPTER = 'apps.usuarios.adapters.CustomSocialAccountAdapter'
 SOCIALACCOUNT_FORMS = {'signup': 'apps.usuarios.forms.SocialSignupForm'}
 ACCOUNT_ADAPTER = 'apps.usuarios.adapters.CustomAccountAdapter'
@@ -192,7 +216,7 @@ SOCIALACCOUNT_PROVIDERS = {
         ],
         'AUTH_PARAMS': {
             'access_type': 'online',
-            'prompt': 'select_account',  # OBLIGA A GOOGLE A PREGUNTAR LA CUENTA
+            'prompt': 'select_account',
         }
     }
 }
@@ -200,10 +224,8 @@ SOCIALACCOUNT_PROVIDERS = {
 ACCOUNT_PREVENT_ENUMERATION = False
 ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
 
-# --- SEGURIDAD EN PRODUCCIÓN (solo se activa con DEBUG=False) ---
+# --- SEGURIDAD EN PRODUCCIÓN ---
 if not DEBUG:
-    # PythonAnywhere termina el HTTPS en su proxy; sin esto Django cree que
-    # la petición es HTTP y SECURE_SSL_REDIRECT causaría un bucle de redirecciones.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True

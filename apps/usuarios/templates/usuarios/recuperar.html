@@ -38,12 +38,12 @@
 
                 <!-- Step indicator -->
                 <div class="step-indicator">
-                    <div class="step-dot active" id="dot-1"></div>
-                    <div class="step-dot" id="dot-2"></div>
+                    <div class="step-dot {% if not success %}active{% endif %}" id="dot-1"></div>
+                    <div class="step-dot {% if success %}active{% endif %}" id="dot-2"></div>
                 </div>
 
                 <!-- ── FORMULARIO VIEW ── -->
-                <div id="form-view">
+                <div id="form-view" {% if success %}style="display:none;"{% endif %}>
 
                     {% if messages %}
                     {% for message in messages %}
@@ -60,8 +60,8 @@
                     <p class="subtitle">Ingresa el correo electrónico asociado a tu cuenta y te enviaremos un enlace
                         para restablecer tu contraseña.</p>
 
-                    <!-- Alert de validación JS (la dejamos, es para el error de "correo inválido" en tiempo real) -->
-                    <div id="form-alert" class="ht-alert ht-alert-error">
+                    <!-- OCULTO por defecto (display:none inline para no depender del CSS) -->
+                    <div id="form-alert" class="ht-alert ht-alert-error" style="display:none;">
                         <i class="fas fa-exclamation-circle"></i>
                         <span id="form-alert-msg">El correo ingresado no es válido.</span>
                     </div>
@@ -89,7 +89,7 @@
                 </div>
 
                 <!-- ── SUCCESS VIEW ── -->
-                <div id="success-view" class="success-card">
+                <div id="success-view" class="success-card" {% if success %}style="display:block;"{% else %}style="display:none;"{% endif %}>
 
                     <div class="success-icon">
                         <i class="fas fa-envelope-open-text"></i>
@@ -100,7 +100,8 @@
                         sigue las instrucciones para crear una nueva contraseña.</p>
 
                     <div class="success-email-badge" id="sent-email-badge">
-                        <i class="fas fa-at me-1"></i> <span id="sent-email-text">correo@ejemplo.com</span>
+                        <i class="fas fa-at me-1"></i>
+                        <span id="sent-email-text">{{ email|default:"correo@ejemplo.com" }}</span>
                     </div>
 
                     <p style="font-size:0.8rem; color: var(--text-muted); margin-bottom: 22px;">
@@ -124,19 +125,15 @@
         <!-- ══════════════════ VISUAL SIDE ══════════════════ -->
         <section class="visual-side d-none d-lg-flex flex-column align-items-center justify-content-center">
 
-            <!-- Security Illustration -->
             <div class="security-visual mb-4">
 
-                <!-- Orbit rings -->
                 <div class="orbit orbit-1"></div>
                 <div class="orbit orbit-2"></div>
 
-                <!-- Central shield -->
                 <div class="shield-main">
                     <i class="fas fa-shield-alt"></i>
                 </div>
 
-                <!-- Floating badges -->
                 <div class="float-badge badge-1">
                     <i class="fas fa-lock"></i>
                 </div>
@@ -175,9 +172,8 @@
 
     </main>
 
-    <!-- Back arrow -->
     <a href="{% url 'login' %}" class="back-arrow" title="Volver">
-    <i class="fas fa-arrow-left"></i>
+        <i class="fas fa-arrow-left"></i>
     </a>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

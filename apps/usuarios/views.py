@@ -2,20 +2,23 @@
 
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth import logout  # 👈 IMPORTANTE PARA LIMPIAR ALLAUTH
+from django.contrib.auth import logout
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import connection
 from django.core.mail import EmailMultiAlternatives
 from django.contrib.staticfiles import finders
 from email.mime.image import MIMEImage
 from django.template.loader import render_to_string
+import logging
+
 from .models import Usuario, PasswordResetToken
 from .recaptcha import verificar_recaptcha
 
-# Importaciones para API de Google con dj-rest-auth y allauth
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
+
+logger = logging.getLogger(__name__)
 
 
 # ==========================================
@@ -23,9 +26,6 @@ from dj_rest_auth.registration.views import SocialLoginView
 # ==========================================
 
 class GoogleLoginView(SocialLoginView):
-    """
-    Endpoint API para procesar el login con Google.
-    """
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
     callback_url = 'http://127.0.0.1:8000/accounts/google/login/callback/'
@@ -42,7 +42,6 @@ def login_view(request):
         correo = request.POST.get('correo', '')
         contrasena = request.POST.get('contrasena', '')
 
-        # Filtro anti-bots: se valida ANTES de consultar usuarios o contraseñas
         if not verificar_recaptcha(request):
             messages.error(request, 'Confirma que no eres un robot e inténtalo de nuevo.')
             return render(request, 'usuarios/login.html', {'correo': correo})
@@ -132,9 +131,7 @@ def home_view(request):
 
 
 def logout_view(request):
-    # 👇 Cierra sesión en Django y allauth (limpia cookies de sesión y tokens)
     logout(request)
-    # Garantiza que cualquier rastro en la sesión se destruya
     request.session.flush()
     return redirect('login')
 
@@ -153,56 +150,67 @@ def _adjuntar_logo(mensaje):
 
 
 def recuperar_view(request):
+    """
+    POST: intenta enviar el correo. Siempre renderiza la vista de éxito
+    (seguridad: no revelar si el correo existe o no) y SIEMPRE devuelve
+    el mismo template con success=True para que el usuario vea la tarjeta
+    verde "Correo enviado".
+    """
     if request.method == 'POST':
         correo = request.POST.get('correo', '').strip()
+        ctx = {'success': True, 'email': correo}
 
+        usuario = None
         try:
             usuario = Usuario.objects.get(
                 correoElectronico=correo,
                 estado='activo'
             )
-
-            reset_token = PasswordResetToken.generar_para_usuario(usuario.idUsuario)
-
-            enlace = request.build_absolute_uri(
-                f'/recuperar/{reset_token.token}/'
-            )
-
-            texto_plano = (
-                f'Hola, {usuario.nombre}.\n\n'
-                'Recibimos una solicitud para restablecer tu contraseña en HebraTech.\n'
-                f'Abre este enlace para crear una nueva (válido por 15 minutos):\n{enlace}\n\n'
-                'Si no solicitaste este cambio, ignora este correo.'
-            )
-
-            mensaje = EmailMultiAlternatives(
-                subject='Recuperación de contraseña - HebraTech',
-                body=texto_plano,
-                from_email=None,
-                to=[usuario.correoElectronico],
-            )
-            mensaje.mixed_subtype = 'related'  # necesario para imágenes cid
-
-            tiene_logo = _adjuntar_logo(mensaje)
-
-            html_content = render_to_string('usuarios/email_recuperar.html', {
-                'nombre': usuario.nombre,
-                'enlace': enlace,
-                'tiene_logo': tiene_logo,
-            })
-            mensaje.attach_alternative(html_content, 'text/html')
-            mensaje.send(fail_silently=False)
-
         except Usuario.DoesNotExist:
-            pass
+            usuario = None
 
-        messages.success(
-            request,
-            'Si el correo está registrado, te enviamos un enlace de recuperación.'
-        )
-        return redirect('recuperar')
+        if usuario is not None:
+            try:
+                reset_token = PasswordResetToken.generar_para_usuario(usuario.idUsuario)
+                enlace = request.build_absolute_uri(
+                    f'/recuperar/{reset_token.token}/'
+                )
 
-    return render(request, 'usuarios/recuperar.html')
+                texto_plano = (
+                    f'Hola, {usuario.nombre}.\n\n'
+                    'Recibimos una solicitud para restablecer tu contraseña en HebraTech.\n'
+                    f'Abre este enlace para crear una nueva (válido por 15 minutos):\n{enlace}\n\n'
+                    'Si no solicitaste este cambio, ignora este correo.'
+                )
+
+                mensaje = EmailMultiAlternatives(
+                    subject='Recuperación de contraseña - HebraTech',
+                    body=texto_plano,
+                    from_email=None,
+                    to=[usuario.correoElectronico],
+                )
+                mensaje.mixed_subtype = 'related'
+
+                tiene_logo = _adjuntar_logo(mensaje)
+
+                html_content = render_to_string('usuarios/email_recuperar.html', {
+                    'nombre': usuario.nombre,
+                    'enlace': enlace,
+                    'tiene_logo': tiene_logo,
+                })
+                mensaje.attach_alternative(html_content, 'text/html')
+                mensaje.send(fail_silently=False)
+
+            except Exception as exc:
+                # No filtramos al usuario si el envío falla por SMTP.
+                # Solo lo dejamos en el log para diagnóstico.
+                logger.exception(
+                    'Error enviando correo de recuperación a %s: %s', correo, exc
+                )
+
+        return render(request, 'usuarios/recuperar.html', ctx)
+
+    return render(request, 'usuarios/recuperar.html', {'success': False})
 
 
 def validar_reset_view(request, token):
@@ -260,9 +268,9 @@ def procesar_reset_view(request, token):
     return redirect('validar_reset', token=token)
 
 
-
 def terminos_de_servicio(request):
     return render(request, 'usuarios/terminos.html')
+
 
 def politicas_de_privacidad(request):
     return render(request, 'usuarios/privacidad.html')

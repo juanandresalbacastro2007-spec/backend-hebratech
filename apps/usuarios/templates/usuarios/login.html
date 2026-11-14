@@ -2,10 +2,6 @@
 {% load static %}
 {% load socialaccount %}
 
-{% block extra_head %}
-    <link rel="icon" href="{% static 'img/fondo_logo.jpg' %}" />
-{% endblock %}
-
 {% block title %}HebraTech | Acceder{% endblock %}
 {% block logo_text %}Iniciar Sesión{% endblock %}
 
@@ -74,7 +70,7 @@
   <div id="register-view" {% if not show_register %}style="display: none;"{% endif %}>
     <h1 class="mb-4">Crea tu cuenta</h1>
 
-    <!-- Botón Registrase con Google -->
+    <!-- Botón Registrarse con Google -->
     <a href="{% provider_login_url 'google' prompt='select_account' %}" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-2 mb-3 fw-medium">
       <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
         <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.616z" fill="#4285F4"/>
@@ -127,7 +123,7 @@
       {% if RECAPTCHA_SITE_KEY %}
       <div class="g-recaptcha-wrap"><div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div></div>
       {% endif %}
-      <button type="submit" class="btn-primary w-100">Crear cuenta</button>   
+      <button type="submit" class="btn-primary w-100">Crear cuenta</button>
     </form>
 
     <p class="switch-text text-center mt-3">
@@ -137,7 +133,7 @@
   </div>
 
   <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
-      <button id="themeToggle" class="btn btn-light rounded-circle shadow-lg border-0" style="width: 48px; height: 48px; font-size: 1.3rem; 
+      <button id="themeToggle" class="btn btn-light rounded-circle shadow-lg border-0" style="width: 48px; height: 48px; font-size: 1.3rem;
       background: var(--surface, #fff); color: var(--primary, #395B64); transition: all 0.3s;">
         <i class="bi bi-moon-fill" id="themeIcon"></i>
       </button>
@@ -148,7 +144,7 @@
   {% if RECAPTCHA_SITE_KEY %}
   <script src="https://www.google.com/recaptcha/api.js?hl=es" async defer></script>
   {% endif %}
-  
+
   <!-- Cargamos tu archivo JS una sola vez -->
   <script src="{% static 'js/login.js' %}"></script>
 {% endblock %}
