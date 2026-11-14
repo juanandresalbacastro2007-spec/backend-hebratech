@@ -7,6 +7,7 @@
   --white:         #ffffff;
   --border:        rgba(165, 201, 202, 0.3);
   --border-solid:  #A5C9CA;
+  --section-divider: rgba(57, 91, 100, 0.35);
 
   --dash-bg:       #0d1e26;
   --dash-surface:  #122330;
@@ -46,6 +47,7 @@
   --white:         #122330;
   --border:        rgba(165, 201, 202, 0.15);
   --border-solid:  #1e3540;
+  --section-divider: rgba(165, 201, 202, 0.35);
 
   --bg-body:       #0d1e26;
   --text-body:     #E7F6F2;
@@ -68,9 +70,6 @@
     
   }
 
-  .bordes{
-    border: #A5C9CA solid 2px !important; 
-  }
   .feat-card.fc-dark,
   .feat-card.fc-accent {
     background: var(--bg-card) !important;
@@ -407,20 +406,39 @@ body {
 .text-hb-mentalidad { color: var(--accent) !important; }
 .text-hb-atencion { color: var(--hero-text) !important; }
 
-/* Borde base de las tarjetas de "Problemas que resolvemos".
-   Se declara transparente para que el hover pueda "encenderlo". */
-.bordes {
-  border: 1px solid transparent;
+/* ── LÍNEA DIVISORIA ENTRE SECCIONES DEL HOME ──
+   Una sola regla: cada sección (menos el hero, que va pegado al navbar)
+   lleva una línea fina arriba. Color por tema vía --section-divider. */
+.ht-problems,
+.ht-features,
+.ht-preview,
+.ht-how,
+#mision-vision,
+.ht-cta,
+.team-section,
+footer#contacto {
+  border-top: 1px solid var(--section-divider);
 }
 
-.hover-effect {
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-  border: 1px solid transparent;
+/* Secciones de fondo oscuro: la línea clara (accent) para que se note en ambos temas */
+.ht-problems,
+.ht-preview,
+#mision-vision,
+.ht-cta,
+.team-section,
+footer#contacto {
+  --section-divider: rgba(165, 201, 202, 0.35);
 }
-.hover-effect:hover {
-  border-color: var(--accent) !important;
-  transform: translateY(-5px);
-  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+
+/* ── PROBLEMAS QUE RESOLVEMOS ──
+   Reusa .feat-card / .fc-icon (mismo look que "Módulos del sistema"). */
+.ht-problems { padding: var(--section-py) 0; background: #395B64; }  /* fijo en ambos temas */
+.ht-problems .section-head { margin-bottom: 48px; }
+.section-head.on-dark .section-eyebrow { color: var(--accent); }
+.section-head.on-dark .section-title   { color: #fff; }
+.ht-problems .feat-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.22);
 }
 .tracking-wider { letter-spacing: 0.1em; }
 

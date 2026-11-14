@@ -5,9 +5,10 @@ from django.contrib import messages
 from django.contrib.auth import logout  # 👈 IMPORTANTE PARA LIMPIAR ALLAUTH
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import connection
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
+from django.contrib.staticfiles import finders
+from email.mime.image import MIMEImage
 from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 from .models import Usuario, PasswordResetToken
 from .recaptcha import verificar_recaptcha
 
@@ -138,6 +139,19 @@ def logout_view(request):
     return redirect('login')
 
 
+def _adjuntar_logo(mensaje):
+    """Incrusta static/img/logo.png como cid:logo_hebratech. Devuelve True si se adjuntó."""
+    ruta = finders.find('img/logo.png')
+    if not ruta:
+        return False
+    with open(ruta, 'rb') as f:
+        logo = MIMEImage(f.read())
+    logo.add_header('Content-ID', '<logo_hebratech>')
+    logo.add_header('Content-Disposition', 'inline', filename='logo.png')
+    mensaje.attach(logo)
+    return True
+
+
 def recuperar_view(request):
     if request.method == 'POST':
         correo = request.POST.get('correo', '').strip()
@@ -154,20 +168,30 @@ def recuperar_view(request):
                 f'/recuperar/{reset_token.token}/'
             )
 
+            texto_plano = (
+                f'Hola, {usuario.nombre}.\n\n'
+                'Recibimos una solicitud para restablecer tu contraseña en HebraTech.\n'
+                f'Abre este enlace para crear una nueva (válido por 15 minutos):\n{enlace}\n\n'
+                'Si no solicitaste este cambio, ignora este correo.'
+            )
+
+            mensaje = EmailMultiAlternatives(
+                subject='Recuperación de contraseña - HebraTech',
+                body=texto_plano,
+                from_email=None,
+                to=[usuario.correoElectronico],
+            )
+            mensaje.mixed_subtype = 'related'  # necesario para imágenes cid
+
+            tiene_logo = _adjuntar_logo(mensaje)
+
             html_content = render_to_string('usuarios/email_recuperar.html', {
                 'nombre': usuario.nombre,
                 'enlace': enlace,
+                'tiene_logo': tiene_logo,
             })
-            texto_plano = strip_tags(html_content)
-
-            send_mail(
-                subject='Recuperación de contraseña - HebraTech',
-                message=texto_plano,
-                from_email=None,
-                recipient_list=[usuario.correoElectronico],
-                html_message=html_content,
-                fail_silently=False,
-            )
+            mensaje.attach_alternative(html_content, 'text/html')
+            mensaje.send(fail_silently=False)
 
         except Usuario.DoesNotExist:
             pass

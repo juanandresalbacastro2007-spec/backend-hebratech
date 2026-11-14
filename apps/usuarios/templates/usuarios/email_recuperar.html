@@ -1,15 +1,131 @@
-<div style="font-family: 'Roboto', Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #E7F6F2; padding: 30px; border-radius: 12px;">
-    <h2 style="color: #2C3333; font-family: 'Fredoka', sans-serif;">Hola, {{ nombre }} 👋</h2>
-    <p style="color: #395B64; font-size: 15px;">
-        Recibimos una solicitud para restablecer tu contraseña en HebraTech.
-        Si fuiste vos, hacé clic en el siguiente botón. Este enlace es válido por <strong>15 minutos</strong>.
-    </p>
-    <div style="text-align: center; margin: 30px 0;">
-        <a href="{{ enlace }}" style="background: #395B64; color: #E7F6F2; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-family: 'Fredoka', sans-serif; font-weight: 600;">
-            Restablecer contraseña
-        </a>
-    </div>
-    <p style="color: #A5C9CA; font-size: 12px;">
-        Si no solicitaste esto, podés ignorar este correo con tranquilidad.
-    </p>
-</div>
+{% comment %}
+  Correo de recuperación de contraseña — HebraTech
+  Variables: nombre, enlace, tiene_logo (bool; el logo va incrustado como cid:logo_hebratech)
+  Todo el CSS va en línea porque Gmail/Outlook ignoran casi cualquier <style>.
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0; padding:0; background-color:#E7F6F2;">
+
+  <!-- Texto de vista previa en la bandeja de entrada -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; font-size:1px; line-height:1px; color:#E7F6F2;">
+    Restablece tu contraseña de HebraTech. El enlace es válido por 15 minutos.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#E7F6F2;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:520px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 32px rgba(44,51,51,0.13);">
+
+          <!-- ── Cabecera con logo ── -->
+          <tr>
+            <td align="center" bgcolor="#395B64" style="background-color:#395B64; background-image:linear-gradient(135deg,#395B64 0%,#2C3333 100%); padding:32px 24px 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  {% if tiene_logo %}
+                  <td style="padding-right:12px; vertical-align:middle;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="48" height="48" align="center" style="width:48px; height:48px; background-color:#A5C9CA; border-radius:12px;">
+                          <img src="cid:logo_hebratech" alt="HebraTech" width="34" style="display:block; width:34px; height:auto; border:0;">
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  {% endif %}
+                  <td style="vertical-align:middle; font-family:'Fredoka', 'Trebuchet MS', Arial, sans-serif; font-size:28px; font-weight:700; color:#ffffff; letter-spacing:0.3px;">
+                    HebraTech
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:14px 0 0; font-family:'Roboto', Arial, sans-serif; font-size:13px; color:#A5C9CA; letter-spacing:1.5px; text-transform:uppercase;">
+                Gestión de producción textil
+              </p>
+            </td>
+          </tr>
+
+          <!-- ── Contenido ── -->
+          <tr>
+            <td style="padding:36px 36px 8px;">
+
+              <!-- Icono de candado -->
+              <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 20px;">
+                <tr>
+                  <td width="64" height="64" align="center" style="width:64px; height:64px; background-color:#E7F6F2; border:2px solid #A5C9CA; border-radius:50%; font-size:28px; line-height:64px;">
+                    🔐
+                  </td>
+                </tr>
+              </table>
+
+              <h1 style="margin:0 0 12px; text-align:center; font-family:'Fredoka', 'Trebuchet MS', Arial, sans-serif; font-size:26px; font-weight:700; line-height:1.2; color:#2C3333;">
+                Hola, {{ nombre }}
+              </h1>
+
+              <p style="margin:0 0 8px; text-align:center; font-family:'Roboto', Arial, sans-serif; font-size:15px; line-height:1.65; color:#5a7070;">
+                Recibimos una solicitud para restablecer la contraseña de tu cuenta.
+                Haz clic en el botón para crear una nueva.
+              </p>
+
+              <!-- Botón -->
+              <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:28px auto;">
+                <tr>
+                  <td align="center" bgcolor="#395B64" style="background-color:#395B64; background-image:linear-gradient(135deg,#395B64,#2C3333); border-radius:10px;">
+                    <a href="{{ enlace }}" target="_blank" style="display:inline-block; padding:14px 34px; font-family:'Fredoka', 'Trebuchet MS', Arial, sans-serif; font-size:17px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:10px;">
+                      Restablecer contraseña
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Aviso de expiración -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background-color:#E7F6F2; border-left:4px solid #395B64; border-radius:8px; padding:12px 16px; font-family:'Roboto', Arial, sans-serif; font-size:13px; line-height:1.55; color:#2C3333;">
+                    ⏱️ Este enlace es válido por <strong>15 minutos</strong> y solo se puede usar una vez.
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Enlace de respaldo -->
+              <p style="margin:24px 0 4px; font-family:'Roboto', Arial, sans-serif; font-size:12px; color:#5a7070;">
+                ¿El botón no funciona? Copia y pega este enlace en tu navegador:
+              </p>
+              <p style="margin:0 0 24px; font-family:'Roboto', Arial, sans-serif; font-size:12px; line-height:1.5; word-break:break-all;">
+                <a href="{{ enlace }}" target="_blank" style="color:#395B64; text-decoration:underline;">{{ enlace }}</a>
+              </p>
+
+              <hr style="border:0; border-top:1px solid #c8dfe0; margin:0 0 20px;">
+
+              <p style="margin:0 0 28px; font-family:'Roboto', Arial, sans-serif; font-size:13px; line-height:1.6; color:#5a7070;">
+                Si no solicitaste este cambio, puedes ignorar este correo: tu contraseña seguirá siendo la misma.
+              </p>
+            </td>
+          </tr>
+
+          <!-- ── Pie ── -->
+          <tr>
+            <td align="center" bgcolor="#2C3333" style="background-color:#2C3333; padding:20px 24px;">
+              <p style="margin:0 0 4px; font-family:'Fredoka', 'Trebuchet MS', Arial, sans-serif; font-size:15px; font-weight:600; color:#A5C9CA;">
+                HebraTech
+              </p>
+              <p style="margin:0; font-family:'Roboto', Arial, sans-serif; font-size:11px; line-height:1.6; color:#94A3B8;">
+                © 2026 HebraTech · Todos los derechos reservados.<br>
+                Este es un mensaje automático, por favor no respondas a este correo.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
