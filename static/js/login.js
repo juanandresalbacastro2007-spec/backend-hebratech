@@ -9,30 +9,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     updateClock();
     setInterval(updateClock, 1000);
-
-    // ── Modo oscuro / claro ──
-    const root = document.documentElement;
-    const btn = document.getElementById('themeToggle');
-    const icon = document.getElementById('themeIcon');
-
-    function applyTheme(theme) {
-        root.setAttribute('data-bs-theme', theme);
-        if (icon) {
-            icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
-        }
-        localStorage.setItem('ht-theme', theme);
-    }
-
-    // Aplicar el tema guardado o por defecto 'light'
-    applyTheme(localStorage.getItem('ht-theme') || 'light');
-
-    if (btn) {
-        btn.addEventListener('click', function () {
-            const current = root.getAttribute('data-bs-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
-            applyTheme(next);
-        });
-    }
 });
 
 

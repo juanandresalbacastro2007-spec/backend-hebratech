@@ -1,7 +1,11 @@
-// theme.js — Modo oscuro global para las páginas de autenticación (base_auth.html)
-// Único responsable del tema: aplica el guardado, cambia con el botón y sincroniza el icono.
-// Comparte la clave 'ht-theme' con el home y el panel de administración.
+// theme.js — ÚNICO responsable del modo oscuro (home, login, recuperar, términos, etc.)
+// - Aplica el tema guardado antes de pintar (sin parpadeo).
+// - Maneja el clic del botón #themeToggle (solo existe en home y login).
+// - Es seguro cargarlo dos veces: no duplica listeners.
 (function () {
+  if (window.__htThemeInit) return;
+  window.__htThemeInit = true;
+
   var root = document.documentElement;
   var KEY = 'ht-theme';
 
@@ -11,8 +15,13 @@
 
   function syncIcons(theme) {
     document.querySelectorAll('#themeToggle i, [data-theme-toggle] i').forEach(function (icon) {
-      icon.classList.toggle('fa-moon', theme === 'light');
-      icon.classList.toggle('fa-sun', theme === 'dark');
+      if (icon.classList.contains('bi')) {            // Bootstrap Icons
+        icon.classList.toggle('bi-moon-fill', theme === 'light');
+        icon.classList.toggle('bi-sun-fill', theme === 'dark');
+      } else {                                         // Font Awesome
+        icon.classList.toggle('fa-moon', theme === 'light');
+        icon.classList.toggle('fa-sun', theme === 'dark');
+      }
     });
   }
 
@@ -21,10 +30,8 @@
     syncIcons(theme);
   }
 
-  // 1) Se aplica en el <head>, antes de pintar la página (sin parpadeo blanco)
   applyTheme(getTheme());
 
-  // 2) Clic en el botón (delegado: funciona aunque el botón aún no exista al cargar)
   document.addEventListener('click', function (e) {
     if (!e.target.closest('#themeToggle, [data-theme-toggle]')) return;
     var next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
@@ -32,11 +39,11 @@
     applyTheme(next);
   });
 
-  // 3) Cuando el DOM esté listo, sincroniza el icono (sol/luna)
   document.addEventListener('DOMContentLoaded', function () { syncIcons(getTheme()); });
 
-  // 4) Si el tema cambia en otra pestaña (home, admin), se actualiza aquí también
-  window.addEventListener('storage', function (e) {
-    if (e.key === KEY) applyTheme(getTheme());
-  });
+  // Al volver con el botón "atrás" (página restaurada desde caché) se re-aplica el tema guardado
+  window.addEventListener('pageshow', function () { applyTheme(getTheme()); });
+
+  // Si cambia en otra pestaña
+  window.addEventListener('storage', function (e) { if (e.key === KEY) applyTheme(getTheme()); });
 })();

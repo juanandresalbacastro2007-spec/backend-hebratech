@@ -23,6 +23,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/usuarios/style.css' %}?v=6" />
+  <script src="{% static 'js/theme.js' %}"></script>
   </head>
 
   <body>
@@ -660,7 +661,7 @@
 
     <!-- Bootstrap JS -->
     <script>
-    <!--modo oscuro -->
+    
 document.addEventListener('DOMContentLoaded', function () {
         // Reloj
         function updateClock() {
@@ -672,29 +673,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         updateClock()
         setInterval(updateClock, 1000)
-
-        // ── Modo oscuro / claro ──
-        const root = document.documentElement
-        const btn = document.getElementById('themeToggle')
-        const icon = document.getElementById('themeIcon')
-
-        function applyTheme(theme) {
-          root.setAttribute('data-bs-theme', theme)
-          if (icon) {
-            icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill'
-          }
-          localStorage.setItem('ht-theme', theme)
-        }
-
-        applyTheme(localStorage.getItem('ht-theme') || 'light')
-
-        if (btn) {
-          btn.addEventListener('click', function () {
-            const current = root.getAttribute('data-bs-theme')
-            const next = current === 'dark' ? 'light' : 'dark'
-            applyTheme(next)
-          })
-        }
       })
     </script>
 
