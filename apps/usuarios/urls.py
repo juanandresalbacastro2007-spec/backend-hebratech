@@ -1,4 +1,6 @@
 from django.urls import path, include
+from django.views.generic import RedirectView
+from django.templatetags.static import static
 from . import views
 
 urlpatterns = [
@@ -21,6 +23,8 @@ urlpatterns = [
     path('terminos-de-servicio/', views.terminos_de_servicio, name='terminos_de_servicio'),
     
     #--- Página de Políticas de Privacidad ---
-    path('politicas-de-privacidad/', views.politicas_de_privacidad, name='politicas_de_privacidad')
+    path('politicas-de-privacidad/', views.politicas_de_privacidad, name='politicas_de_privacidad'),
 
-    ]
+    # --- Silencia el 404 de /favicon.ico (los navegadores lo piden solos) ---
+    path('favicon.ico', RedirectView.as_view(url=static('img/fondo_logo.jpg'), permanent=True)),
+]

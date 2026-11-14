@@ -149,11 +149,6 @@
   <script src="https://www.google.com/recaptcha/api.js?hl=es" async defer></script>
   {% endif %}
   
-  <!-- Definimos la URL de Django de forma segura para JavaScript -->
-  <script>
-      const homeUrl = "{% url 'home' %}";
-  </script>
-  
   <!-- Cargamos tu archivo JS una sola vez -->
   <script src="{% static 'js/login.js' %}"></script>
 {% endblock %}

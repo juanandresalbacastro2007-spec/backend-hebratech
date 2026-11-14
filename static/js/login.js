@@ -28,20 +28,22 @@ function switchAuth() {
     }
 }
 
-// Función inteligente para la flecha de atrás
-function handleBack() {
-    const loginView = document.getElementById('login-view');
-    const registerView = document.getElementById('register-view');
+// Flecha de atrás: es un <a href="home"> normal (funciona aunque falle el JS).
+// Si el formulario de registro está visible, en vez de ir al home vuelve al login.
+document.addEventListener('DOMContentLoaded', function () {
+    const back = document.getElementById('backArrowBtn');
+    if (!back) return;
 
-    // Comprobamos cuál de los dos formularios está visible actualmente en la pantalla
-    const isRegisterVisible = registerView && registerView.style.display !== 'none';
+    back.addEventListener('click', function (e) {
+        const loginView = document.getElementById('login-view');
+        const registerView = document.getElementById('register-view');
+        if (!loginView || !registerView) return;
 
-    if (isRegisterVisible) {
-        // Si estamos viendo el formulario de Registro, la flecha nos devuelve al Login
-        registerView.style.display = 'none';
-        loginView.style.display = 'block';
-    } else {
-        // Si estamos viendo el formulario de Login, la flecha nos manda directo al Home
-        window.location.href = homeUrl;
-    }
-}
+        const registroVisible = window.getComputedStyle(registerView).display !== 'none';
+        if (registroVisible) {
+            e.preventDefault();
+            registerView.style.display = 'none';
+            loginView.style.display = 'block';
+        }
+    });
+});

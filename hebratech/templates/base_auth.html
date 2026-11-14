@@ -106,8 +106,8 @@
 
   </main>
 
-  <!-- Flecha de atrás inteligente -->
-<a href="javascript:void(0)" onclick="handleBack()" class="back-arrow" id="backArrowBtn" title="Volver">
+  <!-- Flecha de atrás: enlace real al home; login.js la intercepta solo si el registro está visible -->
+<a href="{% url 'home' %}" class="back-arrow" id="backArrowBtn" title="Volver">
     <i class="fas fa-arrow-left"></i>
 </a>
 
