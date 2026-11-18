@@ -29,8 +29,7 @@
   <link rel="stylesheet" href="{% static 'css/clientes/cliente.css' %}">
   <link rel="stylesheet" href="{% static 'css/clientes/cliente_shell.css' %}">
   <link rel="stylesheet" href="{% static 'css/administrador/perfil-modal.css' %}">
-  
-  <!-- CSS de Notificaciones (importado de admin.css adaptado al cliente) -->
+
   <style>
     .ht-notif { position: relative; display: flex; align-items: center; }
     .ht-notif-btn { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(165,201,202,0.35); background: #fff; color: #395B64; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s, color 0.15s; }
@@ -147,10 +146,7 @@
 
       <div class="ms-auto d-flex align-items-center gap-2">
         {% block topbar_extra %}{% endblock %}
-
-        <!-- Notificaciones (Mount point para el JS) -->
         <div id="notifMount" data-url="{% url 'notificaciones_json' %}" data-user-id="{{ usuario.idUsuario }}"></div>
-
         <div class="cl-clock d-none d-md-block" id="navClock">
           <div><i class="bi bi-clock"></i><span id="clockDisplay">--:--:--</span></div>
           <span id="dateDisplay"></span>
@@ -176,10 +172,8 @@
     </div>
   </div>
 
-  <!-- MODALES ... (Mantén tus modales existentes aquí) -->
   <!-- ══ MODAL — Nueva Orden ══ -->
   <div class="modal fade" id="newOrderModal" tabindex="-1" aria-labelledby="newOrderModalLabel" aria-hidden="true">
-    <!-- Contenido original intacto -->
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
         <form method="POST" action="{% url 'registrar_orden' %}" id="formNuevaOrden" class="needs-validation" novalidate>
@@ -280,8 +274,7 @@
             </div>
             <div class="mb-1">
               <label for="contactMensaje" class="form-label fw-semibold">Mensaje</label>
-              <textarea class="form-control" id="contactMensaje" rows="5" maxlength="1000" required
-                        placeholder="Cuéntanos en qué podemos ayudarte"></textarea>
+              <textarea class="form-control" id="contactMensaje" rows="5" maxlength="1000" required placeholder="Cuéntanos en qué podemos ayudarte"></textarea>
               <div class="invalid-feedback">Escribe tu mensaje antes de continuar.</div>
               <div class="form-text text-end"><span id="contactContador">0</span>/1000</div>
             </div>
@@ -295,7 +288,113 @@
     </div>
   </div>
 
-  <!-- PENDIENTE: restaurar los modales #quoteModal (Cotización) y #perfilModal (Perfil), que no están en este archivo -->
+  <!-- ══ MODAL — Generar cotización ══ -->
+  <div class="modal fade" id="quoteModal" tabindex="-1" aria-labelledby="quoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
+        <form method="POST" action="{% url 'generar_cotizacion' %}" id="formCotizacion" class="needs-validation" novalidate>
+          {% csrf_token %}
+          <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
+            <h5 class="modal-title" style="font-family:var(--ff-display);" id="quoteModalLabel">
+              <i class="bi bi-file-earmark-text me-2" style="color:var(--primary);"></i>Generar cotización
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted small mb-3">Selecciona producto y cantidad. Al confirmar, podrás descargar la cotización en PDF.</p>
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label fw-semibold">Producto</label>
+                <select class="form-select" name="producto" required>
+                  <option value="" selected disabled>Seleccionar...</option>
+                  {% for producto in productos %}
+                  <option value="{{ producto.idProducto }}">{{ producto.nombre }} — ${{ producto.precio|floatformat:0 }}</option>
+                  {% endfor %}
+                </select>
+                <div class="invalid-feedback">Selecciona un producto.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Cantidad (Unidades)</label>
+                <input type="number" class="form-control" name="cantidad" min="1" placeholder="Ej. 200" required>
+                <div class="invalid-feedback">Ingresa una cantidad válida.</div>
+              </div>
+            </div>
+            <div class="alert alert-danger d-none mt-3 mb-0" id="cotErrorBox" role="alert" style="font-size:0.85rem;"></div>
+          </div>
+          <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
+            <button type="button" class="btn-outline-ht" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn-primary-ht" id="btnCotSubmit"><i class="bi bi-send me-1"></i>Generar cotización</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL — Editar perfil ══ -->
+  <div class="modal fade" id="perfilModal" tabindex="-1" aria-labelledby="perfilModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
+        <form id="formPerfilCliente" method="POST" action="{% url 'editar_perfil_cliente' %}" novalidate>
+          {% csrf_token %}
+          <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
+            <h5 class="modal-title" style="font-family:var(--ff-display);" id="perfilModalLabel">
+              <i class="bi bi-person-gear me-2" style="color:var(--primary);"></i>Editar perfil
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-danger d-none" id="perfilClienteError" role="alert"></div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Nombre</label>
+                <input type="text" class="form-control" value="{{ usuario.nombre|default:'' }}" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Apellido</label>
+                <input type="text" class="form-control" value="{{ usuario.apellido|default:'' }}" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Correo electrónico</label>
+                <input type="email" class="form-control" value="{{ usuario.correoElectronico|default:'' }}" readonly>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Teléfono de contacto *</label>
+                <input type="tel" class="form-control" id="perfilTelefono" name="telefono"
+                       value="{{ cliente.telefono|default:'' }}" required placeholder="Ej. 300 123 4567">
+                <div class="form-text">Mínimo 7 dígitos.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Empresa</label>
+                <input type="text" class="form-control" name="empresa"
+                       value="{{ cliente.empresa|default:'' }}" placeholder="Nombre de tu empresa">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">NIT</label>
+                <input type="text" class="form-control" name="nit"
+                       value="{{ cliente.nit|default:'' }}" placeholder="Identificación tributaria">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Ciudad</label>
+                <input type="text" class="form-control" name="ciudad"
+                       value="{{ cliente.ciudad|default:'' }}" placeholder="Ciudad">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Dirección</label>
+                <input type="text" class="form-control" name="direccion"
+                       value="{{ cliente.direccion|default:'' }}" placeholder="Dirección de facturación">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
+            <button type="button" class="btn-outline-ht" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn-primary-ht"><i class="bi bi-check2 me-1"></i>Guardar cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% block modales_extra %}{% endblock %}
 
   <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
     <button id="themeToggle" class="btn btn-light rounded-circle shadow-lg border-0" style="width: 48px; height: 48px; font-size: 1.3rem; background: var(--bg-card, #fff); color: var(--primary, #395B64); transition: all 0.3s;">
@@ -311,7 +410,7 @@
   <script src="{% static 'js/cliente.js' %}?v=4"></script>
 
   <script>
-    // Tema y barra lateral (igual que antes)
+    // Tema
     (function () {
       const root = document.documentElement;
       const btn = document.getElementById('themeToggle');
@@ -327,6 +426,7 @@
       });
     })();
 
+    // Sidebar
     (function () {
       var root = document.documentElement;
       var sidebar = document.getElementById('clSidebar');
@@ -363,11 +463,13 @@
       (mobile.addEventListener ? mobile.addEventListener('change', sync) : mobile.addListener(sync)); sync();
     })();
 
+    // Contact modal reset
     (function () {
       var m = document.getElementById('contactModal');
       if (m) m.addEventListener('hidden.bs.modal', function () { if (typeof resetContactForm === 'function') resetContactForm(); });
     })();
 
+    // Validación cliente del form de perfil
     (function () {
       var f = document.getElementById('formPerfilCliente');
       if (!f) return;
@@ -378,15 +480,52 @@
         if (!tel) msg = 'El teléfono de contacto es requerido.';
         else if (!/^[0-9+\-\s()]{7,}$/.test(tel)) msg = 'Ingresa un teléfono válido (mínimo 7 dígitos).';
         if (msg) {
-          e.preventDefault(); err.textContent = msg; err.classList.remove('d-none'); err.classList.add('show-error');
+          e.preventDefault();
+          err.textContent = msg;
+          err.classList.remove('d-none');
+          err.classList.add('show-error');
         }
+      });
+    })();
+
+    // ── Cotización: el endpoint devuelve JSON, interceptamos submit ──
+    (function () {
+      var f = document.getElementById('formCotizacion');
+      if (!f) return;
+      var errBox = document.getElementById('cotErrorBox');
+      var btn = document.getElementById('btnCotSubmit');
+      f.addEventListener('submit', function (e) {
+        e.preventDefault();
+        errBox.classList.add('d-none');
+        btn.disabled = true;
+
+        fetch(f.action, {
+          method: 'POST',
+          body: new FormData(f),
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+          if (res.ok && res.data.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('quoteModal')).hide();
+            f.reset();
+            window.location.reload();
+          } else {
+            errBox.textContent = res.data.error || 'No se pudo generar la cotización.';
+            errBox.classList.remove('d-none');
+          }
+        })
+        .catch(function (err) {
+          errBox.textContent = 'Error de red: ' + err;
+          errBox.classList.remove('d-none');
+        })
+        .finally(function () { btn.disabled = false; });
       });
     })();
   </script>
 
   <script>
-    // Modal "Contactar a HebraTech": abre Gmail con el mensaje listo (mismo mecanismo que el home).
-    // Se define DESPUÉS de cliente.js para que resetContactForm no choque con otra versión.
+    // Contactar a HebraTech → abre Gmail
     (function () {
       var CONTACT_EMAIL = 'contacto@hebratech.co';
       var form = document.getElementById('formContacto');

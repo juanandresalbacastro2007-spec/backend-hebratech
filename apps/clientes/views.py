@@ -1,12 +1,10 @@
-# Views para el portal del cliente...
-
 import os
 from datetime import datetime
-import re  # Asegúrate de tener este import arriba del archiv
+import re
 
 from django.conf import settings
 from django.contrib import messages
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 
@@ -25,6 +23,7 @@ cliente_required = login_required_rol(rol_esperado='cliente', session_key='usuar
 ESTADOS_ACTIVOS = ['Pendiente', 'Procesando', 'Enviado']
 ESTADOS_HISTORIAL = ['Entregado', 'Cancelado']
 
+
 def _generar_factura_pdf(orden):
     subtotal = (orden.precioUnitario or 0) * (orden.cantidad or 0)
     numero_factura = f'F-{datetime.now().strftime("%Y%m%d")}-{orden.idOrden:04d}'
@@ -42,6 +41,7 @@ def _generar_factura_pdf(orden):
         rutaPDF=f'facturas/{nombre_archivo}', total=subtotal, estado='Pendiente de pago'
     )
 
+
 @cliente_required
 def cliente_portal(request):
     usuario_id = request.session['usuario_id']
@@ -54,8 +54,9 @@ def cliente_portal(request):
 
     ordenes = Orden.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
     productos_qs = Producto.objects.all()
-    for p in productos_qs: p.precio_js = int(p.precio)
-    
+    for p in productos_qs:
+        p.precio_js = int(p.precio)
+
     ordenes_activas = ordenes.filter(estado__in=['Procesando', 'Enviado']).count()
     ordenes_completadas = ordenes.filter(estado='Entregado').count()
     ordenes_pendientes = ordenes.filter(estado='Pendiente').count()
@@ -81,7 +82,8 @@ def cliente_portal(request):
                 guardar_factura_pdf(factura, ruta_pdf)
             except Exception:
                 continue
-        if os.path.exists(ruta_pdf): facturas.append(factura)
+        if os.path.exists(ruta_pdf):
+            facturas.append(factura)
 
     cotizaciones = Cotizacion.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
     mostrar_bienvenida = not request.session.get('bienvenida_mostrada', False)
@@ -96,6 +98,7 @@ def cliente_portal(request):
         'mostrar_bienvenida': mostrar_bienvenida,
     }
     return render(request, 'clientes/cliente_portal.html', contexto)
+
 
 @cliente_required
 def historial_ordenes(request):
@@ -115,49 +118,67 @@ def historial_ordenes(request):
     }
     return render(request, 'clientes/historial_ordenes.html', contexto)
 
+
 @cliente_required
 def editar_perfil_cliente(request):
+    """
+    Endpoint POST del modal #perfilModal.
+    Guarda los campos que existan en el modelo Cliente. En GET redirige
+    al portal (el formulario ya vive en el modal del cliente_base.html).
+    """
     usuario_id = request.session['usuario_id']
-    try: cliente = Cliente.objects.get(idUsuario=usuario_id)
+    try:
+        cliente = Cliente.objects.get(idUsuario=usuario_id)
     except Cliente.DoesNotExist:
         messages.error(request, 'Tu usuario no tiene un perfil de cliente asociado.')
         return redirect('login')
 
     if request.method == 'POST':
         try:
-            cliente.telefono = request.POST.get('telefono', '').strip() or None
-            cliente.ciudad = request.POST.get('ciudad', '').strip() or None
-            cliente.direccion = request.POST.get('direccion', '').strip() or None
+            # Solo actualizamos los campos que existan en el modelo,
+            # así toleramos versiones distintas del esquema.
+            campos = ['telefono', 'ciudad', 'direccion', 'empresa', 'nit']
+            for campo in campos:
+                if campo in request.POST and hasattr(cliente, campo):
+                    valor = (request.POST.get(campo) or '').strip() or None
+                    setattr(cliente, campo, valor)
             cliente.save()
             messages.success(request, 'Tu perfil ha sido actualizado correctamente.')
-            return redirect('cliente_portal')
         except Exception as e:
             messages.error(request, f'Error al actualizar perfil: {str(e)}')
-            return redirect('editar_perfil_cliente')
+        return redirect('cliente_portal')
 
-    return render(request, 'clientes/editar_perfil_cliente.html', {'cliente': cliente})
+    # GET: no hay template separado; el formulario vive en el modal.
+    return redirect('cliente_portal')
+
 
 @cliente_required
 def registrar_orden(request):
-    if request.method != 'POST': return redirect('cliente_portal')
+    if request.method != 'POST':
+        return redirect('cliente_portal')
     usuario_id = request.session['usuario_id']
-    try: cliente = Cliente.objects.get(idUsuario=usuario_id)
-    except Cliente.DoesNotExist: return redirect('login')
+    try:
+        cliente = Cliente.objects.get(idUsuario=usuario_id)
+    except Cliente.DoesNotExist:
+        return redirect('login')
 
     if Orden.objects.filter(idCliente=cliente, estado__in=ESTADOS_ACTIVOS).exists():
         messages.error(request, 'Ya tienes una orden activa.')
         return redirect('cliente_portal')
 
     producto_id, cantidad = request.POST.get('producto'), request.POST.get('cantidad')
-    prioridad, instrucciones = request.POST.get('prioridad', 'Normal'), request.POST.get('instrucciones', '').strip()
+    prioridad = request.POST.get('prioridad', 'Normal')
+    instrucciones = request.POST.get('instrucciones', '').strip()
     fecha_rango = request.POST.get('fecha_rango', '').strip()
 
-    if not producto_id: return redirect('cliente_portal')
+    if not producto_id:
+        return redirect('cliente_portal')
 
     try:
         producto = Producto.objects.get(idProducto=producto_id)
         cantidad = int(cantidad)
-        if cantidad <= 0: raise ValueError
+        if cantidad <= 0:
+            raise ValueError
     except (Producto.DoesNotExist, ValueError, TypeError):
         messages.error(request, 'Datos inválidos.')
         return redirect('cliente_portal')
@@ -178,21 +199,28 @@ def registrar_orden(request):
 
     return redirect('cliente_portal')
 
+
 @cliente_required
 def generar_cotizacion(request):
-    if request.method != 'POST': return JsonResponse({'error': 'Método no permitido'}, status=405)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
     usuario_id = request.session['usuario_id']
-    try: cliente = Cliente.objects.get(idUsuario=usuario_id)
-    except Cliente.DoesNotExist: return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
+    try:
+        cliente = Cliente.objects.get(idUsuario=usuario_id)
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'Cliente no encontrado'}, status=404)
 
     producto_id, cantidad = request.POST.get('producto'), request.POST.get('cantidad')
-    if not producto_id or not cantidad: return JsonResponse({'error': 'Faltan datos'}, status=400)
+    if not producto_id or not cantidad:
+        return JsonResponse({'error': 'Faltan datos'}, status=400)
 
     try:
         producto = Producto.objects.get(idProducto=producto_id)
         cantidad_int = int(cantidad)
-        if cantidad_int <= 0: raise ValueError
-    except: return JsonResponse({'error': 'Datos inválidos'}, status=400)
+        if cantidad_int <= 0:
+            raise ValueError
+    except Exception:
+        return JsonResponse({'error': 'Datos inválidos'}, status=400)
 
     cotizacion = Cotizacion.objects.create(
         idCliente=cliente, idProducto=producto, cantidad=cantidad_int,
@@ -200,16 +228,19 @@ def generar_cotizacion(request):
     )
     return JsonResponse({'ok': True, 'idCotizacion': cotizacion.idCotizacion, 'mensaje': 'Cotización registrada.'})
 
+
 @cliente_required
 def orden_exitosa(request, idOrden):
     orden = get_object_or_404(Orden, idOrden=idOrden, idCliente__idUsuario=request.session['usuario_id'])
     factura = Factura.objects.filter(idOrden=orden).first()
     return render(request, 'clientes/orden_exitosa.html', {'orden': orden, 'factura': factura})
 
+
 @cliente_required
 def editar_orden(request, idOrden):
     orden = get_object_or_404(Orden, idOrden=idOrden, idCliente__idUsuario=request.session['usuario_id'])
-    if orden.estado != 'Pendiente': return redirect('cliente_portal')
+    if orden.estado != 'Pendiente':
+        return redirect('cliente_portal')
 
     if request.method == 'POST':
         try:
@@ -221,7 +252,8 @@ def editar_orden(request, idOrden):
             fecha_rango = request.POST.get('fecha_rango', '').strip()
             if fecha_rango:
                 inicio, fin = parsear_rango(fecha_rango)
-                if fin: orden.fechaEstimadaInicio, orden.fechaEntregaEstimada = inicio, fin
+                if fin:
+                    orden.fechaEstimadaInicio, orden.fechaEntregaEstimada = inicio, fin
             orden.save()
             messages.success(request, 'Orden actualizada.')
             return redirect('cliente_portal')
@@ -229,6 +261,7 @@ def editar_orden(request, idOrden):
             messages.error(request, f'Error: {str(e)}')
 
     return render(request, 'clientes/editar_orden.html', {'orden': orden, 'productos': Producto.objects.all()})
+
 
 @cliente_required
 def eliminar_orden(request, idOrden):
@@ -238,13 +271,14 @@ def eliminar_orden(request, idOrden):
         messages.success(request, 'Orden eliminada.')
     return redirect('cliente_portal')
 
+
 @cliente_required
 def descargar_factura(request, idFactura):
     factura = get_object_or_404(Factura, idFactura=idFactura, idCliente__idUsuario=request.session['usuario_id'])
     if not factura.rutaPDF:
         factura.rutaPDF = f'facturas/{factura.numeroFactura}.pdf'
         factura.save(update_fields=['rutaPDF'])
-        
+
     ruta = os.path.join(settings.MEDIA_ROOT, factura.rutaPDF)
     try:
         guardar_factura_pdf(factura, ruta)
@@ -252,13 +286,16 @@ def descargar_factura(request, idFactura):
         if not os.path.exists(ruta):
             messages.error(request, 'El archivo PDF no se encontró y no se pudo regenerar.')
             return redirect('cliente_portal')
-            
+
     return FileResponse(open(ruta, 'rb'), as_attachment=True, filename=os.path.basename(ruta))
+
 
 @cliente_required
 def actualizar_ordenes(request):
-    try: cliente = Cliente.objects.get(idUsuario=request.session['usuario_id'])
-    except Cliente.DoesNotExist: return JsonResponse({'error': 'No encontrado'}, status=404)
+    try:
+        cliente = Cliente.objects.get(idUsuario=request.session['usuario_id'])
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'No encontrado'}, status=404)
     ordenes = Orden.objects.filter(idCliente=cliente, estado__in=ESTADOS_ACTIVOS).order_by('-fechaCreacion')
     html = render_to_string('clientes/_tabla_ordenes.html', {'ordenes': ordenes}, request=request)
     return JsonResponse({'html': html})
@@ -266,39 +303,32 @@ def actualizar_ordenes(request):
 
 @cliente_required
 def notificaciones_json(request):
-    try: 
+    try:
         cliente = Cliente.objects.get(idUsuario=request.session['usuario_id'])
-    except Cliente.DoesNotExist: 
+    except Cliente.DoesNotExist:
         return JsonResponse({'error': 'No encontrado'}, status=404)
 
     todas = Notificacion.objects.filter(idCliente=cliente).order_by('-fechaCreacion')
-    
     lista_notifs = []
-    
+
     for n in todas[:20]:
         url_destino = '/clientes/'
         incluir = True
-        
-        # Si es una notificación de orden, verificamos que la orden exista
+
         if n.tipo == 'orden':
-            # Buscamos el número de orden en el mensaje (ej: "Tu orden #24 fue...")
             match = re.search(r'#(\d+)', n.mensaje)
             if match:
                 orden_id = match.group(1)
                 try:
                     orden = Orden.objects.get(idOrden=orden_id, idCliente=cliente)
-                    
-                    # Si ya está entregada o cancelada, enviamos al historial
                     if orden.estado in ['Entregado', 'Cancelado']:
                         url_destino = '/clientes/historial-ordenes/'
                     else:
                         url_destino = '/clientes/#secMisOrdenes'
-                        
                 except Orden.DoesNotExist:
-                    # Si la orden NO existe, la omitimos y la borramos de la BD
                     incluir = False
                     n.delete()
-        
+
         if incluir:
             lista_notifs.append({
                 'id': n.idNotificacion,
@@ -310,26 +340,26 @@ def notificaciones_json(request):
                 'url': url_destino,
             })
 
-    # Contamos cuántas quedaron sin leer después de la limpieza
     no_leidas = sum(1 for n in lista_notifs if not n['leida'])
+    return JsonResponse({'no_leidas': no_leidas, 'notificaciones': lista_notifs})
 
-    return JsonResponse({
-        'no_leidas': no_leidas,
-        'notificaciones': lista_notifs,
-    })
 
 @cliente_required
 def marcar_notificacion_leida(request, idNotificacion):
-    if request.method != 'POST': return JsonResponse({'error': 'Método no permitido'}, status=405)
-    try: cliente = Cliente.objects.get(idUsuario=request.session['usuario_id'])
-    except Cliente.DoesNotExist: return JsonResponse({'error': 'No encontrado'}, status=404)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        cliente = Cliente.objects.get(idUsuario=request.session['usuario_id'])
+    except Cliente.DoesNotExist:
+        return JsonResponse({'error': 'No encontrado'}, status=404)
 
     if idNotificacion == 0:
         Notificacion.objects.filter(idCliente=cliente, leida=False).update(leida=True)
     else:
         Notificacion.objects.filter(idNotificacion=idNotificacion, idCliente=cliente).update(leida=True)
-    
+
     return JsonResponse({'ok': True})
+
 
 @cliente_required
 def descargar_cotizacion(request, idCotizacion):
@@ -340,6 +370,7 @@ def descargar_cotizacion(request, idCotizacion):
     except Exception as e:
         messages.error(request, f'Error: {str(e)}')
         return redirect('cliente_portal')
+
 
 @cliente_required
 def eliminar_cotizacion(request, idCotizacion):
