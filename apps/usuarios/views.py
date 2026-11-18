@@ -36,7 +36,17 @@ class GoogleLoginView(SocialLoginView):
 # ==========================================
 
 def login_view(request):
-    correo = ''
+    correo = request.GET.get('correo', '')
+    show_register = request.GET.get('register') == '1'
+    pending = request.GET.get('pending') == '1'
+
+    # Si allauth nos envió aquí por cuenta pendiente, cerrar sesión y avisar
+    if pending and request.user.is_authenticated:
+        logout(request)
+        messages.warning(
+            request,
+            'Tu cuenta está pendiente de aprobación. Podrás iniciar sesión una vez que un administrador la active.'
+        )
 
     if request.method == 'POST':
         correo = request.POST.get('correo', '')
@@ -49,10 +59,21 @@ def login_view(request):
         error_generico = 'Usuario o contraseña incorrectos. Por favor, intente de nuevo.'
 
         try:
-            usuario = Usuario.objects.get(
-                correoElectronico=correo,
-                estado='activo'
-            )
+            usuario = Usuario.objects.get(correoElectronico=correo)
+
+            # La cuenta existe pero no está activa
+            if usuario.estado != 'activo':
+                if usuario.estado == 'pendiente':
+                    messages.warning(
+                        request,
+                        'Tu cuenta está pendiente de aprobación. Un administrador debe activarla para que puedas iniciar sesión.'
+                    )
+                else:
+                    messages.error(
+                        request,
+                        f'Tu cuenta está en estado "{usuario.estado}". Contacta al administrador.'
+                    )
+                return render(request, 'usuarios/login.html', {'correo': correo})
 
             if check_password(contrasena, usuario.contrasena):
                 request.session.cycle_key()
@@ -81,9 +102,21 @@ def login_view(request):
                 messages.error(request, error_generico)
 
         except Usuario.DoesNotExist:
-            messages.error(request, error_generico)
+            # No existe → mostrar registro con email precargado
+            messages.info(
+                request,
+                'No encontramos una cuenta con ese correo. Puedes crear una nueva aquí.'
+            )
+            return render(request, 'usuarios/login.html', {
+                'correo': correo,
+                'show_register': True,
+                'reg_correo': correo,
+            })
 
-    return render(request, 'usuarios/login.html', {'correo': correo})
+    return render(request, 'usuarios/login.html', {
+        'correo': correo,
+        'show_register': show_register,
+    })
 
 
 def registro_view(request):
@@ -115,7 +148,7 @@ def registro_view(request):
 
         with connection.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO usuarios 
+                INSERT INTO usuarios
                     (nombre, apellido, correoElectronico, contrasena, rol, estado)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, [nombre, apellido, correo, make_password(contrasena), 'sin_asignar', 'pendiente'])
@@ -123,7 +156,8 @@ def registro_view(request):
         messages.success(request, '¡Cuenta creada! Un administrador debe aprobarla antes de que puedas iniciar sesión.')
         return redirect('login')
 
-    return redirect('login')
+    # GET directo a /registro/ → mostrar el formulario de registro
+    return render(request, 'usuarios/login.html', {'show_register': True})
 
 
 def home_view(request):
@@ -183,8 +217,6 @@ def recuperar_view(request):
                     from_email=None,
                     to=[usuario.correoElectronico],
                 )
-                
-                # ⚠️ AQUÍ ESTABA EL ERROR: Se eliminó la línea mensaje.mixed_subtype = 'related'
 
                 tiene_logo = _adjuntar_logo(mensaje)
 

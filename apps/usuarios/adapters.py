@@ -1,13 +1,20 @@
+from urllib.parse import quote
+
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib.auth.hashers import make_password
 from django.db import connection
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 
 
 class CustomAccountAdapter(DefaultAccountAdapter):
     """
-    Controla a dónde se redirige después de un login (incluye login con Google).
+    Redirige después del login social (Google).
+    - Cuenta pendiente / inactiva → manda a /login/?pending=1 (login_view la
+      desloguea y muestra aviso al usuario).
+    - Usuario autenticado sin fila en `usuarios` → manda a /login/?register=1
+      con el correo precargado para que complete el alta.
+    - Resto → portal según rol.
     """
 
     def get_login_redirect_url(self, request):
@@ -16,17 +23,23 @@ class CustomAccountAdapter(DefaultAccountAdapter):
 
         from apps.usuarios.models import Usuario
 
+        # Alta recién creada por Google → queda pendiente, avisar y desloguear
+        if request.session.pop('nuevo_registro_social', False):
+            return f"{reverse('login')}?pending=1&correo={quote(request.user.email)}"
+
         try:
             usuario_db = Usuario.objects.get(correoElectronico=request.user.email)
         except Usuario.DoesNotExist:
-            return super().get_login_redirect_url(request)
-
-        if usuario_db.estado != 'activo':
-            return super().get_login_redirect_url(request)
+            # Autenticado por allauth pero sin fila en `usuarios`
+            return f"{reverse('login')}?register=1&correo={quote(request.user.email)}"
 
         request.session['usuario_id'] = usuario_db.idUsuario
         request.session['usuario_nombre'] = usuario_db.nombre
         request.session['usuario_rol'] = usuario_db.rol
+
+        # Cuenta pendiente / inactiva / sin rol → login_view la desloguea
+        if usuario_db.estado != 'activo' or usuario_db.rol == 'sin_asignar':
+            return f"{reverse('login')}?pending=1&correo={quote(usuario_db.correoElectronico)}"
 
         if usuario_db.rol == 'cliente':
             return reverse('cliente_portal')
@@ -44,7 +57,6 @@ class CustomAccountAdapter(DefaultAccountAdapter):
         return super().get_login_redirect_url(request)
 
     def add_message(self, request, level, message_template, message_context=None, extra_tags=""):
-        # Evita mostrar el mensaje automático "Ha iniciado sesión exitosamente..."
         if message_template == "account/messages/logged_in.txt":
             return
         super().add_message(request, level, message_template, message_context, extra_tags)
@@ -52,8 +64,7 @@ class CustomAccountAdapter(DefaultAccountAdapter):
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
     """
-    Puentea el registro por Google (allauth) con la tabla `usuarios` propia
-    de HebraTech.
+    Puentea el alta social (Google) con la tabla `usuarios` propia.
     """
 
     def save_user(self, request, sociallogin, form=None):
@@ -85,5 +96,8 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
                     (nombre, apellido, correoElectronico, contrasena, rol, estado)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, [nombre, apellido, correo, contrasena_hash, 'sin_asignar', 'pendiente'])
+
+        # Marca: la próxima redirección va a avisar "cuenta pendiente"
+        request.session['nuevo_registro_social'] = True
 
         return user
