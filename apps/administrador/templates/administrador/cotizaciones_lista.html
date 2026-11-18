@@ -7,7 +7,7 @@
 {% block topbar_sub %}Cotizaciones generadas por el administrador{% endblock %}
 
 {% block topbar_extra %}
-<div class="ms-auto d-flex gap-2">
+<div class="ms-auto d-none d-lg-flex gap-2">
   <button type="button" class="btn btn-primary-ht d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#modalNuevaCotizacion">
     <i class="bi bi-plus-lg me-1"></i>Nueva cotización
   </button>
@@ -40,6 +40,9 @@
 <div class="section-card">
   <div class="section-card-header">
     <h6><i class="bi bi-file-earmark-text me-2"></i>Todas las cotizaciones ({{ cotizaciones|length }})</h6>
+    <button type="button" class="btn btn-sm btn-primary-ht d-lg-none" data-bs-toggle="modal" data-bs-target="#modalNuevaCotizacion">
+      <i class="bi bi-plus-lg"></i>Nueva
+    </button>
   </div>
   <div class="section-card-body p-0">
     <table class="ht-table">
