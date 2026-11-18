@@ -6,32 +6,42 @@
 
 {% block content %}
 
-  <h1 class="mb-2">Completá tu registro</h1>
+  <h1 class="mb-2">Crea tu cuenta</h1>
   <p class="text-muted mb-4">
-    Estás usando tu cuenta de Google para acceder a HebraTech. Solo falta que crees una contraseña.
+    Estás usando tu cuenta de Google. Verifica tus datos y crea una contraseña
+    para acceder también sin Google.
   </p>
 
   <form method="post" action="{% url 'socialaccount_signup' %}" class="auth-form">
     {% csrf_token %}
 
-    {# Campos ocultos que ya vienen precargados desde Google #}
-    {{ form.nombre }}
-    {{ form.apellido }}
+    {# Oculta el username autogenerado para que allauth no lo exija #}
+    {{ form.username }}
 
-    {# Email: si allauth lo renderiza como hidden, no mostramos label;
-       si viene visible, mostramos label + input como un campo normal. #}
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.nombre.id_for_label }}">Nombre</label>
+      {{ form.nombre }}
+      {% for error in form.nombre.errors %}
+        <div class="text-danger small mt-1">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.apellido.id_for_label }}">Apellido</label>
+      {{ form.apellido }}
+      {% for error in form.apellido.errors %}
+        <div class="text-danger small mt-1">{{ error }}</div>
+      {% endfor %}
+    </div>
+
     {% if form.email %}
-      {% if form.email.is_hidden %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
         {{ form.email }}
-      {% else %}
-        <div class="mb-3">
-          <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
-          {{ form.email }}
-          {% for error in form.email.errors %}
-            <div class="text-danger small mt-1">{{ error }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
+        {% for error in form.email.errors %}
+          <div class="text-danger small mt-1">{{ error }}</div>
+        {% endfor %}
+      </div>
     {% endif %}
 
     <div class="mb-3">
@@ -69,11 +79,9 @@
       </div>
     {% endif %}
 
-    {# Red de seguridad: si algún campo no listado arriba trae errores,
-       mostramos el mensaje (sin renderizar su input) para no quedar
-       "colgados" sin explicación. #}
+    {# Red de seguridad: errores de campos no listados explícitamente #}
     {% for field in form %}
-      {% if field.name not in "nombre,apellido,email,contrasena,confirmar_contrasena" and field.errors %}
+      {% if field.name not in "nombre,apellido,email,contrasena,confirmar_contrasena,username" and field.errors %}
         <div class="alert alert-danger py-2 small mb-3">
           <strong>{{ field.label }}:</strong>
           {% for error in field.errors %}{{ error }}{% endfor %}
@@ -81,7 +89,7 @@
       {% endif %}
     {% endfor %}
 
-    <button type="submit" class="btn-primary w-100">Completar registro</button>
+    <button type="submit" class="btn-primary w-100">Crear cuenta</button>
   </form>
 
   <div class="alert alert-secondary small mt-3 mb-0">
