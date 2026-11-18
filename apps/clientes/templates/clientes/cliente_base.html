@@ -255,7 +255,47 @@
     </div>
   </div>
 
-  <!-- (Los demás modales: Cotización, Contacto, Perfil, se mantienen exactamente igual a tu código anterior) -->
+  <!-- ══ MODAL — Contactar a HebraTech ══ -->
+  <div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:16px;border:1px solid var(--border-solid);">
+        <form id="formContacto" novalidate>
+          <div class="modal-header" style="border-bottom:1px solid rgba(165,201,202,0.3);">
+            <h5 class="modal-title" style="font-family:var(--ff-display);" id="contactModalLabel">
+              <i class="bi bi-envelope-paper me-2" style="color:var(--primary);"></i>Contactar a HebraTech
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted small mb-3">Escríbenos tu consulta. Se abrirá tu correo con el mensaje listo para enviar.</p>
+            <div class="mb-3">
+              <label for="contactAsunto" class="form-label fw-semibold">Asunto</label>
+              <select class="form-select" id="contactAsunto" required>
+                <option value="Consulta general">Consulta general</option>
+                <option value="Problema con una orden">Problema con una orden</option>
+                <option value="Cotización">Cotización</option>
+                <option value="Facturación">Facturación</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="mb-1">
+              <label for="contactMensaje" class="form-label fw-semibold">Mensaje</label>
+              <textarea class="form-control" id="contactMensaje" rows="5" maxlength="1000" required
+                        placeholder="Cuéntanos en qué podemos ayudarte"></textarea>
+              <div class="invalid-feedback">Escribe tu mensaje antes de continuar.</div>
+              <div class="form-text text-end"><span id="contactContador">0</span>/1000</div>
+            </div>
+          </div>
+          <div class="modal-footer" style="border-top:1px solid rgba(165,201,202,0.3);">
+            <button type="button" class="btn-outline-ht" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn-primary-ht"><i class="bi bi-send me-1"></i>Enviar mensaje</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- PENDIENTE: restaurar los modales #quoteModal (Cotización) y #perfilModal (Perfil), que no están en este archivo -->
 
   <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
     <button id="themeToggle" class="btn btn-light rounded-circle shadow-lg border-0" style="width: 48px; height: 48px; font-size: 1.3rem; background: var(--bg-card, #fff); color: var(--primary, #395B64); transition: all 0.3s;">
@@ -340,6 +380,46 @@
         if (msg) {
           e.preventDefault(); err.textContent = msg; err.classList.remove('d-none'); err.classList.add('show-error');
         }
+      });
+    })();
+  </script>
+
+  <script>
+    // Modal "Contactar a HebraTech": abre Gmail con el mensaje listo (mismo mecanismo que el home).
+    // Se define DESPUÉS de cliente.js para que resetContactForm no choque con otra versión.
+    (function () {
+      var CONTACT_EMAIL = 'contacto@hebratech.co';
+      var form = document.getElementById('formContacto');
+      if (!form) return;
+      var asunto = document.getElementById('contactAsunto');
+      var mensaje = document.getElementById('contactMensaje');
+      var contador = document.getElementById('contactContador');
+
+      window.resetContactForm = function () {
+        form.reset();
+        mensaje.classList.remove('is-invalid');
+        contador.textContent = '0';
+      };
+
+      mensaje.addEventListener('input', function () {
+        contador.textContent = mensaje.value.length;
+        if (mensaje.value.trim()) mensaje.classList.remove('is-invalid');
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var texto = mensaje.value.trim();
+        if (!texto) { mensaje.classList.add('is-invalid'); mensaje.focus(); return; }
+
+        var firma = '\n\n— {{ usuario.nombre|escapejs }} {{ usuario.apellido|escapejs }}{% if cliente.empresa %} ({{ cliente.empresa|escapejs }}){% endif %}';
+        var url = 'https://mail.google.com/mail/?view=cm&fs=1'
+          + '&to=' + encodeURIComponent(CONTACT_EMAIL)
+          + '&su=' + encodeURIComponent('[Portal de clientes] ' + asunto.value)
+          + '&body=' + encodeURIComponent(texto + firma);
+
+        window.open(url, '_blank', 'noopener');
+        var modal = bootstrap.Modal.getInstance(document.getElementById('contactModal'));
+        if (modal) modal.hide();
       });
     })();
   </script>
