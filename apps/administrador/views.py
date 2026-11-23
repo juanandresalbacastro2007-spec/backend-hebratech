@@ -468,10 +468,10 @@ def usuario_crear(request):
         with connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO usuarios
-                    (nombre, apellido, correoElectronico, contrasena, telefono, rol, estado)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (nombre, apellido, correoElectronico, contrasena, telefono, rol, estado, emailVerificado)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, [nombre, apellido, correo, make_password(contrasena),
-                  telefono or None, rol, 'activo'])
+                  telefono or None, rol, 'activo', 1])
 
             id_nuevo = cursor.lastrowid
 
@@ -487,6 +487,10 @@ def usuario_crear(request):
                     INSERT INTO operarios (idUsuario, especialidad, fechaIngreso, estado)
                     VALUES (%s, %s, CURDATE(), %s)
                 """, [id_nuevo, especialidad, 'activo'])
+
+        # El admin registra el correo directamente: se considera verificado.
+        # La fecha se guarda con el ORM para respetar la zona horaria (USE_TZ=True).
+        Usuario.objects.filter(idUsuario=id_nuevo).update(emailVerificadoEn=timezone.now())
 
         messages.success(request, f'Usuario {nombre} {apellido} creado correctamente.')
         return redirect('admin_usuarios')

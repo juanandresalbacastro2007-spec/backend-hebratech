@@ -4,9 +4,13 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.hashers import make_password, check_password
+from django.core import signing
+from django.core.cache import cache
 from django.db import connection
 from django.core.mail import EmailMultiAlternatives
 from django.contrib.staticfiles import finders
+from django.urls import reverse
+from django.utils import timezone
 from email.mime.image import MIMEImage
 from django.template.loader import render_to_string
 import logging
@@ -19,6 +23,10 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 
 logger = logging.getLogger(__name__)
+
+# Verificación de correo: el enlace es un token firmado que vence a las 24 h
+SALT_VERIFICACION = 'hebratech-verificar-correo'
+VERIFICACION_MAX_AGE = 60 * 60 * 24
 
 
 # ==========================================
@@ -60,6 +68,19 @@ def login_view(request):
 
         try:
             usuario = Usuario.objects.get(correoElectronico=correo)
+
+            # Correo sin verificar (solo se revela si la contraseña es correcta,
+            # para no exponer qué correos están registrados sin verificar)
+            if not usuario.emailVerificado and check_password(contrasena, usuario.contrasena):
+                messages.warning(
+                    request,
+                    'Debes verificar tu correo antes de iniciar sesión. Revisa tu bandeja '
+                    'de entrada (y spam) o pide un nuevo enlace.'
+                )
+                return render(request, 'usuarios/login.html', {
+                    'correo': correo,
+                    'correo_sin_verificar': True,
+                })
 
             # La cuenta existe pero no está activa
             if usuario.estado != 'activo':
@@ -152,8 +173,19 @@ def registro_view(request):
                     (nombre, apellido, correoElectronico, contrasena, rol, estado)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, [nombre, apellido, correo, make_password(contrasena), 'sin_asignar', 'pendiente'])
+            nuevo_id = cursor.lastrowid
 
-        messages.success(request, '¡Cuenta creada! Un administrador debe aprobarla antes de que puedas iniciar sesión.')
+        # Enviar el enlace de verificación (si falla, el usuario puede pedir reenvío desde el login)
+        try:
+            enviar_verificacion(request, Usuario.objects.get(idUsuario=nuevo_id))
+        except Exception:
+            logger.exception('Error enviando correo de verificación a %s', correo)
+
+        messages.success(
+            request,
+            '¡Cuenta creada! Te enviamos un correo para verificar tu dirección. '
+            'Después, un administrador debe aprobar tu cuenta.'
+        )
         return redirect('login')
 
     # GET directo a /registro/ → mostrar el formulario de registro
@@ -182,6 +214,101 @@ def _adjuntar_logo(mensaje):
     mensaje.attach(logo)
     return True
 
+
+# ==========================================
+# VERIFICACIÓN DE CORREO ELECTRÓNICO
+# ==========================================
+
+def enviar_verificacion(request, usuario):
+    """Genera el token firmado y envía el correo con el enlace de verificación."""
+    token = signing.dumps(
+        {'uid': usuario.idUsuario, 'correo': usuario.correoElectronico},
+        salt=SALT_VERIFICACION,
+    )
+    enlace = request.build_absolute_uri(reverse('verificar_email', args=[token]))
+
+    texto_plano = (
+        f'Hola, {usuario.nombre}.\n\n'
+        'Confirma tu correo para completar tu registro en HebraTech.\n'
+        f'Abre este enlace (válido por 24 horas):\n{enlace}\n\n'
+        'Si no fuiste tú, ignora este correo.'
+    )
+
+    mensaje = EmailMultiAlternatives(
+        subject='Verifica tu correo - HebraTech',
+        body=texto_plano,
+        from_email=None,
+        to=[usuario.correoElectronico],
+    )
+
+    tiene_logo = _adjuntar_logo(mensaje)
+
+    html_content = render_to_string('usuarios/email_verificar.html', {
+        'nombre': usuario.nombre,
+        'enlace': enlace,
+        'tiene_logo': tiene_logo,
+    })
+    mensaje.attach_alternative(html_content, 'text/html')
+    mensaje.send(fail_silently=False)
+
+
+def verificar_email_view(request, token):
+    try:
+        data = signing.loads(token, salt=SALT_VERIFICACION, max_age=VERIFICACION_MAX_AGE)
+    except signing.SignatureExpired:
+        messages.error(request, 'El enlace venció. Inicia sesión y te ofreceremos uno nuevo.')
+        return redirect('login')
+    except signing.BadSignature:
+        messages.error(request, 'El enlace de verificación no es válido.')
+        return redirect('login')
+
+    usuario = Usuario.objects.filter(
+        idUsuario=data['uid'], correoElectronico=data['correo']
+    ).first()
+    if usuario is None:
+        messages.error(request, 'No se encontró la cuenta asociada.')
+        return redirect('login')
+
+    if not usuario.emailVerificado:
+        usuario.emailVerificado = True
+        usuario.emailVerificadoEn = timezone.now()
+        usuario.save(update_fields=['emailVerificado', 'emailVerificadoEn'])
+
+    if usuario.estado == 'pendiente':
+        messages.success(
+            request,
+            'Correo verificado. Un administrador debe aprobar tu cuenta para que puedas ingresar.'
+        )
+    else:
+        messages.success(request, 'Correo verificado. Ya puedes iniciar sesión.')
+    return redirect('login')
+
+
+def reenviar_verificacion_view(request):
+    if request.method != 'POST':
+        return redirect('login')
+
+    correo = request.POST.get('correo', '').strip()
+    usuario = Usuario.objects.filter(correoElectronico=correo, emailVerificado=False).first()
+
+    # cache.add devuelve False si ya se envió hace menos de 60 s (anti-spam)
+    if usuario and cache.add(f'reenvio_verif_{usuario.idUsuario}', 1, 60):
+        try:
+            enviar_verificacion(request, usuario)
+        except Exception:
+            logger.exception('Error reenviando verificación a %s', correo)
+
+    # Mismo mensaje exista o no el correo, para no revelar qué correos están registrados
+    messages.success(
+        request,
+        'Si el correo está registrado y sin verificar, te enviamos un nuevo enlace.'
+    )
+    return redirect('login')
+
+
+# ==========================================
+# RECUPERACIÓN DE CONTRASEÑA
+# ==========================================
 
 def recuperar_view(request):
     if request.method == 'POST':

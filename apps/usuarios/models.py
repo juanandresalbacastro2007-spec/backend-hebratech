@@ -27,6 +27,8 @@ class Usuario(models.Model):
     direccion = models.CharField(max_length=255, null=True, blank=True)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='sin_asignar')
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    emailVerificado = models.BooleanField(default=False)
+    emailVerificadoEn = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'usuarios'

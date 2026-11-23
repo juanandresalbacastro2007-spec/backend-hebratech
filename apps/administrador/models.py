@@ -36,9 +36,9 @@ class Usuario(models.Model):
     direccion = models.CharField(max_length=255, null=True, blank=True)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='sin_asignar')
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
-    fotoPerfil = models.ImageField(
-        upload_to='perfiles/', null=True, blank=True, db_column='fotoPerfil'
-    )
+    fotoPerfil = models.ImageField(upload_to='perfiles/', null=True, blank=True, db_column='fotoPerfil')
+    emailVerificado = models.BooleanField(default=False)
+    emailVerificadoEn = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'usuarios'

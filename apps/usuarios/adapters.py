@@ -5,6 +5,7 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib.auth.hashers import make_password
 from django.db import connection
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 
 
 class CustomAccountAdapter(DefaultAccountAdapter):
@@ -32,6 +33,13 @@ class CustomAccountAdapter(DefaultAccountAdapter):
         except Usuario.DoesNotExist:
             # Autenticado por allauth pero sin fila en `usuarios`
             return f"{reverse('login')}?register=1&correo={quote(request.user.email)}"
+
+        # Entrar con Google demuestra que el correo es suyo: si se había
+        # registrado con formulario y nunca verificó, queda verificado.
+        if not usuario_db.emailVerificado:
+            usuario_db.emailVerificado = True
+            usuario_db.emailVerificadoEn = timezone.now()
+            usuario_db.save(update_fields=['emailVerificado', 'emailVerificadoEn'])
 
         request.session['usuario_id'] = usuario_db.idUsuario
         request.session['usuario_nombre'] = usuario_db.nombre
@@ -93,9 +101,15 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         with connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO usuarios
-                    (nombre, apellido, correoElectronico, contrasena, rol, estado)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, [nombre, apellido, correo, contrasena_hash, 'sin_asignar', 'pendiente'])
+                    (nombre, apellido, correoElectronico, contrasena, rol, estado, emailVerificado)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, [nombre, apellido, correo, contrasena_hash, 'sin_asignar', 'pendiente', 1])
+
+        # Google ya verificó este correo; se guarda la fecha con el ORM
+        # para que respete la zona horaria (USE_TZ=True).
+        Usuario.objects.filter(correoElectronico=correo).update(
+            emailVerificadoEn=timezone.now()
+        )
 
         # Marca: la próxima redirección va a avisar "cuenta pendiente"
         request.session['nuevo_registro_social'] = True

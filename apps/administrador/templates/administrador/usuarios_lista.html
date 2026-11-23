@@ -87,7 +87,16 @@
               <span class="fw-medium">{{ u.nombre }} {{ u.apellido }}</span>
             </div>
           </td>
-          <td>{{ u.correoElectronico }}</td>
+          <td>
+            {{ u.correoElectronico }}
+            {% if not u.emailVerificado %}
+              <div class="mt-1">
+                <span class="badge-ht badge-warning" title="Este usuario aún no verificó su correo">
+                  <i class="bi bi-envelope-exclamation me-1"></i>Sin verificar
+                </span>
+              </div>
+            {% endif %}
+          </td>
           <td>{{ u.telefono|default:"—" }}</td>
           <td>
             {% if u.rol == 'administrador' %}

@@ -10,6 +10,10 @@ urlpatterns = [
     path('registro/', views.registro_view, name='registro'),
     path('logout/', views.logout_view, name='logout'),
 
+    # --- Verificación de correo electrónico ---
+    path('verificar-email/<str:token>/', views.verificar_email_view, name='verificar_email'),
+    path('reenviar-verificacion/', views.reenviar_verificacion_view, name='reenviar_verificacion'),
+
     # --- Flujo de Recuperación de Contraseña ---
     path('recuperar/', views.recuperar_view, name='recuperar'),
     path('recuperar/<str:token>/', views.validar_reset_view, name='validar_reset'),
@@ -18,10 +22,10 @@ urlpatterns = [
     # --- Endpoints API REST (Google Login & JWT) ---
     path('api/auth/google/', views.GoogleLoginView.as_view(), name='google_login_api'),
     path('api/auth/', include('dj_rest_auth.urls')),
-    
+
     #--- Página de Términos y Condiciones ---
     path('terminos-de-servicio/', views.terminos_de_servicio, name='terminos_de_servicio'),
-    
+
     #--- Página de Políticas de Privacidad ---
     path('politicas-de-privacidad/', views.politicas_de_privacidad, name='politicas_de_privacidad'),
 
