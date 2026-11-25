@@ -1,0 +1,120 @@
+{% comment %}
+  Modal "Editar perfil" del operario.
+  Es el mismo del administrador (admin_base.html): mismos ids y clases, así que
+  reutiliza static/js/perfil.js y static/css/administrador/perfil-modal.css.
+  Diferencias: lee los datos de operario.idUsuario, edita dirección y especialidad y pide la contraseña actual
+  cuando se quiere cambiar la contraseña.
+{% endcomment %}
+{% with u=operario.idUsuario %}
+<div class="modal fade" id="modalEditarPerfil" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content perfil-modal-content">
+
+      <!-- Cabecera del Modal -->
+      <div class="perfil-modal-header">
+        <button type="button" class="btn-close btn-close-white perfil-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+
+        <!-- Avatar + botón para subir imagen -->
+        <div class="perfil-avatar-wrapper">
+          <div class="perfil-avatar-grande" id="perfilAvatarPreview">
+            {% if u.fotoPerfil %}
+              <img src="{{ u.fotoPerfil.url }}" alt="Foto de perfil">
+            {% else %}
+              {{ u.nombre|first|upper }}
+            {% endif %}
+          </div>
+          <label for="perfilFoto" class="perfil-avatar-edit-btn" title="Cambiar foto de perfil">
+            <i class="bi bi-camera-fill"></i>
+          </label>
+        </div>
+
+        <h5 class="perfil-modal-title">Editar perfil</h5>
+        <p class="perfil-modal-sub">Actualiza tu información personal</p>
+      </div>
+
+      <form id="formEditarPerfil" action="{% url 'operarios:api_editar_perfil' %}" method="POST"
+            class="perfil-modal-body" novalidate enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Input File Oculto -->
+        <input type="file" id="perfilFoto" name="foto" accept="image/png, image/jpeg, image/webp" class="d-none">
+
+        <!-- Caja de Alertas JS -->
+        <div class="perfil-alert d-none" id="perfilAlert"></div>
+
+        <div class="perfil-field">
+          <label for="perfilNombre"><i class="bi bi-person-fill"></i> Nombre</label>
+          <input type="text" class="form-control" id="perfilNombre" name="nombre" value="{{ u.nombre }}" required>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilApellido"><i class="bi bi-person-fill"></i> Apellido</label>
+          <input type="text" class="form-control" id="perfilApellido" name="apellido" value="{{ u.apellido }}" required>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilEmail"><i class="bi bi-envelope-fill"></i> Correo electrónico</label>
+          <input type="email" class="form-control" id="perfilEmail" name="email" value="{{ u.correoElectronico|default:'' }}" required>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilTelefono"><i class="bi bi-telephone-fill"></i> Teléfono</label>
+          <input type="text" class="form-control" id="perfilTelefono" name="telefono" value="{{ u.telefono|default:'' }}">
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilDireccion"><i class="bi bi-geo-alt-fill"></i> Dirección</label>
+          <input type="text" class="form-control" id="perfilDireccion" name="direccion" value="{{ u.direccion|default:'' }}" maxlength="255">
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilEspecialidad"><i class="bi bi-tools"></i> Especialidad</label>
+          <select class="form-select" id="perfilEspecialidad" name="especialidad" required>
+            {% for esp in especialidades %}
+              <option value="{{ esp }}" {% if operario.especialidad == esp %}selected{% endif %}>{{ esp }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Cambio de Contraseña -->
+        <hr class="perfil-divider">
+        <p class="perfil-section-label"><i class="bi bi-shield-lock-fill"></i> Cambiar contraseña <span>(opcional)</span></p>
+
+        <div class="perfil-field">
+          <label for="perfilPasswordActual">Contraseña actual</label>
+          <div class="perfil-input-icon">
+            <input type="password" class="form-control" id="perfilPasswordActual" name="password_actual" placeholder="Solo si vas a cambiar la contraseña" autocomplete="current-password">
+            <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPasswordActual"></i>
+          </div>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilPassword1">Nueva contraseña</label>
+          <div class="perfil-input-icon">
+            <input type="password" class="form-control" id="perfilPassword1" name="password1" placeholder="Dejar en blanco para no cambiar" autocomplete="new-password">
+            <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPassword1"></i>
+          </div>
+        </div>
+
+        <div class="perfil-field">
+          <label for="perfilPassword2">Confirmar nueva contraseña</label>
+          <div class="perfil-input-icon">
+            <input type="password" class="form-control" id="perfilPassword2" name="password2" placeholder="Repetir contraseña" autocomplete="new-password">
+            <i class="bi bi-eye-slash-fill toggle-password" data-target="perfilPassword2"></i>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="perfil-modal-footer">
+          <button type="button" class="btn btn-perfil-cancelar" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-perfil-guardar" id="btnGuardarPerfil">
+            <span class="btn-text">Guardar cambios</span>
+            <span class="spinner-border spinner-border-sm d-none" id="spinnerGuardar"></span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endwith %}

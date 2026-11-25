@@ -84,6 +84,15 @@ class Cliente(models.Model):
 
 
 class Operario(models.Model):
+    # ── FUENTE ÚNICA de las especialidades válidas ─────────────────
+    # La usan: usuario_form.html (admin), usuario_crear/usuario_editar
+    # (admin) y api_editar_perfil (operarios). Para agregar una nueva,
+    # basta con añadirla aquí.
+    ESPECIALIDADES = [
+        'Corte', 'Confección', 'Bordado', 'Estampado',
+        'Planchado', 'Control de Calidad', 'Empaque', 'General',
+    ]
+
     idOperario = models.AutoField(primary_key=True)
     idUsuario = models.ForeignKey(
         Usuario,

@@ -101,4 +101,14 @@ urlpatterns = [
         name='generar_pdf_reporte'
     ),
 
+    # ------------------------------------------------------------------
+    # API — Editar perfil desde el modal (nombre, correo, teléfono, foto, contraseña)
+    # POST /operarios/api/perfil/editar/
+    # ------------------------------------------------------------------
+    path(
+        'api/perfil/editar/',
+        views.api_editar_perfil,
+        name='api_editar_perfil'
+    ),
+
 ]

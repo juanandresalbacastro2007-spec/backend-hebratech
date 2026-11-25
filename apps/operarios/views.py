@@ -5,14 +5,29 @@ import logging
 from datetime import date, datetime
 
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django.db import transaction
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
 from .models import AsignacionTarea, Incidencia, Operario
 
 logger = logging.getLogger(__name__)
+
+# Fuente única: Operario.ESPECIALIDADES en apps/administrador/models.py
+# (la misma lista que usa el formulario de usuarios del admin).
+ESPECIALIDADES = Operario.ESPECIALIDADES
+
+
+def _especialidades_para(operario):
+    """Lista para el selector; incluye la especialidad actual si es un valor antiguo fuera de la lista."""
+    lista = list(ESPECIALIDADES)
+    if operario.especialidad and operario.especialidad not in lista:
+        lista.append(operario.especialidad)
+    return lista
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -55,6 +70,7 @@ def tablero_operario(request):
     return render(request, 'operarios/operario.html', {
         'operario': operario,
         'mostrar_bienvenida': mostrar_bienvenida,
+        'especialidades': _especialidades_para(operario),
     })
 
 
@@ -113,6 +129,102 @@ def perfil_operario(request):
         return redirect('operarios:perfil')
 
     return render(request, 'operarios/perfil.html', {'operario': operario})
+
+
+# ─────────────────────────────────────────────────────────────────
+# 2b. API — Editar perfil desde el modal (AJAX)
+# POST /operarios/api/perfil/editar/
+# Mismo contrato JSON que administrador.editar_perfil, para reutilizar perfil.js
+# ─────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_editar_perfil(request):
+    """Actualiza datos básicos, foto y (opcionalmente) contraseña del operario logueado."""
+    operario = _get_operario(request)
+    if not operario:
+        return JsonResponse(
+            {'success': False, 'mensaje': 'Tu sesión expiró. Inicia sesión de nuevo.'},
+            status=401,
+        )
+
+    usuario = operario.idUsuario
+
+    def _error(msg, status=400):
+        return JsonResponse({'success': False, 'mensaje': msg}, status=status)
+
+    nombre    = request.POST.get('nombre', '').strip()
+    apellido  = request.POST.get('apellido', '').strip()
+    correo    = request.POST.get('email', '').strip()
+    telefono  = request.POST.get('telefono', '').strip()
+    direccion = request.POST.get('direccion', '').strip()
+    especialidad = request.POST.get('especialidad', '').strip()
+    pw_actual = request.POST.get('password_actual', '')
+    pass1     = request.POST.get('password1', '').strip()
+    pass2     = request.POST.get('password2', '').strip()
+    foto      = request.FILES.get('foto')
+
+    if not nombre or not correo:
+        return _error('El nombre y el correo electrónico son obligatorios.')
+
+    try:
+        validate_email(correo)
+    except ValidationError:
+        return _error('El correo electrónico no es válido.')
+
+    # operarios.especialidad es NOT NULL en la base de datos
+    if not especialidad:
+        return _error('La especialidad es obligatoria.')
+    # Solo valores de la lista (o el que ya tenía, si era un valor antiguo)
+    if especialidad not in ESPECIALIDADES and especialidad != operario.especialidad:
+        return _error('La especialidad seleccionada no es válida.')
+    if len(direccion) > 255:
+        return _error('La dirección no puede superar 255 caracteres.')
+
+    # El correo es el identificador de acceso: no puede repetirse.
+    if type(usuario).objects.filter(
+        correoElectronico__iexact=correo
+    ).exclude(pk=usuario.pk).exists():
+        return _error('Ese correo electrónico ya está registrado por otro usuario.')
+
+    if pass1 or pass2:
+        if not check_password(pw_actual, usuario.contrasena):
+            return _error('La contraseña actual es incorrecta.')
+        if pass1 != pass2:
+            return _error('Las contraseñas no coinciden.')
+        if len(pass1) < 8:
+            return _error('La contraseña debe tener al menos 8 caracteres.')
+        usuario.contrasena = make_password(pass1)
+
+    if foto:
+        if foto.content_type not in ('image/jpeg', 'image/png', 'image/webp'):
+            return _error('La foto debe ser JPG, PNG o WEBP.')
+        if foto.size > 5 * 1024 * 1024:
+            return _error('La foto no puede pesar más de 5 MB.')
+        usuario.fotoPerfil = foto
+
+    usuario.nombre = nombre
+    usuario.apellido = apellido
+    usuario.correoElectronico = correo
+    usuario.telefono = telefono or None
+    usuario.direccion = direccion or None
+    operario.especialidad = especialidad
+
+    try:
+        with transaction.atomic():
+            usuario.save()
+            operario.save(update_fields=['especialidad'])
+    except Exception:
+        logger.exception('Error al guardar el perfil del usuario %s', usuario.pk)
+        return _error('No se pudo guardar el perfil. Intenta nuevamente.', 500)
+
+    request.session['usuario_nombre'] = usuario.nombre
+
+    return JsonResponse({
+        'success': True,
+        'mensaje': 'Perfil actualizado correctamente.',
+        'foto_url': usuario.fotoPerfil.url if usuario.fotoPerfil else None,
+        'tiene_foto': bool(usuario.fotoPerfil),
+    })
 
 
 # ─────────────────────────────────────────────────────────────────

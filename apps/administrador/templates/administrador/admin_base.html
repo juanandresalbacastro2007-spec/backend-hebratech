@@ -85,8 +85,8 @@
         <div class="sidebar-footer">
           <div class="admin-info admin-info-clickable" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil" title="Editar perfil">
             <div class="admin-avatar">
-              {% if usuario.foto %}
-                <img src="{{ usuario.foto.url }}" alt="Avatar" class="admin-avatar-img">
+              {% if usuario.fotoPerfil %}
+                <img src="{{ usuario.fotoPerfil.url }}" alt="Avatar" class="admin-avatar-img">
               {% else %}
                 {{ usuario.nombre|first|upper }}
               {% endif %}
@@ -142,8 +142,8 @@
         <!-- Contenedor del Avatar + Botón Flotante para Subir Imagen -->
         <div class="perfil-avatar-wrapper">
           <div class="perfil-avatar-grande" id="perfilAvatarPreview">
-            {% if usuario.foto %}
-              <img src="{{ usuario.foto.url }}" alt="Foto de perfil">
+            {% if usuario.fotoPerfil %}
+              <img src="{{ usuario.fotoPerfil.url }}" alt="Foto de perfil">
             {% else %}
               {{ usuario.nombre|first|upper }}
             {% endif %}

@@ -12,10 +12,26 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
+// Mostrar / ocultar contraseña (el ojito)
+function togglePass(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const icon = input.parentElement.querySelector('.toggle-password');
+    const mostrar = input.type === 'password';
+
+    input.type = mostrar ? 'text' : 'password';
+
+    if (icon) {
+        icon.classList.toggle('fa-eye', !mostrar);
+        icon.classList.toggle('fa-eye-slash', mostrar);
+    }
+}
+
+
 function switchAuth() {
     const loginView = document.getElementById('login-view');
     const registerView = document.getElementById('register-view');
-    const logoText = document.querySelector('.logo-text'); // Si manejas el texto superior dinámico
 
     if (loginView.style.display === 'none') {
         // Estamos en Registro -> Volver al Login

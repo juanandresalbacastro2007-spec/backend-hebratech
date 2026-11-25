@@ -44,7 +44,8 @@
             {% if correo and not show_register %}autofocus{% endif %}
             placeholder="Mínimo 8 caracteres" required>
           <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
-            onclick="togglePass('login-pass')" style="cursor:pointer;"></i>
+            onclick="togglePass('login-pass')" style="cursor:pointer;"
+            title="Mostrar u ocultar contraseña"></i>
         </div>
       </div>
       <a href="{% url 'recuperar' %}" class="forgot-link d-block text-end mb-3">
@@ -112,13 +113,19 @@
           <input type="password" name="contrasena" id="reg-pass" class="form-control"
             placeholder="Mínimo 8 caracteres" required>
           <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
-            onclick="togglePass('reg-pass')" style="cursor:pointer;"></i>
+            onclick="togglePass('reg-pass')" style="cursor:pointer;"
+            title="Mostrar u ocultar contraseña"></i>
         </div>
       </div>
       <div class="mb-3">
         <label class="form-label">Confirmar contraseña</label>
-        <input type="password" name="confirmar" class="form-control"
-          placeholder="Repite tu contraseña" required>
+        <div class="password-wrapper position-relative">
+          <input type="password" name="confirmar" id="reg-confirm" class="form-control"
+            placeholder="Repite tu contraseña" required>
+          <i class="fas fa-eye toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
+            onclick="togglePass('reg-confirm')" style="cursor:pointer;"
+            title="Mostrar u ocultar contraseña"></i>
+        </div>
       </div>
       {% if RECAPTCHA_SITE_KEY %}
       <div class="g-recaptcha-wrap"><div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div></div>

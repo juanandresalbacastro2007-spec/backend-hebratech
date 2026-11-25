@@ -2124,3 +2124,28 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .ht-archive-note.flash { animation: none; }
 }
+
+
+/* ── Avatar del navbar (se actualiza en vivo desde el modal "Editar perfil") ── */
+.ht-nav-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #fff;
+  color: #212529;
+  font-size: .75rem;
+  font-weight: 700;
+  border: 1px solid #fff;
+  box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .075);
+}
+.ht-nav-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}

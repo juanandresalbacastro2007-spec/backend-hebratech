@@ -465,6 +465,11 @@ def usuario_crear(request):
             messages.error(request, 'Ya existe un usuario con ese correo.')
             return redirect('admin_usuario_crear')
 
+        especialidad = request.POST.get('especialidad', 'General')
+        if rol == 'operario' and especialidad not in Operario.ESPECIALIDADES:
+            messages.error(request, 'La especialidad seleccionada no es válida.')
+            return redirect('admin_usuario_crear')
+
         with connection.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO usuarios
@@ -482,7 +487,6 @@ def usuario_crear(request):
                 """, [id_nuevo, 'Natural', f'{nombre} {apellido}', correo, 'activo'])
 
             elif rol == 'operario':
-                especialidad = request.POST.get('especialidad', 'General')
                 cursor.execute("""
                     INSERT INTO operarios (idUsuario, especialidad, fechaIngreso, estado)
                     VALUES (%s, %s, CURDATE(), %s)
@@ -498,6 +502,7 @@ def usuario_crear(request):
     return render(request, 'administrador/usuario_form.html', {
         'usuario': usuario,
         'accion': 'Crear',
+        'especialidades': Operario.ESPECIALIDADES,
     })
 
 
@@ -513,6 +518,24 @@ def usuario_editar(request, idUsuario):
         telefono = request.POST.get('telefono', '')
         rol = request.POST.get('rol')
         estado = request.POST.get('estado')
+
+        # Especialidad: solo aplica a operarios y debe estar en la lista oficial
+        # (o ser la que el operario ya tenía, si era un valor antiguo).
+        operario_obj = (
+            Operario.objects.filter(idUsuario=usuario_editar_obj).first()
+            if rol == 'operario' else None
+        )
+        especialidad = request.POST.get('especialidad', '').strip()
+        if rol == 'operario':
+            if not especialidad:
+                especialidad = operario_obj.especialidad if operario_obj else 'General'
+            es_valida = (
+                especialidad in Operario.ESPECIALIDADES
+                or (operario_obj is not None and especialidad == operario_obj.especialidad)
+            )
+            if not es_valida:
+                messages.error(request, 'La especialidad seleccionada no es válida.')
+                return redirect('admin_usuario_editar', idUsuario=idUsuario)
 
         usuario_editar_obj.nombre = nombre
         usuario_editar_obj.apellido = apellido
@@ -538,19 +561,30 @@ def usuario_editar(request, idUsuario):
                     "SELECT idOperario FROM operarios WHERE idUsuario = %s", [idUsuario]
                 )
                 if cursor.fetchone() is None:
-                    especialidad = request.POST.get('especialidad', 'General')
                     cursor.execute("""
                         INSERT INTO operarios (idUsuario, especialidad, fechaIngreso, estado)
                         VALUES (%s, %s, CURDATE(), %s)
                     """, [idUsuario, especialidad, 'activo'])
 
+        # Operario que ya existía: antes la especialidad editada se ignoraba.
+        if operario_obj is not None and especialidad != operario_obj.especialidad:
+            operario_obj.especialidad = especialidad
+            operario_obj.save(update_fields=['especialidad'])
+
         messages.success(request, f'Usuario {nombre} actualizado correctamente.')
         return redirect('admin_usuarios')
+
+    operario_actual = Operario.objects.filter(idUsuario=usuario_editar_obj).first()
+    especialidades = list(Operario.ESPECIALIDADES)
+    if operario_actual and operario_actual.especialidad not in especialidades:
+        especialidades.append(operario_actual.especialidad)   # valor antiguo: se conserva
 
     return render(request, 'administrador/usuario_form.html', {
         'usuario': usuario_admin,
         'usuario_editar': usuario_editar_obj,
         'accion': 'Editar',
+        'especialidades': especialidades,
+        'especialidad_actual': operario_actual.especialidad if operario_actual else '',
     })
 
 

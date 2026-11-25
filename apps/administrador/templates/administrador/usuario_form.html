@@ -117,14 +117,9 @@
                   <i class="bi bi-tools me-1"></i>Especialidad del Operario
                 </label>
                 <select name="especialidad" id="id_especialidad" class="form-select">
-                  <option value="Corte" {% if usuario_editar.especialidad == 'Corte' %}selected{% endif %}>Corte</option>
-                  <option value="Confección" {% if usuario_editar.especialidad == 'Confección' %}selected{% endif %}>Confección</option>
-                  <option value="Bordado" {% if usuario_editar.especialidad == 'Bordado' %}selected{% endif %}>Bordado</option>
-                  <option value="Estampado" {% if usuario_editar.especialidad == 'Estampado' %}selected{% endif %}>Estampado</option>
-                  <option value="Planchado" {% if usuario_editar.especialidad == 'Planchado' %}selected{% endif %}>Planchado</option>
-                  <option value="Control de Calidad" {% if usuario_editar.especialidad == 'Control de Calidad' %}selected{% endif %}>Control de Calidad</option>
-                  <option value="Empaque" {% if usuario_editar.especialidad == 'Empaque' %}selected{% endif %}>Empaque</option>
-                  <option value="General" {% if usuario_editar.especialidad == 'General' %}selected{% endif %}>General</option>
+                  {% for esp in especialidades %}
+                    <option value="{{ esp }}" {% if esp == especialidad_actual %}selected{% endif %}>{{ esp }}</option>
+                  {% endfor %}
                 </select>
                 <span class="form-text text-muted small d-block mt-1">Define el área de producción asignada a este trabajador.</span>
               </div>

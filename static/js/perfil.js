@@ -1,6 +1,8 @@
 /* ══════════════════════════════════════════
-   PERFIL MODAL — HebraTech Admin
-   Ruta sugerida: static/js/administrador/perfil.js
+   PERFIL MODAL — HebraTech (administrador y operarios)
+   Ruta: static/js/perfil.js
+   - La URL de envío sale del atributo action del formulario.
+   - Si existe #perfilPasswordActual (operarios), se exige al cambiar contraseña.
    ══════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -18,8 +20,16 @@ document.addEventListener('DOMContentLoaded', function () {
   const inputEmail    = document.getElementById('perfilEmail');
   const inputPass1    = document.getElementById('perfilPassword1');
   const inputPass2    = document.getElementById('perfilPassword2');
+  const inputActual   = document.getElementById('perfilPasswordActual'); // solo operarios
+  const inputDireccion    = document.getElementById('perfilDireccion');     // solo operarios
+  const inputEspecialidad = document.getElementById('perfilEspecialidad');  // solo operarios
   const inputFoto     = document.getElementById('perfilFoto');
   const avatarPreview = document.getElementById('perfilAvatarPreview');
+
+  const camposValidables = [inputNombre, inputApellido, inputEmail, inputPass1, inputPass2, inputActual, inputEspecialidad, inputDireccion];
+
+  let previewUrl = null;                                   // URL temporal de la foto elegida
+  let previewOriginal = avatarPreview ? avatarPreview.innerHTML : '';
 
   /* ── Vista previa en tiempo real de la foto seleccionada ── */
   if (inputFoto && avatarPreview) {
@@ -35,14 +45,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
       limpiarAlerta();
 
-      // Generar URL temporal para la previsualización
-      const urlPreview = URL.createObjectURL(archivo);
-      avatarPreview.innerHTML = `<img src="${urlPreview}" alt="Vista previa del avatar">`;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(archivo);
+      avatarPreview.innerHTML = `<img src="${previewUrl}" alt="Vista previa del avatar">`;
     });
   }
 
   /* ── Mostrar / Ocultar Contraseña ── */
-  document.querySelectorAll('.toggle-password').forEach(icon => {
+  document.querySelectorAll('#modalEditarPerfil .toggle-password').forEach(icon => {
     icon.addEventListener('click', function () {
       const input = document.getElementById(this.dataset.target);
       if (!input) return;
@@ -66,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function limpiarErroresCampos() {
-    [inputNombre, inputApellido, inputEmail, inputPass1, inputPass2].forEach(el => el && el.classList.remove('is-invalid'));
+    camposValidables.forEach(el => el && el.classList.remove('is-invalid'));
   }
 
   function getCookie(name) {
@@ -86,7 +96,16 @@ document.addEventListener('DOMContentLoaded', function () {
   function manejarErrorBackend(mensaje) {
     const msgLower = (mensaje || '').toLowerCase();
 
-    if (msgLower.includes('correo') || msgLower.includes('email')) {
+    if (msgLower.includes('especialidad') && inputEspecialidad) {
+      inputEspecialidad.classList.add('is-invalid');
+      inputEspecialidad.focus();
+    } else if (msgLower.includes('dirección') && inputDireccion) {
+      inputDireccion.classList.add('is-invalid');
+      inputDireccion.focus();
+    } else if (msgLower.includes('actual') && inputActual) {
+      inputActual.classList.add('is-invalid');
+      inputActual.focus();
+    } else if (msgLower.includes('correo') || msgLower.includes('email')) {
       inputEmail.classList.add('is-invalid');
       inputEmail.focus();
     } else if (msgLower.includes('contraseña')) {
@@ -104,6 +123,27 @@ document.addEventListener('DOMContentLoaded', function () {
     mostrarAlerta(mensaje || 'No se pudo actualizar el perfil.', 'error');
   }
 
+  /* ── Refresca nombre y avatar visibles en la página (sin recargar) ── */
+  function actualizarInterfaz(nombre, apellido, fotoUrl, tieneFoto) {
+    // Admin: sidebar
+    document.querySelectorAll('.admin-name').forEach(el => { el.textContent = `${nombre} ${apellido}`; });
+    // Operario: navbar (solo nombre) y menú lateral (nombre completo)
+    document.querySelectorAll('[data-perfil-nombre]').forEach(el => { el.textContent = nombre; });
+    document.querySelectorAll('[data-perfil-nombre-completo]').forEach(el => { el.textContent = `${nombre} ${apellido}`; });
+
+    const inicial1 = nombre.charAt(0).toUpperCase();
+    const inicial2 = (nombre.charAt(0) + apellido.charAt(0)).toUpperCase();
+
+    document.querySelectorAll('.admin-avatar, [data-perfil-avatar]').forEach(el => {
+      const dosLetras = el.hasAttribute('data-perfil-avatar');
+      if (fotoUrl) {
+        el.innerHTML = `<img src="${fotoUrl}" alt="Avatar" class="admin-avatar-img">`;
+      } else if (tieneFoto === false || !el.querySelector('img')) {
+        el.textContent = dosLetras ? inicial2 : inicial1;
+      }
+    });
+  }
+
   /* ── Envío del Formulario vía AJAX (FormData soporta archivos) ── */
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -114,6 +154,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const pass2 = inputPass2 ? inputPass2.value : '';
 
     if (pass1 || pass2) {
+      if (inputActual && !inputActual.value) {
+        inputActual.classList.add('is-invalid');
+        mostrarAlerta('Escribe tu contraseña actual para poder cambiarla.', 'error');
+        return;
+      }
       if (pass1 !== pass2) {
         inputPass1.classList.add('is-invalid');
         inputPass2.classList.add('is-invalid');
@@ -133,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const formData = new FormData(form);
 
     try {
-      const response = await fetch('/administrador/editar-perfil/', {
+      const response = await fetch(form.getAttribute('action') || '/administrador/editar-perfil/', {
         method: 'POST',
         headers: {
           'X-CSRFToken': getCookie('csrftoken'),
@@ -149,25 +194,32 @@ document.addEventListener('DOMContentLoaded', function () {
         throw new Error('Respuesta inválida del servidor.');
       }
 
-      if (response.ok && data.success) {
-        mostrarAlerta(data.mensaje || 'Perfil actualizado correctamente.', 'success');
+      const textoServidor = data.mensaje || data.message;
 
-        const nombre = inputNombre.value.trim();
+      if (response.ok && data.success) {
+        mostrarAlerta(textoServidor || 'Perfil actualizado correctamente.', 'success');
+
+        const nombre   = inputNombre.value.trim();
         const apellido = inputApellido.value.trim();
 
-        // Actualizar nombre completo en el Sidebar
-        const nombreSidebar = document.querySelector('.admin-name');
-        if (nombreSidebar) nombreSidebar.textContent = `${nombre} ${apellido}`;
+        // Foto nueva: la que devuelve el servidor o, si no la devuelve, la vista previa local
+        const subioFoto = inputFoto && inputFoto.files && inputFoto.files[0];
+        const fotoUrl = data.foto_url || (subioFoto ? previewUrl : null);
 
-        // Actualizar el avatar en el Sidebar sin recargar
-        const avataresSidebar = document.querySelectorAll('.admin-avatar');
-        avataresSidebar.forEach(el => {
-          if (data.foto_url) {
-            el.innerHTML = `<img src="${data.foto_url}" alt="Avatar" class="admin-avatar-img">`;
-          } else if (!data.tiene_foto) {
-            el.textContent = nombre.charAt(0).toUpperCase();
-          }
-        });
+        actualizarInterfaz(nombre, apellido, fotoUrl, data.tiene_foto);
+
+        // Lo guardado pasa a ser el nuevo "estado original" del modal
+        [inputNombre, inputApellido, inputEmail, inputDireccion, inputEspecialidad,
+         document.getElementById('perfilTelefono')]
+          .forEach(el => {
+            if (!el) return;
+            if (el.tagName === 'SELECT') {
+              Array.from(el.options).forEach(o => { o.defaultSelected = o.selected; });
+            } else {
+              el.defaultValue = el.value;
+            }
+          });
+        if (avatarPreview) previewOriginal = avatarPreview.innerHTML;
 
         // Cerrar modal tras guardar con éxito
         setTimeout(() => {
@@ -175,13 +227,14 @@ document.addEventListener('DOMContentLoaded', function () {
           if (instanciaModal) instanciaModal.hide();
 
           limpiarAlerta();
+          if (inputActual) inputActual.value = '';
           if (inputPass1) inputPass1.value = '';
           if (inputPass2) inputPass2.value = '';
           if (inputFoto) inputFoto.value = '';
         }, 1200);
 
       } else {
-        manejarErrorBackend(data.mensaje);
+        manejarErrorBackend(textoServidor);
       }
     } catch (err) {
       mostrarAlerta('Error de conexión con el servidor. Intenta nuevamente.', 'error');
@@ -191,16 +244,18 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* ── Quitar clase de error al interactuar con las entradas ── */
-  [inputNombre, inputApellido, inputEmail, inputPass1, inputPass2].forEach(input => {
+  camposValidables.forEach(input => {
     if (!input) return;
     input.addEventListener('input', function () {
       this.classList.remove('is-invalid');
     });
   });
 
-  /* ── Resetear alertas al cerrar el modal ── */
+  /* ── Al cerrar el modal: limpiar alertas y descartar cambios sin guardar ── */
   modalEl.addEventListener('hidden.bs.modal', function () {
     limpiarAlerta();
     limpiarErroresCampos();
+    form.reset();                                   // vuelve a los últimos valores guardados
+    if (avatarPreview) avatarPreview.innerHTML = previewOriginal;
   });
 });
