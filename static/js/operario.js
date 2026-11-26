@@ -99,6 +99,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ── Helpers de presentación ──────────────────────────────
+    const PESO_PRIORIDAD = { Urgente: 0, Alta: 1, Media: 2, Baja: 3 };
+
+    // Urgente primero; a igual prioridad, la fecha límite más cercana arriba
+    function porPrioridad(a, b) {
+        const pa = PESO_PRIORIDAD[a.prioridad] ?? 9;
+        const pb = PESO_PRIORIDAD[b.prioridad] ?? 9;
+        if (pa !== pb) return pa - pb;
+        const fa = a.fechaLimite || '9999-12-31';
+        const fb = b.fechaLimite || '9999-12-31';
+        return fa < fb ? -1 : fa > fb ? 1 : 0;
+    }
+
+    // Texto y estado del vencimiento: "Vence hoy", "Vencida hace 2 d"…
+    function infoVencimiento(t) {
+        if (!t.fechaLimite || t.estado === 'Completada') return null;
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        const lim = new Date(t.fechaLimite + 'T00:00:00');
+        if (isNaN(lim)) return null;
+        const dias = Math.round((lim - hoy) / 86400000);
+        if (dias < 0)   return { cls: 'is-late', texto: `Vencida hace ${-dias} d` };
+        if (dias === 0) return { cls: 'is-soon', texto: 'Vence hoy' };
+        if (dias === 1) return { cls: 'is-soon', texto: 'Vence mañana' };
+        return { cls: '', texto: 'Vence ' + lim.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) };
+    }
+
+    // El filtro de proceso se arma con los procesos que realmente tienen las tareas
+    function poblarFiltroProceso(tareas) {
+        const sel = document.getElementById('filterProcess');
+        if (!sel) return;
+        const actual = sel.value;
+        const procesos = [...new Set(tareas.map(t => t.proceso).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'es'));
+        sel.innerHTML = '<option value="">Proceso</option>' +
+            procesos.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+        sel.value = procesos.includes(actual) ? actual : '';
+    }
+
     function renderizarKanban(tareas) {
         Object.keys(cacheTareas).forEach(k => delete cacheTareas[k]);
         Object.keys(timerIntervals).forEach(id => {
@@ -115,7 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const visible = completadas.find(t => t.idAsignacion === ultimaCompletadaId) || completadas[0] || null;
         idCompletadaVisible = visible ? visible.idAsignacion : null;
 
-        tareas.forEach(t => {
+        poblarFiltroProceso(tareas);
+
+        [...tareas].sort(porPrioridad).forEach(t => {
             cacheTareas[t.idAsignacion] = t;
             // Solo la última completada queda en el tablero; las demás viven en el historial
             if (t.estado === 'Completada' && t !== visible) return;
@@ -149,8 +189,9 @@ document.addEventListener('DOMContentLoaded', () => {
         card.setAttribute('data-estado', t.estado);
         card.setAttribute('data-process', t.proceso || '');
 
-        const prioClass  = `ht-badge-prio-${t.prioridad}`;
-        const compClass  = `ht-badge-complex-${(t.complejidad || 'media').toLowerCase()}`;
+        const prioClass = `ht-badge-prio-${t.prioridad}`;
+        const compClass = `ht-badge-complex-${(t.complejidad || 'media').toLowerCase()}`;
+        const venc      = infoVencimiento(t);
 
         const timerBlock = t.estado === 'En Progreso'
             ? `<div class="ht-timer-block" id="timerBlock-${t.idAsignacion}">
@@ -178,23 +219,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         card.innerHTML = `
             <div class="ht-card-header">
-                <span class="ht-card-name">${t.nombreTarea || 'Tarea sin título'}</span>
-                <button class="ht-card-btn-detail" data-action="ver" title="Ver detalle">
+                <span class="ht-card-name">${esc(t.nombreTarea || 'Tarea sin título')}</span>
+                <button class="ht-card-btn-detail" data-action="ver" title="Ver detalle" aria-label="Ver detalle de la tarea">
                     <i class="bi bi-eye"></i>
                 </button>
             </div>
             <div class="ht-card-proceso">
-                <i class="bi bi-gear-fill"></i>${t.proceso || 'General'}
-                &nbsp;·&nbsp;
-                <i class="bi bi-cpu"></i>${t.maquina || 'Planta'}
+                <span class="ht-chip"><i class="bi bi-gear-fill"></i>${esc(t.proceso || 'General')}</span>
+                ${t.maquina && t.maquina !== t.proceso ? `<span class="ht-chip"><i class="bi bi-cpu"></i>${esc(t.maquina)}</span>` : ''}
             </div>
-            <p class="ht-card-desc">${t.descripcionTarea || 'Sin descripción adicional.'}</p>
+            <p class="ht-card-desc">${esc(t.descripcionTarea || 'Sin descripción adicional.')}</p>
             <div class="ht-card-tags">
-                <span class="ht-badge ${prioClass}">${t.prioridad}</span>
-                <span class="ht-badge ${compClass}">${t.complejidad || 'Media'}</span>
-                ${t.cantidadPrendas ? `<span class="ht-badge" style="background:var(--surface);border:1px solid var(--border-md);color:var(--text-muted);"><i class="bi bi-boxes me-1"></i>${t.cantidadPrendas} ${t.tipoPrenda || 'uds'}</span>` : ''}
-                <span class="ht-badge" style="background:var(--surface);border:1px solid var(--border-md);color:var(--text-muted);"><i class="bi bi-clock me-1"></i>${t.horasEstimadas}h</span>
-                ${t.estado === 'Completada' ? `<span class="ht-badge" style="background:rgba(21,115,71,.12);border:1px solid rgba(21,115,71,.35);color:var(--ok);"><i class="bi bi-check-circle-fill me-1"></i>Finalizada ${t.fechaFinalizacion || ''}</span>` : ''}
+                <span class="ht-badge ${prioClass}">${esc(t.prioridad)}</span>
+                <span class="ht-badge ${compClass}" title="Complejidad"><i class="bi bi-speedometer2"></i>${esc(t.complejidad || 'Media')}</span>
+                ${t.cantidadPrendas ? `<span class="ht-badge ht-badge--soft"><i class="bi bi-boxes"></i>${esc(t.cantidadPrendas)} ${esc(t.tipoPrenda || 'uds')}</span>` : ''}
+                <span class="ht-badge ht-badge--soft"><i class="bi bi-clock"></i>${esc(t.horasEstimadas)}h</span>
+                ${venc ? `<span class="ht-badge ht-badge--soft ht-badge--due ${venc.cls}"><i class="bi bi-calendar-event"></i>${esc(venc.texto)}</span>` : ''}
+                ${t.estado === 'Completada' ? `<span class="ht-badge ht-badge--ok"><i class="bi bi-check-circle-fill"></i>Finalizada ${esc(t.fechaFinalizacion || '')}</span>` : ''}
             </div>
             ${timerBlock}
             ${actionBtns ? `<div class="ht-card-actions">${actionBtns}</div>` : ''}
@@ -385,7 +426,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 zona.classList.add('drag-over');
             });
-            zona.addEventListener('dragleave', () => zona.classList.remove('drag-over'));
+            zona.addEventListener('dragleave', e => {
+                if (!zona.contains(e.relatedTarget)) zona.classList.remove('drag-over');
+            });
             zona.addEventListener('drop', async e => {
                 e.preventDefault();
                 zona.classList.remove('drag-over');
@@ -533,7 +576,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const noLeidas = reportes.filter(r => r.respuesta && !r.respuestaLeida);
 
-        if (badge) badge.textContent = noLeidas.length;
+        if (badge) {
+            badge.textContent = noLeidas.length;
+            badge.hidden = noLeidas.length === 0;
+        }
 
         if (noLeidas.length === 0) {
             container.innerHTML = `<div class="ht-empty-state">
@@ -1320,11 +1366,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-    // ── Menú lateral (móvil/tablet) ──────────────────────────
+    // ── Barra lateral ────────────────────────────────────────
+    // (abrir/ocultar el menú lo maneja el script de operario.html;
+    //  aquí solo se conectan las acciones que abren modales)
     function configurarMenuLateral() {
-        const el = document.getElementById('menuLateral');
-        if (!el) return;
-        const drawer = bootstrap.Offcanvas.getOrCreateInstance(el);
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
 
         const acciones = {
             'nueva-incidencia':      () => abrirModalIncidencia(),
@@ -1332,19 +1379,14 @@ document.addEventListener('DOMContentLoaded', () => {
             'historial-tareas':      () => abrirHistorialTareas(),
         };
 
-        el.querySelectorAll('[data-ht-action]').forEach(btn => {
+        sidebar.querySelectorAll('[data-ht-action]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const fn = acciones[btn.dataset.htAction];
                 if (!fn) return;
-                // Se ejecuta cuando el menú terminó de cerrarse, para no apilar overlays
-                el.addEventListener('hidden.bs.offcanvas', fn, { once: true });
-                drawer.hide();
+                // En móvil se cierra el menú primero, para no apilar capas
+                if (typeof window.htCerrarMenuMovil === 'function') window.htCerrarMenuMovil();
+                setTimeout(fn, 150);
             });
-        });
-
-        // Si la pantalla pasa a modo escritorio, el menú lateral se cierra solo
-        window.matchMedia('(min-width: 992px)').addEventListener('change', e => {
-            if (e.matches) drawer.hide();
         });
     }
 

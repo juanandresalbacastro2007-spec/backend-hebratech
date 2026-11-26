@@ -2,7 +2,7 @@
   Modal "Editar perfil" del operario.
   Es el mismo del administrador (admin_base.html): mismos ids y clases, así que
   reutiliza static/js/perfil.js y static/css/administrador/perfil-modal.css.
-  Diferencias: lee los datos de operario.idUsuario, edita dirección y especialidad y pide la contraseña actual
+  Diferencias: lee los datos de operario.idUsuario, edita dirección (la especialidad se muestra bloqueada: la asigna el administrador) y pide la contraseña actual
   cuando se quiere cambiar la contraseña.
 {% endcomment %}
 {% with u=operario.idUsuario %}
@@ -67,13 +67,10 @@
           <input type="text" class="form-control" id="perfilDireccion" name="direccion" value="{{ u.direccion|default:'' }}" maxlength="255">
         </div>
 
-        <div class="perfil-field">
-          <label for="perfilEspecialidad"><i class="bi bi-tools"></i> Especialidad</label>
-          <select class="form-select" id="perfilEspecialidad" name="especialidad" required>
-            {% for esp in especialidades %}
-              <option value="{{ esp }}" {% if operario.especialidad == esp %}selected{% endif %}>{{ esp }}</option>
-            {% endfor %}
-          </select>
+        <div class="perfil-field perfil-field--locked">
+          <label for="perfilEspecialidad"><i class="bi bi-tools"></i> Especialidad <i class="bi bi-lock-fill perfil-lock" title="Solo el administrador puede cambiarla"></i></label>
+          <input type="text" class="form-control" id="perfilEspecialidad" value="{{ operario.especialidad|default:'Sin asignar' }}" disabled aria-describedby="perfilEspecialidadHint">
+          <div class="perfil-field-hint" id="perfilEspecialidadHint"><i class="bi bi-info-circle"></i> Solo el administrador puede asignar o cambiar tu especialidad.</div>
         </div>
 
         <!-- Cambio de Contraseña -->

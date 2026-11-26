@@ -22,11 +22,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const inputPass2    = document.getElementById('perfilPassword2');
   const inputActual   = document.getElementById('perfilPasswordActual'); // solo operarios
   const inputDireccion    = document.getElementById('perfilDireccion');     // solo operarios
-  const inputEspecialidad = document.getElementById('perfilEspecialidad');  // solo operarios
   const inputFoto     = document.getElementById('perfilFoto');
   const avatarPreview = document.getElementById('perfilAvatarPreview');
 
-  const camposValidables = [inputNombre, inputApellido, inputEmail, inputPass1, inputPass2, inputActual, inputEspecialidad, inputDireccion];
+  const camposValidables = [inputNombre, inputApellido, inputEmail, inputPass1, inputPass2, inputActual, inputDireccion];
 
   let previewUrl = null;                                   // URL temporal de la foto elegida
   let previewOriginal = avatarPreview ? avatarPreview.innerHTML : '';
@@ -96,10 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function manejarErrorBackend(mensaje) {
     const msgLower = (mensaje || '').toLowerCase();
 
-    if (msgLower.includes('especialidad') && inputEspecialidad) {
-      inputEspecialidad.classList.add('is-invalid');
-      inputEspecialidad.focus();
-    } else if (msgLower.includes('dirección') && inputDireccion) {
+    if (msgLower.includes('dirección') && inputDireccion) {
       inputDireccion.classList.add('is-invalid');
       inputDireccion.focus();
     } else if (msgLower.includes('actual') && inputActual) {
@@ -209,16 +205,9 @@ document.addEventListener('DOMContentLoaded', function () {
         actualizarInterfaz(nombre, apellido, fotoUrl, data.tiene_foto);
 
         // Lo guardado pasa a ser el nuevo "estado original" del modal
-        [inputNombre, inputApellido, inputEmail, inputDireccion, inputEspecialidad,
+        [inputNombre, inputApellido, inputEmail, inputDireccion,
          document.getElementById('perfilTelefono')]
-          .forEach(el => {
-            if (!el) return;
-            if (el.tagName === 'SELECT') {
-              Array.from(el.options).forEach(o => { o.defaultSelected = o.selected; });
-            } else {
-              el.defaultValue = el.value;
-            }
-          });
+          .forEach(el => { if (el) el.defaultValue = el.value; });
         if (avatarPreview) previewOriginal = avatarPreview.innerHTML;
 
         // Cerrar modal tras guardar con éxito

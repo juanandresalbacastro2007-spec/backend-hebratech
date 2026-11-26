@@ -426,3 +426,27 @@
 [data-bs-theme="dark"] .perfil-edit-hint {
   color: #a5c9ca;
 }
+
+/* ══ CAMPO BLOQUEADO (solo lectura, p. ej. Especialidad del operario) ══ */
+.perfil-field .form-control:disabled {
+  background-color: var(--color-atencion);
+  border-style: dashed;
+  color: #5d7378;
+  cursor: not-allowed;
+  opacity: 1;
+}
+.perfil-lock { color: #8a9a9b; font-size: .72rem; margin-left: 2px; }
+.perfil-field-hint {
+  margin-top: 5px;
+  font-size: .74rem;
+  color: #7d8b8e;
+}
+.perfil-field-hint i { margin-right: 3px; }
+
+[data-bs-theme="dark"] .perfil-field .form-control:disabled {
+  background-color: #1a262c;
+  border-color: #395b64;
+  color: #8aa6ad;
+}
+[data-bs-theme="dark"] .perfil-field-hint,
+[data-bs-theme="dark"] .perfil-lock { color: #8aa6ad; }

@@ -9,126 +9,111 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{% static 'css/operarios/operario.css' %}?v={% now 'U' %}" />
-    <!-- Estilos del modal "Editar perfil" (compartidos con el módulo administrador) -->
+    <!-- Layout con barra lateral (mismo formato del administrador) + Kanban -->
+    <link rel="stylesheet" href="{% static 'css/operarios/operario-shell.css' %}?v={% now 'U' %}" />
+    <!-- Modal "Editar perfil" (compartido con el módulo administrador) -->
     <link rel="stylesheet" href="{% static 'css/administrador/perfil-modal.css' %}?v={% now 'U' %}" />
     <link rel="icon" type="image/png" href="{% static 'img/fondo_logo.jpg' %}" />
 
-    <!-- Tema: se aplica antes de pintar para evitar parpadeo -->
+    <!-- Tema y estado de la barra lateral: se aplican antes de pintar para evitar parpadeo -->
     <script>
       ;(function () {
         var t = localStorage.getItem('ht-theme') || 'light'
         document.documentElement.setAttribute('data-bs-theme', t)
+        try {
+          if (window.innerWidth > 768 && localStorage.getItem('ht-sidebar') === 'collapsed') {
+            document.documentElement.classList.add('sidebar-collapsed')
+          }
+        } catch (e) {}
       })()
     </script>
-
-    <!-- Reglas CSS optimizadas para movil y pantallas grandes -->
-    <style>
-      .ht-header-wrapper {
-        background: linear-gradient(135deg, #395b64 0%, #2c444e 100%) !important;
-        color: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        padding: 10px 14px !important;
-      }
-      .ht-navbar-top, .ht-controls-bar {
-        background: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-      }
-      .ht-brand .brand-title { color: #ffffff !important; font-size: 1.05rem; }
-      .ht-brand .brand-sub { color: #a5c9ca !important; font-size: 0.72rem; }
-      
-      .ht-btn-custom {
-        background: rgba(255, 255, 255, 0.15) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 6px;
-        padding: 4px 8px;
-        font-size: 0.8rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-      }
-      .ht-btn-custom:hover {
-        background: rgba(255, 255, 255, 0.25) !important;
-        color: #ffffff !important;
-      }
-      .ht-icon-link {
-        color: rgba(255, 255, 255, 0.9) !important;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        transition: all 0.2s;
-        flex-shrink: 0;
-      }
-      .ht-icon-link:hover {
-        background: rgba(255, 255, 255, 0.25);
-        color: #ffffff !important;
-      }
-      .ht-icon-link.logout:hover {
-        background: rgba(239, 68, 68, 0.3) !important;
-        color: #f87171 !important;
-        border-color: rgba(239, 68, 68, 0.4);
-      }
-      .ht-input-clean {
-        background: rgba(255, 255, 255, 0.95) !important;
-        border: none !important;
-        color: #1e293b !important;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        padding: 4px 8px;
-        height: 32px;
-      }
-    </style>
   </head>
 
   <body>
-    <!--      ═══════════════════════════════════════════════════
-    HEADER UNIFICADO (FILA SUPERIOR LIMPIA CON PERFIL/SALIR)
-  ════════════════════════════════════════════════════      -->
-    <header class="ht-header-wrapper">
-      
-      <!-- FILA 1 (ARRIBA): Logo, Reloj, Perfil y Salir (Si o si arriba) -->
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-2 border-bottom border-white border-opacity-10">
-        <!-- Menú lateral (solo móvil/tablet) -->
-        <button type="button" class="ht-icon-link ht-hamburger d-lg-none" data-bs-toggle="offcanvas"
-                data-bs-target="#menuLateral" aria-controls="menuLateral" aria-label="Abrir menú">
-          <i class="bi bi-list" style="font-size:1.25rem;"></i>
-        </button>
+    <!-- Capa oscura (solo móvil) -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-        <!-- Logo y título -->
-        <a href="{% url 'operarios:tablero' %}" class="ht-brand text-decoration-none d-flex align-items-center gap-2">
+    <!-- ══════════════ BARRA LATERAL ══════════════ -->
+    <aside class="sidebar" id="sidebar" aria-label="Menú del operario">
+      <div class="sidebar-head">
+        <a href="{% url 'operarios:tablero' %}" class="sidebar-brand">
           <div class="brand-icon">
-            <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="max-height: 32px;" />
+            <img src="{% static 'img/logo.png' %}" alt="HebraTech" style="width:100%;height:auto;" />
           </div>
-          <div class="d-flex flex-column">
-            <span class="brand-title fw-bold" style="line-height:1.1;">HebraTech</span>
-            <span class="brand-sub">Operario</span>
+          <div>
+            <div class="brand-title">HebraTech</div>
+            <div class="brand-sub">Operario</div>
           </div>
         </a>
+        <button type="button" class="sidebar-close" id="sidebarClose" aria-label="Ocultar menú" title="Ocultar menú">
+          <i class="bi bi-chevron-double-left"></i>
+        </button>
+      </div>
 
-        <!-- Reloj central -->
-        <div id="topClock" class="d-none d-lg-flex align-items-center px-2 py-1 rounded bg-white text-dark shadow-sm fw-semibold gap-1" style="font-size: 0.8rem;">
-          <i class="bi bi-clock text-primary"></i>
-          <span id="clockText">--:--:--</span>
+      <nav class="sidebar-nav" aria-label="Navegación del operario">
+        <div class="nav-section-label">Principal</div>
+        <a href="{% url 'operarios:tablero' %}" class="nav-item active" aria-current="page">
+          <i class="bi bi-kanban-fill"></i> Tablero
+        </a>
+
+        <div class="nav-section-label">Mi trabajo</div>
+        <button type="button" class="nav-item" data-ht-action="nueva-incidencia">
+          <i class="bi bi-plus-circle-fill"></i> Nueva incidencia
+        </button>
+        <button type="button" class="nav-item" data-ht-action="historial-incidencias">
+          <i class="bi bi-journal-text"></i> Historial de incidencias
+          <span class="nav-badge" id="drawerReportesBadge">0</span>
+        </button>
+        <button type="button" class="nav-item" data-ht-action="historial-tareas">
+          <i class="bi bi-archive-fill"></i> Historial de tareas
+          <span class="nav-badge" id="drawerHistorialBadge">0</span>
+        </button>
+
+        <div class="sidebar-footer">
+          <button type="button" class="admin-info admin-info-clickable" data-bs-toggle="modal"
+                  data-bs-target="#modalEditarPerfil" title="Editar perfil">
+            <div class="admin-avatar" data-perfil-avatar>{% if operario.idUsuario.fotoPerfil %}<img src="{{ operario.idUsuario.fotoPerfil.url }}" alt="Avatar" class="admin-avatar-img">{% elif operario %}{{ operario.idUsuario.nombre|first|upper }}{{ operario.idUsuario.apellido|first|upper }}{% else %}OP{% endif %}</div>
+            <div style="min-width:0;">
+              <div class="admin-name">{% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% else %}Operario{% endif %}</div>
+              <div class="admin-role">{{ operario.especialidad|default:"Operario" }} <i class="bi bi-pencil-fill perfil-edit-hint"></i></div>
+            </div>
+          </button>
+          <a href="{% url 'logout' %}" class="btn-logout">
+            <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ══════════════ CONTENIDO ══════════════ -->
+    <div class="main-content">
+      <header class="topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Mostrar u ocultar menú"
+                aria-controls="sidebar" aria-expanded="true" title="Mostrar / ocultar menú">
+          <i class="bi bi-layout-sidebar"></i>
+        </button>
+        <div>
+          <h5 class="topbar-title"><i class="bi bi-kanban me-2"></i>Tablero operativo</h5>
+          <div class="topbar-sub">Total de tareas: <strong id="totalTasks">0</strong></div>
         </div>
 
-        <!-- Acciones principales de Usuario y Cierre de Sesión -->
-        <div class="d-flex align-items-center gap-2 ms-auto">
-          
+        <div class="ht-topbar-right ms-auto">
+          <div class="ht-loading" id="loadingIndicator" style="display:none;">
+            <div class="ht-spinner"></div>
+            <span class="d-none d-sm-inline">Cargando tareas…</span>
+          </div>
+
+          <div id="topClock" class="top-clock d-none d-md-inline-flex">
+            <i class="bi bi-clock"></i>
+            <span id="clockText">--:--:--</span>
+          </div>
+
           <!-- Notificaciones -->
           <div class="dropdown">
-            <button class="ht-btn-custom position-relative px-2 py-1" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Notificaciones">
+            <button class="ht-bell" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                    aria-expanded="false" aria-label="Notificaciones" title="Notificaciones">
               <i class="bi bi-bell-fill"></i>
-              <span class="ht-badge-count" id="navNotifBadge">0</span>
+              <span class="ht-bell-badge" id="navNotifBadge" hidden>0</span>
             </button>
             <div class="dropdown-menu dropdown-menu-end ht-dropdown-panel ht-dropdown-panel--wide">
               <div class="ht-dropdown-header">
@@ -143,239 +128,138 @@
               </div>
             </div>
           </div>
-
-          <div class="vr bg-white opacity-25" style="height:20px;"></div>
-
-          <!-- Perfil de usuario: abre el modal "Editar perfil" (si falla el JS, el href lleva a la página de perfil) -->
-          <a href="{% url 'operarios:perfil' %}" class="d-flex align-items-center gap-2 text-decoration-none"
-             data-bs-toggle="modal" data-bs-target="#modalEditarPerfil" title="Editar perfil">
-            <span class="ht-nav-avatar" data-perfil-avatar>{% if operario.idUsuario.fotoPerfil %}<img src="{{ operario.idUsuario.fotoPerfil.url }}" alt="Avatar" />{% elif operario %}{{ operario.idUsuario.nombre|first|upper }}{{ operario.idUsuario.apellido|first|upper }}{% else %}OP{% endif %}</span>
-
-            <span class="d-none d-md-inline text-white fw-medium" style="font-size: 0.8rem;" data-perfil-nombre>{% if operario %}{{ operario.idUsuario.nombre }}{% else %}Operario{% endif %}</span>
-          </a>
-
-          <!-- Botón de editar perfil (Solo visible en pantallas medianas/grandes) -->
-          <a href="{% url 'operarios:perfil' %}" class="ht-icon-link d-none d-md-inline-flex"
-             data-bs-toggle="modal" data-bs-target="#modalEditarPerfil" title="Editar perfil">
-            <i class="bi bi-pencil-square"></i>
-          </a>
-
-          <!-- Botón de Salir (SIEMPRE ARRIBA Y VISIBLE) -->
-          <a href="{% url 'logout' %}" class="ht-icon-link logout ms-1" title="Cerrar sesión">
-            <i class="bi bi-box-arrow-right"></i>
-          </a>
         </div>
-      </div>
+      </header>
 
-      <!-- FILA 2 (ABAJO): acciones rápidas + filtros. Todo visible en móvil (íconos) -->
-      <div class="ht-hdr-row2">
+      <div class="content-wrap">
+        <div class="ht-toast-wrap" id="toastWrap" aria-live="polite"></div>
 
-        <!-- Acciones: en móvil solo íconos con contador; desde 576px muestran el texto -->
-        <div class="ht-hdr-actions d-none d-lg-flex" role="group" aria-label="Acciones rápidas">
-          <button type="button" class="ht-btn-custom ht-btn-custom--primary" id="btnGenerateReport"
-                  title="Reportar una nueva incidencia" aria-label="Reportar una nueva incidencia">
-            <i class="bi bi-plus-lg"></i>
-            <span class="ht-btn-label">Nueva incidencia</span>
+        <!-- Resumen: cada tarjeta abre su lista -->
+        <section class="ht-stats" aria-label="Resumen de tareas">
+          <button type="button" class="ht-stat-tile ht-stat-tile--pending" id="kpiPending" title="Ver tareas pendientes">
+            <span class="ht-stat-icon"><i class="bi bi-clock-history"></i></span>
+            <span><strong class="ht-stat-num" id="kpiCountPending">0</strong><span class="ht-stat-label">Pendientes</span></span>
           </button>
+          <button type="button" class="ht-stat-tile ht-stat-tile--progress" id="kpiProgress" title="Ver tareas en proceso">
+            <span class="ht-stat-icon"><i class="bi bi-play-circle-fill"></i></span>
+            <span><strong class="ht-stat-num" id="kpiCountProgress">0</strong><span class="ht-stat-label">En proceso</span></span>
+          </button>
+          <button type="button" class="ht-stat-tile ht-stat-tile--done" id="kpiDone" title="Abrir historial de tareas">
+            <span class="ht-stat-icon"><i class="bi bi-check-circle-fill"></i></span>
+            <span><strong class="ht-stat-num" id="kpiCountDone">0</strong><span class="ht-stat-label">Completadas</span></span>
+          </button>
+          <button type="button" class="ht-stat-tile ht-stat-tile--incidence" id="kpiIncidence" title="Abrir gestión de incidencias">
+            <span class="ht-stat-icon"><i class="bi bi-exclamation-triangle-fill"></i></span>
+            <span><strong class="ht-stat-num" id="kpiCountIncidence">0</strong><span class="ht-stat-label">Incidencias</span></span>
+          </button>
+        </section>
 
-          <button type="button" class="ht-btn-custom" id="btnVerIncidenciasGeneradas"
-                  title="Historial de incidencias" aria-label="Historial de incidencias">
-            <i class="bi bi-journal-text"></i>
-            <span class="ht-btn-label">Historial de incidencias</span>
-            <span class="ht-badge-count" id="reportesBadgeCount">0</span>
-          </button>
-
-          <button type="button" class="ht-btn-custom" id="btnVerHistorial"
-                  title="Historial de tareas completadas" aria-label="Historial de tareas completadas">
-            <i class="bi bi-archive"></i>
-            <span class="ht-btn-label">Historial de tareas</span>
-            <span class="ht-badge-count" id="historialBadgeCount">0</span>
-          </button>
-        </div>
-
-        <!-- KPIs informativos (Ocultos en pantalla reducida) -->
-        <div class="ht-kpis-row d-none d-xl-flex align-items-center gap-2">
-          <button class="ht-kpi-chip ht-kpi-chip--pending" id="kpiPending" title="Ver tareas pendientes">
-            <span class="ht-kpi-dot"></span>
-            <span class="ht-kpi-label">Pendientes</span>
-            <strong class="ht-kpi-count" id="kpiCountPending">0</strong>
-          </button>
-          <button class="ht-kpi-chip ht-kpi-chip--progress" id="kpiProgress" title="Ver tareas en proceso">
-            <span class="ht-kpi-dot"></span>
-            <span class="ht-kpi-label">En Proceso</span>
-            <strong class="ht-kpi-count" id="kpiCountProgress">0</strong>
-          </button>
-          <button class="ht-kpi-chip ht-kpi-chip--done" id="kpiDone" title="Abrir historial de tareas">
-            <span class="ht-kpi-dot"></span>
-            <span class="ht-kpi-label">Completadas</span>
-            <strong class="ht-kpi-count" id="kpiCountDone">0</strong>
-          </button>
-          <button class="ht-kpi-chip ht-kpi-chip--incidence" id="kpiIncidence" title="Abrir gestión de incidencias">
-            <span class="ht-kpi-dot"></span>
-            <span class="ht-kpi-label">Incidencias</span>
-            <strong class="ht-kpi-count" id="kpiCountIncidence">0</strong>
-          </button>
-        </div>
-
-        <!-- Buscador y filtros: en móvil ocupan toda una fila -->
-        <div class="ht-hdr-filters">
-          <div class="ht-hdr-search">
+        <!-- Buscar, filtrar y reportar -->
+        <div class="ht-toolbar">
+          <div class="ht-toolbar-search">
             <i class="bi bi-search"></i>
-            <input type="search" id="searchInput" class="form-control form-control-sm ht-input-clean" placeholder="Buscar tarea…" aria-label="Buscar tarea" />
+            <input type="search" id="searchInput" class="form-control ht-input-clean" placeholder="Buscar tarea…" aria-label="Buscar tarea" />
           </div>
 
           <div class="ht-select-wrap">
-            <select id="filterPrio" class="form-select form-select-sm ht-input-clean" aria-label="Filtrar por prioridad">
+            <select id="filterPrio" class="form-select ht-input-clean" aria-label="Filtrar por prioridad">
               <option value="">Prioridad</option>
               <option value="Urgente">🔴 Urgente</option>
               <option value="Alta">🟠 Alta</option>
-              <option value="Media">⚪ Media</option>
-              <option value="Normal">🟢 Normal</option>
+              <option value="Media">🔵 Media</option>
+              <option value="Baja">🟢 Baja</option>
             </select>
           </div>
 
           <div class="ht-select-wrap">
-            <select id="filterProcess" class="form-select form-select-sm ht-input-clean" aria-label="Filtrar por tipo de proceso">
+            <select id="filterProcess" class="form-select ht-input-clean" aria-label="Filtrar por proceso">
               <option value="">Proceso</option>
-              <option value="Confección">Confección</option>
-              <option value="Ensamble">Ensamble</option>
-              <option value="Corte">Corte</option>
-              <option value="Planchado">Planchado</option>
             </select>
           </div>
+
+          <button type="button" class="ht-btn-primary ht-toolbar-cta d-inline-flex align-items-center gap-1" id="btnGenerateReport"
+                  title="Reportar una nueva incidencia">
+            <i class="bi bi-plus-lg"></i> Nueva incidencia
+          </button>
         </div>
-      </div>
 
-    </header>
+        <p class="ht-board-hint d-none d-md-flex">
+          <i class="bi bi-hand-index-thumb"></i>
+          <span>Arrastra una tarjeta a otra columna para cambiar su estado, o usa los botones <strong>Iniciar</strong> y <strong>Finalizar</strong>.</span>
+        </p>
 
-    <!-- ═══ MENÚ LATERAL (móvil y tablet; en escritorio el menú queda arriba) ═══ -->
-    <div class="offcanvas offcanvas-start ht-drawer" tabindex="-1" id="menuLateral" aria-labelledby="menuLateralTitulo">
-      <div class="offcanvas-header ht-drawer-head">
-        <div class="d-flex align-items-center gap-2" style="min-width:0;">
-          <img src="{% static 'img/logo.png' %}" alt="" style="max-height:34px;" />
-          <div class="d-flex flex-column" style="line-height:1.15;min-width:0;">
-            <span class="fw-bold" id="menuLateralTitulo">HebraTech</span>
-            <small class="ht-drawer-user text-truncate">
-              <span data-perfil-nombre-completo>{% if operario %}{{ operario.idUsuario.nombre }} {{ operario.idUsuario.apellido }}{% else %}Operario{% endif %}</span>
-            </small>
+        <!-- Pestañas (solo móvil) -->
+        <div class="ht-mobile-tabs d-md-none">
+          <button class="ht-mobile-tab active" data-tab="Pendiente">
+            <i class="bi bi-clock-history me-1"></i>Pendientes
+            <span class="ms-1">(<span id="mobCountPending">0</span>)</span>
+          </button>
+          <button class="ht-mobile-tab" data-tab="En Progreso">
+            <i class="bi bi-play-circle-fill me-1"></i>En proceso
+            <span class="ms-1">(<span id="mobCountProgress">0</span>)</span>
+          </button>
+          <button class="ht-mobile-tab" data-tab="Completada">
+            <i class="bi bi-check-circle-fill me-1"></i>Terminadas
+            <span class="ms-1">(<span id="mobCountDone">0</span>)</span>
+          </button>
+        </div>
+
+        <!-- ═══ KANBAN ═══ -->
+        <div class="ht-kanban-board" id="kanbanBoard">
+          <div class="ht-kanban-col" id="col-Pendiente" data-estado="Pendiente">
+            <div class="ht-col-header ht-col-header--pending">
+              <span class="ht-col-ico"><i class="bi bi-clock-history"></i></span>
+              <span class="ht-col-title">Pendientes</span>
+              <span class="ht-col-count" id="count-Pendiente">0</span>
+            </div>
+            <div class="ht-drop-zone" id="list-Pendiente" data-status="Pendiente">
+              <div class="ht-col-empty" id="empty-Pendiente">
+                <i class="bi bi-check2-circle"></i>
+                <strong>¡Todo al día!</strong>
+                <span>No tienes tareas pendientes.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ht-kanban-col" id="col-En Progreso" data-estado="En Progreso">
+            <div class="ht-col-header ht-col-header--progress">
+              <span class="ht-col-ico"><i class="bi bi-play-circle-fill"></i></span>
+              <span class="ht-col-title">En proceso</span>
+              <span class="ht-col-count" id="count-En Progreso">0</span>
+            </div>
+            <div class="ht-drop-zone" id="list-En Progreso" data-status="En Progreso">
+              <div class="ht-col-empty" id="empty-En Progreso">
+                <i class="bi bi-play-circle"></i>
+                <strong>Sin tareas en ejecución</strong>
+                <span>Arrastra o inicia una tarea aquí.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ht-kanban-col ht-kanban-col--completada" id="col-Completada" data-estado="Completada">
+            <div class="ht-col-header ht-col-header--done" id="headerCompletada" style="cursor:pointer;" title="Colapsar / expandir">
+              <span class="ht-col-ico"><i class="bi bi-check-circle-fill"></i></span>
+              <span class="ht-col-title">Completadas</span>
+              <span class="ht-col-count" id="count-Completada">0</span>
+              <i class="bi bi-chevron-up ht-col-chevron" id="chevronCompletada"></i>
+            </div>
+            <div class="ht-drop-zone" id="list-Completada" data-status="Completada">
+              <div class="ht-col-empty" id="empty-Completada">
+                <i class="bi bi-trophy"></i>
+                <strong>¡Al día!</strong>
+                <span>Aquí queda tu última tarea completada; las anteriores pasan al historial.</span>
+                <button type="button" class="btn-link-ht mt-1" id="linkVerHistorialDesdeColumna">Ver historial →</button>
+              </div>
+            </div>
+            <div class="ht-archive-note" id="archiveNote" hidden>
+              <i class="bi bi-archive-fill"></i>
+              <span><strong id="archiveNoteCount">0</strong> <span id="archiveNoteTxt">tareas anteriores archivadas en el historial.</span></span>
+              <button type="button" class="btn-link-ht" id="linkVerHistorialDesdeNota">Ver historial →</button>
+            </div>
           </div>
         </div>
-        <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="offcanvas" aria-label="Cerrar menú"></button>
       </div>
-      <nav class="offcanvas-body ht-drawer-body" aria-label="Menú del operario">
-        <a href="{% url 'operarios:tablero' %}" class="ht-drawer-item is-active">
-          <i class="bi bi-kanban"></i><span>Tablero</span>
-        </a>
-        <button type="button" class="ht-drawer-item" data-ht-action="nueva-incidencia">
-          <i class="bi bi-plus-lg"></i><span>Nueva incidencia</span>
-        </button>
-        <button type="button" class="ht-drawer-item" data-ht-action="historial-incidencias">
-          <i class="bi bi-journal-text"></i><span>Historial de incidencias</span>
-          <span class="ht-badge-count ms-auto" id="drawerReportesBadge">0</span>
-        </button>
-        <button type="button" class="ht-drawer-item" data-ht-action="historial-tareas">
-          <i class="bi bi-archive"></i><span>Historial de tareas</span>
-          <span class="ht-badge-count ms-auto" id="drawerHistorialBadge">0</span>
-        </button>
-        <hr class="ht-drawer-sep" />
-        <a href="{% url 'operarios:perfil' %}" class="ht-drawer-item"
-           data-bs-toggle="modal" data-bs-target="#modalEditarPerfil">
-          <i class="bi bi-pencil-square"></i><span>Editar perfil</span>
-        </a>
-        <a href="{% url 'logout' %}" class="ht-drawer-item ht-drawer-item--logout">
-          <i class="bi bi-box-arrow-right"></i><span>Cerrar sesión</span>
-        </a>
-      </nav>
     </div>
-
-    <!--      ═══════════════════════════════════════════════════
-       MAIN — TABLERO KANBAN
-  ════════════════════════════════════════════════════      -->
-    <main class="ht-main">
-      <div class="ht-page-header">
-        <div>
-          <h1 class="ht-page-title"><i class="bi bi-kanban"></i> Tablero Operativo</h1>
-          <p class="ht-page-sub">
-            Total de tareas: <strong id="totalTasks">0</strong>
-          </p>
-        </div>
-        <div class="ht-loading" id="loadingIndicator" style="display:none;">
-          <div class="ht-spinner"></div>
-          <span>Cargando tareas…</span>
-        </div>
-      </div>
-
-      <div class="ht-toast-wrap" id="toastWrap" aria-live="polite"></div>
-
-      <div class="ht-mobile-tabs d-md-none">
-        <button class="ht-mobile-tab active" data-tab="Pendiente">
-          <i class="bi bi-clock-history me-1"></i>Pendientes
-          <span class="ms-1">(<span id="mobCountPending">0</span>)</span>
-        </button>
-        <button class="ht-mobile-tab" data-tab="En Progreso">
-          <i class="bi bi-play-circle-fill me-1"></i>En Proceso
-          <span class="ms-1">(<span id="mobCountProgress">0</span>)</span>
-        </button>
-        <button class="ht-mobile-tab" data-tab="Completada">
-          <i class="bi bi-check-circle-fill me-1"></i>Terminadas
-          <span class="ms-1">(<span id="mobCountDone">0</span>)</span>
-        </button>
-      </div>
-
-      <div class="ht-kanban-board" id="kanbanBoard">
-        <div class="ht-kanban-col" id="col-Pendiente" data-estado="Pendiente">
-          <div class="ht-col-header ht-col-header--pending">
-            <div class="ht-col-dot"></div>
-            <span class="ht-col-title">Pendientes</span>
-            <span class="ht-col-count" id="count-Pendiente">0</span>
-          </div>
-          <div class="ht-drop-zone" id="list-Pendiente" data-status="Pendiente">
-            <div class="ht-col-empty" id="empty-Pendiente">
-              <i class="bi bi-check2-circle"></i>
-              <strong>¡Todo al día!</strong>
-              <span>No tienes tareas pendientes.</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="ht-kanban-col" id="col-En Progreso" data-estado="En Progreso">
-          <div class="ht-col-header ht-col-header--progress">
-            <div class="ht-col-dot"></div>
-            <span class="ht-col-title">En Proceso</span>
-            <span class="ht-col-count" id="count-En Progreso">0</span>
-          </div>
-          <div class="ht-drop-zone" id="list-En Progreso" data-status="En Progreso">
-            <div class="ht-col-empty" id="empty-En Progreso">
-              <i class="bi bi-play-circle"></i>
-              <strong>Sin tareas en ejecución</strong>
-              <span>Arrastra o inicia una tarea aquí.</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="ht-kanban-col ht-kanban-col--completada" id="col-Completada" data-estado="Completada">
-          <div class="ht-col-header ht-col-header--done" id="headerCompletada" style="cursor:pointer;" title="Colapsar/expandir">
-            <div class="ht-col-dot"></div>
-            <span class="ht-col-title">Completadas</span>
-            <span class="ht-col-count" id="count-Completada">0</span>
-            <i class="bi bi-chevron-up ht-col-chevron ms-auto" id="chevronCompletada"></i>
-          </div>
-          <div class="ht-drop-zone" id="list-Completada" data-status="Completada">
-            <div class="ht-col-empty" id="empty-Completada">
-              <i class="bi bi-trophy"></i>
-              <strong>¡Al día!</strong>
-              <span>Aquí queda tu última tarea completada; las anteriores pasan al historial.</span>
-              <button type="button" class="btn-link-ht mt-1" id="linkVerHistorialDesdeColumna">Ver historial →</button>
-            </div>
-          </div>
-          <div class="ht-archive-note" id="archiveNote" hidden>
-            <i class="bi bi-archive-fill"></i>
-            <span><strong id="archiveNoteCount">0</strong> <span id="archiveNoteTxt">tareas anteriores archivadas en el historial.</span></span>
-            <button type="button" class="btn-link-ht" id="linkVerHistorialDesdeNota">Ver historial →</button>
-          </div>
-        </div>
-      </div>
-    </main>
 
     <!--      ═══════════════════════════════════════════════════
        MODALES
@@ -699,7 +583,7 @@
       </div>
     </div>
 
-    <!-- ═══ MODAL EDITAR PERFIL (mismo del administrador) ═══ -->
+    <!-- ═══ MODAL EDITAR PERFIL (el mismo del administrador) ═══ -->
     {% include "operarios/_modal_perfil.html" %}
 
     <!-- ═══ BOTÓN FLOTANTE DE TEMA ═══ -->
@@ -710,15 +594,66 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/operario.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'js/perfil.js' %}?v={% now 'U' %}"></script>
+
+    <!-- Barra lateral: ocultar / mostrar (escritorio) y menú deslizable (móvil) -->
     <script>
-      // El menú lateral (offcanvas) se cierra al abrir el modal de perfil:
-      // si no, su "focus trap" no deja escribir en los campos del modal.
-      document.addEventListener('show.bs.modal', function (e) {
-        if (e.target.id !== 'modalEditarPerfil') return
-        var el = document.getElementById('menuLateral')
-        var oc = el && bootstrap.Offcanvas.getInstance(el)
-        if (oc) oc.hide()
-      })
+      ;(function () {
+        var root = document.documentElement
+        var sidebar = document.getElementById('sidebar')
+        var backdrop = document.getElementById('sidebarBackdrop')
+        var btn = document.getElementById('sidebarToggle')
+        var closeBtn = document.getElementById('sidebarClose')
+        var mobile = window.matchMedia('(max-width: 768px)')
+        if (!sidebar || !btn) return
+
+        function setAria(open) { btn.setAttribute('aria-expanded', open ? 'true' : 'false') }
+
+        function closeMobile() {
+          sidebar.classList.remove('open')
+          backdrop.classList.remove('show')
+          document.body.classList.remove('sidebar-lock')
+          if (mobile.matches) setAria(false)
+        }
+
+        function toggleSidebar() {
+          if (mobile.matches) {
+            var open = sidebar.classList.toggle('open')
+            backdrop.classList.toggle('show', open)
+            document.body.classList.toggle('sidebar-lock', open)
+            setAria(open)
+          } else {
+            var collapsed = root.classList.toggle('sidebar-collapsed')
+            try { localStorage.setItem('ht-sidebar', collapsed ? 'collapsed' : 'open') } catch (e) {}
+            setAria(!collapsed)
+          }
+        }
+
+        window.toggleSidebar = toggleSidebar
+        window.htCerrarMenuMovil = closeMobile   // lo usa operario.js antes de abrir un modal
+
+        btn.addEventListener('click', toggleSidebar)
+        if (closeBtn) closeBtn.addEventListener('click', toggleSidebar)
+        backdrop.addEventListener('click', closeMobile)
+        sidebar.addEventListener('click', function (e) {
+          if (mobile.matches && e.target.closest('a.nav-item')) closeMobile()
+        })
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMobile() })
+        // Al abrir cualquier modal (p. ej. "Editar perfil") el menú móvil se cierra
+        document.addEventListener('show.bs.modal', function () { if (mobile.matches) closeMobile() })
+
+        function sync() {
+          if (mobile.matches) { root.classList.remove('sidebar-collapsed'); closeMobile() }
+          else {
+            closeMobile()
+            var c = false
+            try { c = localStorage.getItem('ht-sidebar') === 'collapsed' } catch (e) {}
+            root.classList.toggle('sidebar-collapsed', c)
+            setAria(!c)
+          }
+        }
+        if (mobile.addEventListener) mobile.addEventListener('change', sync); else mobile.addListener(sync)
+        sync()
+      })()
     </script>
 
     {% if mostrar_bienvenida %}

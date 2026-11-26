@@ -7,7 +7,6 @@ from datetime import date, datetime
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.db import transaction
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
@@ -16,18 +15,6 @@ from django.views.decorators.http import require_http_methods, require_POST
 from .models import AsignacionTarea, Incidencia, Operario
 
 logger = logging.getLogger(__name__)
-
-# Fuente única: Operario.ESPECIALIDADES en apps/administrador/models.py
-# (la misma lista que usa el formulario de usuarios del admin).
-ESPECIALIDADES = Operario.ESPECIALIDADES
-
-
-def _especialidades_para(operario):
-    """Lista para el selector; incluye la especialidad actual si es un valor antiguo fuera de la lista."""
-    lista = list(ESPECIALIDADES)
-    if operario.especialidad and operario.especialidad not in lista:
-        lista.append(operario.especialidad)
-    return lista
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -70,7 +57,6 @@ def tablero_operario(request):
     return render(request, 'operarios/operario.html', {
         'operario': operario,
         'mostrar_bienvenida': mostrar_bienvenida,
-        'especialidades': _especialidades_para(operario),
     })
 
 
@@ -92,9 +78,7 @@ def perfil_operario(request):
         usuario.telefono = request.POST.get('telefono', '').strip() or None
         usuario.direccion = request.POST.get('direccion', '').strip() or None
 
-        especialidad = request.POST.get('especialidad', '').strip()
-        if especialidad:
-            operario.especialidad = especialidad
+        # La especialidad NO se acepta aquí: solo el administrador puede asignarla.
 
         if 'fotoPerfil' in request.FILES:
             usuario.fotoPerfil = request.FILES['fotoPerfil']
@@ -139,7 +123,10 @@ def perfil_operario(request):
 
 @require_POST
 def api_editar_perfil(request):
-    """Actualiza datos básicos, foto y (opcionalmente) contraseña del operario logueado."""
+    """Actualiza datos básicos, dirección, foto y (opcionalmente) contraseña del operario logueado.
+
+    La especialidad es de solo lectura para el operario: la asigna el administrador.
+    """
     operario = _get_operario(request)
     if not operario:
         return JsonResponse(
@@ -157,7 +144,6 @@ def api_editar_perfil(request):
     correo    = request.POST.get('email', '').strip()
     telefono  = request.POST.get('telefono', '').strip()
     direccion = request.POST.get('direccion', '').strip()
-    especialidad = request.POST.get('especialidad', '').strip()
     pw_actual = request.POST.get('password_actual', '')
     pass1     = request.POST.get('password1', '').strip()
     pass2     = request.POST.get('password2', '').strip()
@@ -171,12 +157,6 @@ def api_editar_perfil(request):
     except ValidationError:
         return _error('El correo electrónico no es válido.')
 
-    # operarios.especialidad es NOT NULL en la base de datos
-    if not especialidad:
-        return _error('La especialidad es obligatoria.')
-    # Solo valores de la lista (o el que ya tenía, si era un valor antiguo)
-    if especialidad not in ESPECIALIDADES and especialidad != operario.especialidad:
-        return _error('La especialidad seleccionada no es válida.')
     if len(direccion) > 255:
         return _error('La dirección no puede superar 255 caracteres.')
 
@@ -207,12 +187,11 @@ def api_editar_perfil(request):
     usuario.correoElectronico = correo
     usuario.telefono = telefono or None
     usuario.direccion = direccion or None
-    operario.especialidad = especialidad
 
+    # La especialidad NO se toca aquí: solo el administrador puede asignarla
+    # (aunque alguien envíe el campo a mano, se ignora).
     try:
-        with transaction.atomic():
-            usuario.save()
-            operario.save(update_fields=['especialidad'])
+        usuario.save()
     except Exception:
         logger.exception('Error al guardar el perfil del usuario %s', usuario.pk)
         return _error('No se pudo guardar el perfil. Intenta nuevamente.', 500)
